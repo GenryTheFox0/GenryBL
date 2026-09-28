@@ -1194,8 +1194,9 @@ SL compileFloatingThought(const QString& rest)
         return pyFloat(v, &x) ? pyRepr(x) : U(d);
     };
     const QString x = numeric(part(1, "0.5"), "0.5"), y = numeric(part(2, "0.18"), "0.18"), s = numeric(part(3, "3.0"), "3.0");
+    const QString said = pyQ(QString(text).replace(QStringLiteral("\\n"), QStringLiteral("\n"))).replace(QLatin1Char('\n'), QStringLiteral("\\n"));
     return {QStringLiteral("    show expression Text(%1, style=\"genry_thought\") as genry_thought_text at genry_thought_float(%2, %3, %4)")
-                .arg(pyQ(text), x, y, s)};
+                .arg(said, x, y, s)};
 }
 
 SL compileColorFilter(const QString& rest)

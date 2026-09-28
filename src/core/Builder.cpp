@@ -16,6 +16,8 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
+#include <private/qzipreader_p.h>
+#include <private/qzipwriter_p.h>
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -500,6 +502,156 @@ bool zipMod(const QString& modDir, const QString& zipPath, QString* err)
     if (!p.waitForStarted(10000) || !p.waitForFinished(-1) || p.exitCode() != 0) {
         if (err) *err = QStringLiteral("tar не собрал ZIP");
         return false;
+    }
+    return true;
+}
+
+namespace {
+
+// the files of a mod that travel: everything but this computer's own marks
+QStringList shippedFiles(const QString& modDir)
+{
+    QStringList out;
+    QDirIterator it(modDir, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString rel = QDir(modDir).relativeFilePath(it.next());
+        const QString name = QFileInfo(rel).fileName();
+        if (name == QLatin1String(".genrybl_owner") || name.endsWith(QLatin1Char('~')) || name.endsWith(QLatin1String(".bak"))) continue;
+        out << rel;
+    }
+    out.sort();
+    return out;
+}
+
+QString installText(const QString& modId, const QString& modName)
+{
+    return QString::fromUtf8(
+               "%1\n"
+               "Мод для «Бесконечного лета». Сделан в GenryBL — конструкторе модов: https://github.com/GenryTheFox0/GenryBL\n\n"
+               "КАК УСТАНОВИТЬ\n"
+               "1. Открой папку игры: Steam → Библиотека → «Бесконечное лето» → правой кнопкой → Управление →\n"
+               "   Просмотреть локальные файлы.\n"
+               "2. Зайди в папку game, потом в mods.\n"
+               "3. Распакуй туда папку «%2» из этого архива — чтобы вышло game\\mods\\%2\\…\n"
+               "4. Запусти игру → «Моды» → «%1».\n\n"
+               "Удалить — просто удали папку game\\mods\\%2.\n")
+        .arg(modName.isEmpty() ? modId : modName, modId);
+}
+
+}   // namespace
+
+QStringList missingModFiles(const QString& modDir, const QString& modId)
+{
+    QStringList missing;
+    const QRegularExpression ref(QStringLiteral("[\"']mods/%1/([^\"'\\\\]+)[\"']").arg(QRegularExpression::escape(modId)));
+    QDirIterator it(modDir, {QStringLiteral("*.rpy")}, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        QFile f(it.next());
+        if (!f.open(QIODevice::ReadOnly)) continue;
+        const QString text = QString::fromUtf8(f.readAll());
+        for (auto m = ref.globalMatch(text); m.hasNext();) {
+            const QString rel = m.next().captured(1);
+            // made at run time («…/%s.png», «[name]»): not a file name
+            if (rel.contains(QLatin1Char('%')) || rel.contains(QLatin1Char('[')) || rel.contains(QLatin1Char('{'))) continue;
+            if (!QFileInfo::exists(modDir + QLatin1Char('/') + rel) && !missing.contains(rel)) missing << rel;
+        }
+    }
+    missing.sort();
+    return missing;
+}
+
+bool exportZip(const QString& modDir, const QString& modId, const QString& modName, const QString& zipPath, QString* err)
+{
+    const QStringList files = shippedFiles(modDir);
+    if (files.isEmpty()) {
+        if (err) *err = QStringLiteral("папка мода пустая: %1").arg(QDir::toNativeSeparators(modDir));
+        return false;
+    }
+    QDir().mkpath(QFileInfo(zipPath).absolutePath());
+    const QString tmp = zipPath + QStringLiteral(".part");
+    QFile::remove(tmp);
+    {
+        QZipWriter zip(tmp);
+        if (zip.status() != QZipWriter::NoError) {
+            if (err) *err = QStringLiteral("не могу записать %1").arg(QDir::toNativeSeparators(zipPath));
+            return false;
+        }
+        zip.setCompressionPolicy(QZipWriter::AutoCompress);      // pictures/music are stored, text is packed
+        zip.addFile(QString::fromUtf8("КАК_УСТАНОВИТЬ.txt"), installText(modId, modName).toUtf8());
+        for (const QString& rel : files) {
+            QFile f(modDir + QLatin1Char('/') + rel);
+            if (!f.open(QIODevice::ReadOnly)) {
+                if (err) *err = QStringLiteral("не читается %1").arg(QDir::toNativeSeparators(f.fileName()));
+                return false;
+            }
+            zip.addFile(modId + QLatin1Char('/') + rel, f.readAll());
+        }
+        zip.close();
+        if (zip.status() != QZipWriter::NoError) {
+            if (err) *err = QStringLiteral("архив не дописался (место на диске?)");
+            return false;
+        }
+    }
+    // read it back: every file there, every byte the same
+    {
+        QZipReader back(tmp);
+        if (!back.isReadable() || back.count() != files.size() + 1) {
+            if (err) *err = QStringLiteral("архив не читается после записи");
+            return false;
+        }
+        for (const QString& rel : files) {
+            QFile f(modDir + QLatin1Char('/') + rel);
+            f.open(QIODevice::ReadOnly);
+            if (back.fileData(modId + QLatin1Char('/') + rel) != f.readAll()) {
+                if (err) *err = QStringLiteral("в архиве испортился %1").arg(rel);
+                return false;
+            }
+        }
+    }
+    QFile::remove(zipPath);
+    if (!QFile::rename(tmp, zipPath)) {
+        if (err) *err = QStringLiteral("не могу переименовать в %1 (открыт в другой программе?)").arg(QDir::toNativeSeparators(zipPath));
+        return false;
+    }
+    return true;
+}
+
+bool exportWorkshopFolder(const QString& modDir, const QString& modId, const QString& modName, const QString& dest, QString* err)
+{
+    const QString target = dest + QStringLiteral("/mods/") + modId;
+    QDir(target).removeRecursively();                 // our own export folder: always the mod as it is now
+    for (const QString& rel : shippedFiles(modDir)) {
+        const QString to = target + QLatin1Char('/') + rel;
+        QDir().mkpath(QFileInfo(to).absolutePath());
+        if (!QFile::copy(modDir + QLatin1Char('/') + rel, to)) {
+            if (err) *err = QStringLiteral("не удалось скопировать %1").arg(rel);
+            return false;
+        }
+    }
+    // the Workshop wants a .rpyc next to every .rpy (the game's lint made them)
+    QStringList noRpyc;
+    QDirIterator it(target, {QStringLiteral("*.rpy")}, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString f = it.next();
+        if (!QFileInfo::exists(f + QLatin1Char('c'))) noRpyc << QDir(target).relativeFilePath(f);
+    }
+    if (!noRpyc.isEmpty()) {
+        if (err) *err = QStringLiteral("нет .rpyc для: %1 — Мастерская такой мод не примет").arg(noRpyc.join(QStringLiteral(", ")));
+        return false;
+    }
+    QFile how(dest + QString::fromUtf8("/КАК_ВЫЛОЖИТЬ.txt"));
+    if (how.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        how.write(QString::fromUtf8(
+                      "%1 — папка для Мастерской Steam\n\n"
+                      "1. Открой загрузчик самой игры: <папка игры>\\game\\mods\\ES_Content_Uploader.exe\n"
+                      "   (Steam должен быть запущен под твоим аккаунтом, VPN лучше выключить).\n"
+                      "2. «Перейти к списку предметов» → создай новый предмет.\n"
+                      "3. Основная папка — ЭТА папка (в ней лежит mods). Обложка подхватится сама из preview.jpg.\n"
+                      "4. Название, описание, теги — как хочешь. «Загрузить без исходников» НЕ ставь.\n"
+                      "5. Сначала доступность «По ссылке», проверь сам (подпишись, запусти), потом — «Публичный».\n\n"
+                      "Не держи копию мода в game\\mods, если подписан на него в Мастерской: одинаковые метки — игра упадёт.\n")
+                      .arg(modName.isEmpty() ? modId : modName)
+                      .toUtf8());
     }
     return true;
 }

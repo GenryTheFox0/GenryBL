@@ -1550,33 +1550,90 @@ void Engine::engineCheck(const QString& id, const QString& text)
     }));
 }
 
-void Engine::exportZip(const QString& id, const QString& text)
+QString Engine::exportDir() const
 {
-    if (m_busy) return;
+    QString docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    if (docs.isEmpty()) docs = QDir::homePath();
+    const QString dir = QDir::cleanPath(docs + QStringLiteral("/GenryBL"));
+    QDir().mkpath(dir);
+    return dir;
+}
+
+void Engine::exportMod(const QString& id, const QString& text, const QString& kind)
+{
+    if (m_busy) { emit toast(U("Уже собираю, секунду"), 1); return; }
     saveStory(id, text);
     const BuildEnv env = envFor(id);
     const CompileOptions opt = options();
-    const QString outDir = m_root + QStringLiteral("/dist");
-    setBusy(true, U("Собираю архив мода…"));
-    auto* w = new QFutureWatcher<QString>(this);
-    connect(w, &QFutureWatcher<QString>::finished, this, [this, w, outDir] {
-        const QString res = w->result();
+    const bool workshop = kind == QLatin1String("workshop");
+    const QString base = exportDir();
+    setBusy(true, U("Экспорт: собираю мод…"));
+    auto log = [this](const QString& s) { QMetaObject::invokeMethod(this, [this, s] { setBusy(true, s); }, Qt::QueuedConnection); };
+    struct Result { bool ok = false; QString message, path, modId; };
+    auto* w = new QFutureWatcher<Result>(this);
+    connect(w, &QFutureWatcher<Result>::finished, this, [this, w, id, workshop] {
+        const Result r = w->result();
         w->deleteLater();
         setBusy(false);
-        if (res.startsWith(QLatin1Char('!'))) { emit buildFinished(false, res.mid(1)); return; }
-        emit buildFinished(true, U("Архив готов: ") + QDir::toNativeSeparators(res));
-        openFolder(outDir);
+        if (r.ok && workshop) {
+            // the Workshop card: the mod's first frame, square, under 1 MB
+            QImage shot = m_renderer.render(coverScene(id));
+            if (!shot.isNull()) {
+                const int side = qMin(shot.width(), shot.height());
+                shot = shot.copy((shot.width() - side) / 2, (shot.height() - side) / 2, side, side)
+                           .scaled(640, 640, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                shot.save(r.path + QStringLiteral("/preview.jpg"), "JPG", 88);
+            }
+        }
+        emit exportFinished(r.ok, r.message, r.path);
+        if (r.ok) revealFile(workshop ? r.path + QStringLiteral("/mods") : r.path);
     });
-    w->setFuture(QtConcurrent::run([this, env, text, opt, outDir] {
-        waitForWardrobe({});
-        const BuildReport r = build::install(env, text, opt, {});
-        if (!r.ok) return QStringLiteral("!") + r.error;
-        QDir().mkpath(outDir);
-        const QString zip = outDir + QLatin1Char('/') + r.meta.modId + QStringLiteral(".zip");
+    w->setFuture(QtConcurrent::run([this, env, text, opt, workshop, base, log]() -> Result {
+        Result res;
+        waitForWardrobe(log);
+        const BuildReport r = build::install(env, text, opt, log);
+        if (!r.ok) { res.message = r.error; return res; }
+        res.modId = r.meta.modId;
+        log(U("Экспорт: мод проверяет сама игра (Ren'Py lint) — до пары минут…"));
         QString err;
-        if (!build::zipMod(r.modDir, zip, &err)) return QStringLiteral("!") + err;
-        return zip;
+        const QStringList hits = build::lint(env.esRoot, r.meta.modId, &err, 600000);
+        if (!err.isEmpty()) { res.message = err; return res; }
+        if (!hits.isEmpty()) {
+            res.message = U("Игра нашла в моде ошибки — экспорт остановлен, чтобы люди не получили сломанный мод:\n") +
+                          QStringList(hits.mid(0, 8)).join(QLatin1Char('\n'));
+            return res;
+        }
+        const QStringList missing = build::missingModFiles(r.modDir, r.meta.modId);
+        if (!missing.isEmpty()) {
+            res.message = U("Мод ссылается на файлы, которых нет в его папке — у другого человека он не заведётся:\n") +
+                          QStringList(missing.mid(0, 8)).join(QLatin1Char('\n'));
+            return res;
+        }
+        log(workshop ? U("Экспорт: готовлю папку для Мастерской…") : U("Экспорт: пакую архив и перечитываю его…"));
+        if (workshop) {
+            res.path = base + QString::fromUtf8("/Мастерская/") + r.meta.modId;
+            if (!build::exportWorkshopFolder(r.modDir, r.meta.modId, r.meta.modName, res.path, &err)) { res.message = err; return res; }
+            res.message = U("Папка для Мастерской готова: там mods, обложка preview.jpg и «КАК_ВЫЛОЖИТЬ.txt»");
+        } else {
+            res.path = base + QString::fromUtf8("/Экспорт/") + r.meta.modId + QStringLiteral("_pc.zip");
+            if (!build::exportZip(r.modDir, r.meta.modId, r.meta.modName, res.path, &err)) { res.message = err; return res; }
+            res.message = U("Архив готов — игра его проверила, все файлы внутри. Отдавай людям: внутри «КАК_УСТАНОВИТЬ.txt»");
+        }
+        res.ok = true;
+        return res;
     }));
+}
+
+void Engine::revealFile(const QString& path) const
+{
+#ifdef Q_OS_WIN
+    QProcess p;
+    p.setProgram(QStringLiteral("explorer.exe"));
+    p.setNativeArguments(QStringLiteral("/select,\"%1\"").arg(QDir::toNativeSeparators(path)));
+    p.startDetached();
+#else
+    openFolder(QFileInfo(path).absolutePath());
+#endif
 }
 
 void Engine::openFolder(const QString& path) const { QDesktopServices::openUrl(QUrl::fromLocalFile(path.isEmpty() ? m_root : path)); }

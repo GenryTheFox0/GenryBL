@@ -658,6 +658,7 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             cmd == QLatin1String("bigtext")) {
             QString t = rest;
             if (t.size() >= 2 && (t.front() == QLatin1Char('"') || t.front() == QLatin1Char('\'')) && t.back() == t.front()) t = t.mid(1, t.size() - 2);
+            t.replace(QStringLiteral("\\n"), QStringLiteral("\n"));       // a line break the writer made
             if (cmd == QLatin1String("diary")) t = U("Дневник\n") + t;
             st.nvlText = t.isEmpty() ? QStringLiteral("...") : t;
             continue;
@@ -671,7 +672,11 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             else { st.notifyTitle = U("Достижение"); st.notifyText = U("Достижение: ") + p.value(1, p.value(0)); }
             continue;
         }
-        if (cmd == QLatin1String("floatingthought")) { st.floating = rest.section(QLatin1Char('|'), 0, 0).trimmed(); if (st.floating.isEmpty()) st.floating = U("Мысль."); continue; }
+        if (cmd == QLatin1String("floatingthought")) {
+            st.floating = rest.section(QLatin1Char('|'), 0, 0).trimmed().replace(QStringLiteral("\\n"), QStringLiteral("\n"));
+            if (st.floating.isEmpty()) st.floating = U("Мысль.");
+            continue;
+        }
         if (cmd == QLatin1String("phonestart") && QStringList{U("дом"), U("рабочийстол"), U("рабочий стол"), U("меню"), QStringLiteral("home")}.contains(rest.toLower())) {
             st.phoneHome = true;
             continue;

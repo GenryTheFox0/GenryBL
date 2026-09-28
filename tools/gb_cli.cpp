@@ -170,7 +170,7 @@ int main(int argc, char** argv)
     env.assetsDir = QFileInfo(a[2]).absolutePath() + "/assets";
     env.backupsDir = root + "/work/backups";
     env.saveDir = root + "/work/es_saves";
-    if (cmd == "install" || cmd == "lint" || cmd == "run") {
+    if (cmd == "install" || cmd == "lint" || cmd == "run" || cmd == "export") {
         const BuildReport r = build::install(env, story, opt, [](const QString& s) { out << "  " << s << "\n"; out.flush(); });
         if (!r.ok) return fail(r.error);
         out << "installed " << r.modFile << " labels: " << r.labels.join(' ') << "\n";
@@ -182,6 +182,25 @@ int main(int argc, char** argv)
             if (hits.isEmpty()) out << "LINT CLEAN: no report lines mention " << r.meta.modId << "\n";
             for (const QString& h : hits) out << "  " << h << "\n";
             return hits.isEmpty() ? 0 : 1;
+        }
+        if (cmd == "export") {
+            // gb_cli export <story.txt> zip|workshop <out .zip | out folder>: what the «Экспорт» button does
+            out << "running Everlasting Summer lint...\n";
+            out.flush();
+            const QStringList hits = build::lint(esRoot, r.meta.modId, &err, 600000);
+            if (!err.isEmpty()) return fail(err);
+            if (!hits.isEmpty()) {
+                for (const QString& h : hits) out << "  " << h << "\n";
+                return fail("the game's lint is not clean - no export");
+            }
+            const QStringList missing = build::missingModFiles(r.modDir, r.meta.modId);
+            if (!missing.isEmpty()) return fail("not inside the mod: " + missing.join(", "));
+            const QString kind = a.value(3), dest = a.value(4);
+            const bool ok = kind == "workshop" ? build::exportWorkshopFolder(r.modDir, r.meta.modId, r.meta.modName, dest, &err)
+                                               : build::exportZip(r.modDir, r.meta.modId, r.meta.modName, dest, &err);
+            if (!ok) return fail(err);
+            out << "EXPORTED " << dest << "\n";
+            return 0;
         }
         if (cmd == "run") {
             // scene names as written in the story ("evening") -> the mod's real label, like the app does

@@ -59,6 +59,9 @@ int main(int argc, char** argv)
     // optional page input, e.g. "a.wav|b.ogg" for editor-dialogue-import
     qml.rootContext()->setContextProperty(QStringLiteral("shotArg"),
                                           shot && args.size() > shotAt + 3 && !args[shotAt + 3].startsWith(QLatin1String("--")) ? args[shotAt + 3] : QString());
+    // --shot ... --size 1280x720: the window of a smaller screen (a 1920x1080 laptop at 150 % Windows scale)
+    const int sizeAt = int(args.indexOf(QStringLiteral("--size")));
+    qml.rootContext()->setContextProperty(QStringLiteral("shotSize"), shot && sizeAt > 0 && args.size() > sizeAt + 1 ? args[sizeAt + 1] : QString());
     QObject::connect(&qml, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(3); }, Qt::QueuedConnection);
     qml.loadFromModule("GenryBL", "Main");
     if (qml.rootObjects().isEmpty()) return 3;

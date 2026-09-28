@@ -215,7 +215,12 @@ public:
     Q_INVOKABLE void play(const QString& id, const QString& text, int line);
     Q_INVOKABLE void stopGame();
     Q_INVOKABLE void engineCheck(const QString& id, const QString& text);     // ES's own Ren'Py lint
-    Q_INVOKABLE void exportZip(const QString& id, const QString& text);
+    // «Экспорт»: build -> the game's own lint (also makes the .rpyc) -> every file the mod needs is inside it ->
+    // "zip" = the archive for players, "workshop" = the folder for the game's Workshop uploader (+ preview.jpg),
+    // both in Documents\GenryBL -> exportFinished; the file is shown selected in Explorer
+    Q_INVOKABLE void exportMod(const QString& id, const QString& text, const QString& kind);
+    Q_INVOKABLE void revealFile(const QString& path) const;
+    Q_INVOKABLE QString exportDir() const;
     Q_INVOKABLE void openFolder(const QString& path) const;
     Q_INVOKABLE QString audioUrl(const QString& gamePath) const;
     Q_INVOKABLE QString font() const { return m_renderer.fontFamily(); }
@@ -242,6 +247,7 @@ signals:
     void engineCheckFinished(bool clean, const QStringList& lines);
     void audioImported(const QStringList& rels, bool ok);
     void updateChanged();
+    void exportFinished(bool ok, const QString& message, const QString& path);
 
 private:
     explicit Engine(QObject* parent = nullptr);

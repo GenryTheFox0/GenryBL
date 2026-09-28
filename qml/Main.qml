@@ -20,7 +20,10 @@ ApplicationWindow {
     // --shot mode: park the window off-screen so the user's desktop is never touched
     Component.onCompleted: {
         if (Engine.mode !== "") { width = 1280; height = 720 }
-        if (shotPage) { x = -4000; y = -4000; width = Engine.mode !== "" ? 1280 : 1600; height = Engine.mode !== "" ? 720 : 900 }
+        if (shotPage) {
+            x = -4000; y = -4000; width = Engine.mode !== "" ? 1280 : 1600; height = Engine.mode !== "" ? 720 : 900
+            if (shotSize) { const wh = shotSize.split("x"); width = parseInt(wh[0]); height = parseInt(wh[1]) }
+        }
         if (!Engine.ready) return
         win.start()
     }

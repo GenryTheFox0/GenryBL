@@ -178,6 +178,7 @@ Item {
         onInsertBlock: (block) => ed.insert(block)
         onClosed: code.focusEditor()
     }
+    ExportDialog { id: exportDialog; onClosed: code.focusEditor() }
     ModTitleDialog {
         id: titleDialog
         onApplied: (text) => { code.setText(text); ed.save(); ed.issues = Engine.lint(code.text); ed.refreshPreview(); Engine.toast("Название мода обновлено", 0) }
@@ -222,17 +223,30 @@ Item {
         color: Theme.bg2
         z: 2
         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+        // A laptop at 125-150 % Windows scale is ~1280 px wide: the old one-line bar pushed «Играть» off the edge.
+        // Now «← Меню», the name, the problems chip, «Экспорт», «Кино» and «Играть» always stay; the tools fold
+        // into «☰ Ещё» when they do not fit. The tools keep their width inside a clipping box (never hidden), so
+        // the bar always knows how much room they would need.
+        readonly property real toolsNeed: tools.implicitWidth + 10
+        readonly property real fixedNeed: menuBtn.implicitWidth + Math.min(titleInk.implicitWidth, 420) + nameBtn.implicitWidth + chipBox.width +
+                                          exportBtn.implicitWidth + (stopBtn.visible ? stopBtn.implicitWidth + 10 : 0) + cinemaBtn.implicitWidth +
+                                          playBtn.implicitWidth + 10 * 8 + 26 + 40
+        readonly property bool compact: fixedNeed + toolsNeed > width
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 12
             anchors.rightMargin: 14
             spacing: 10
-            PillButton { dark: true; text: "← Меню"; onClicked: { ed.save(); ed.back() } }
+            PillButton { id: menuBtn; dark: true; text: "← Меню"; onClicked: { ed.save(); ed.back() } }
             InkText {
+                id: titleInk
                 text: Engine.currentProjectName; size: 26; color: Theme.gold; Layout.alignment: Qt.AlignVCenter
+                Layout.maximumWidth: top.compact ? 300 : 520
+                clip: true
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: titleDialog.openFor(code.text) }
             }
             PillButton {
+                id: nameBtn
                 dark: true
                 text: "Aa Название"
                 onClicked: titleDialog.openFor(code.text)
@@ -240,6 +254,7 @@ Item {
                 ToolTip.text: "Как мод выглядит в списке модов БЛ: свой шрифт, цвет, размер"
             }
             Rectangle {
+                id: chipBox
                 Layout.alignment: Qt.AlignVCenter
                 height: 26; radius: 13
                 width: chip.implicitWidth + 22
@@ -255,61 +270,101 @@ Item {
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: infoTabs.currentIndex = 0 }
             }
             Item { Layout.fillWidth: true }
-            PillButton {
-                readonly property bool play: ed.playKind !== "" && ed.playKind !== "prose" && !ed.lineForm.id
-                dark: true
-                text: play ? "⇲ Развернуть строку" : "✎ Настроить строку"
-                enabled: play || !!ed.lineForm.id
-                onClicked: play ? ed.expandLine() : ed.editLine()
-                ToolTip.visible: hovered
-                ToolTip.text: play ? "Сценарная строка → команды, которые она означает: показать …, фон …, реплика (Ctrl+Shift+E)"
-                                   : "Открыть строку под курсором в её окне: все параметры, картинки, превью (Ctrl+E)"
+            // the tools: in a line when they fit, folded into «☰ Ещё» when they do not
+            Item {
+                Layout.preferredWidth: top.compact ? 0 : tools.implicitWidth
+                Layout.preferredHeight: tools.implicitHeight
+                clip: true
+                Row {
+                    id: tools
+                    spacing: 10
+                    readonly property bool linePlay: ed.playKind !== "" && ed.playKind !== "prose" && !ed.lineForm.id
+                    PillButton {
+                        dark: true
+                        text: tools.linePlay ? "⇲ Развернуть строку" : "✎ Настроить строку"
+                        enabled: tools.linePlay || !!ed.lineForm.id
+                        onClicked: tools.linePlay ? ed.expandLine() : ed.editLine()
+                        ToolTip.visible: hovered
+                        ToolTip.text: tools.linePlay ? "Сценарная строка → команды, которые она означает: показать …, фон …, реплика (Ctrl+Shift+E)"
+                                                     : "Открыть строку под курсором в её окне: все параметры, картинки, превью (Ctrl+E)"
+                    }
+                    PillButton {
+                        dark: true
+                        text: "✍ Сценарий"
+                        onClicked: screenplay.openFor(code.text, code.currentLine, "")
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Пиши как сценарий: вставь сценарий, переписку или главу — станут фонами, спрайтами и репликами (Ctrl+Shift+V — из буфера)"
+                    }
+                    PillButton {
+                        dark: true
+                        text: "⑂ Выбор"
+                        onClicked: choiceWizard.openFor(code.text, code.currentLine)
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Выбор и последствия: варианты с картинками как в 7ДЛ, очки, сцены веток и общая сцена после"
+                    }
+                    PillButton {
+                        dark: true
+                        text: "♪ Диалог"
+                        onClicked: dialogue.openFor(code.text, code.currentLine)
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Диалог + озвучка: реплики таблицей, озвучка файлами по порядку, кадр игры сразу (Ctrl+D)"
+                    }
+                    PillButton {
+                        dark: true
+                        text: "Библиотека"
+                        onClicked: libraryBrowser.open()
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Картинки всех модов из твоей мастерской БЛ: спрайты, фоны, CG — взять в свой мод"
+                    }
+                    PillButton { dark: true; text: "Папка мода"; onClicked: Engine.openFolder(Engine.projectDir(ed.projectId)) }
+                    PillButton {
+                        dark: true
+                        text: "Проверить движком"
+                        enabled: !Engine.busy
+                        onClicked: Engine.engineCheck(ed.projectId, code.text)
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Родной lint Ren'Py самой игры: картинки, метки, синтаксис (1-2 минуты)"
+                    }
+                }
             }
             PillButton {
+                visible: top.compact
                 dark: true
-                text: "✍ Сценарий"
-                onClicked: screenplay.openFor(code.text, code.currentLine, "")
-                ToolTip.visible: hovered
-                ToolTip.text: "Пиши как сценарий: вставь сценарий, переписку или главу — станут фонами, спрайтами и репликами (Ctrl+Shift+V — из буфера)"
+                text: "☰ Ещё"
+                onClicked: moreMenu.popup()
+                Menu {
+                    id: moreMenu
+                    MenuItem {
+                        text: tools.linePlay ? "Развернуть строку" : "Настроить строку"
+                        enabled: tools.linePlay || !!ed.lineForm.id
+                        onTriggered: tools.linePlay ? ed.expandLine() : ed.editLine()
+                    }
+                    MenuItem { text: "Сценарий — пиши как сценарий"; onTriggered: screenplay.openFor(code.text, code.currentLine, "") }
+                    MenuItem { text: "Выбор и последствия"; onTriggered: choiceWizard.openFor(code.text, code.currentLine) }
+                    MenuItem { text: "Диалог + озвучка"; onTriggered: dialogue.openFor(code.text, code.currentLine) }
+                    MenuItem { text: "Библиотека картинок"; onTriggered: libraryBrowser.open() }
+                    MenuSeparator {}
+                    MenuItem { text: "Папка мода"; onTriggered: Engine.openFolder(Engine.projectDir(ed.projectId)) }
+                    MenuItem { text: "Проверить движком игры"; enabled: !Engine.busy; onTriggered: Engine.engineCheck(ed.projectId, code.text) }
+                }
             }
             PillButton {
+                id: exportBtn
                 dark: true
-                text: "⑂ Выбор"
-                onClicked: choiceWizard.openFor(code.text, code.currentLine)
-                ToolTip.visible: hovered
-                ToolTip.text: "Выбор и последствия: варианты с картинками как в 7ДЛ, очки, сцены веток и общая сцена после"
-            }
-            PillButton {
-                dark: true
-                text: "♪ Диалог"
-                onClicked: dialogue.openFor(code.text, code.currentLine)
-                ToolTip.visible: hovered
-                ToolTip.text: "Диалог + озвучка: реплики таблицей, озвучка файлами по порядку, кадр игры сразу (Ctrl+D)"
-            }
-            PillButton {
-                dark: true
-                text: "Библиотека"
-                onClicked: libraryBrowser.open()
-                ToolTip.visible: hovered
-                ToolTip.text: "Картинки всех модов из твоей мастерской БЛ: спрайты, фоны, CG — взять в свой мод"
-            }
-            PillButton { dark: true; text: "Папка мода"; onClicked: Engine.openFolder(Engine.projectDir(ed.projectId)) }
-            PillButton {
-                dark: true
-                text: "Проверить движком"
+                text: "⇪ Экспорт"
                 enabled: !Engine.busy
-                onClicked: Engine.engineCheck(ed.projectId, code.text)
+                onClicked: exportDialog.openFor(ed.projectId, code.text)
                 ToolTip.visible: hovered
-                ToolTip.text: "Родной lint Ren'Py самой игры: картинки, метки, синтаксис (1-2 минуты)"
+                ToolTip.text: "Отдать мод людям: архив для игроков или папка для Мастерской Steam — после проверки самой игрой"
             }
-            PillButton { dark: true; text: "Архив мода"; enabled: !Engine.busy; onClicked: Engine.exportZip(ed.projectId, code.text) }
-            PillButton { visible: Engine.gameRunning; text: "■ Стоп"; onClicked: Engine.stopGame() }
+            PillButton { id: stopBtn; visible: Engine.gameRunning; text: "■ Стоп"; onClicked: Engine.stopGame() }
             PillButton {
+                id: cinemaBtn
                 accent: true
                 text: "▶ Кино  F6"
                 onClicked: ed.cinema()
                 ToolTip.visible: hovered
-                ToolTip.text: "Кино-режим: мод играет прямо тут, как в игре — печать текста, музыка, выборы по веткам, без загрузки БЛ"
+                ToolTip.text: "Кино-режим: мод играет прямо тут, как в игре — печать текста, музыка, выборы по веткам, без загрузки БЛ (F6)"
             }
             // the big one
             AbstractButton {

@@ -483,6 +483,16 @@ static void testForms()
     Forms forms;
     QString err;
     check(forms.load(QStringLiteral(GB_SOURCE_DIR "/data/forms.json"), &err), "forms.json loads " + err);
+    {
+        // «Текст на экране»: a line break the writer made stays one (old: the two lines were glued with a space)
+        const QString line = forms.build(QStringLiteral("note"), {{QStringLiteral("how"), QStringLiteral("note")},
+                                                                   {QStringLiteral("text"), QString::fromUtf8("Так я и нашёл то, что искал!\nМод был сделан за пару минут")}});
+        CompileState nst;
+        const QString rpy = compileLine(line, QStringLiteral("genry_t"), nst, CompileOptions{}).join(QLatin1Char('\n'));
+        check(line == QString::fromUtf8("заметка Так я и нашёл то, что искал!\\nМод был сделан за пару минут") &&
+                  rpy.contains(QString::fromUtf8("искал!\\nМод")),
+              "Текст на экране keeps the writer's line break: " + line);
+    }
     const CompileOptions v1;
     int n = 0, badCompile = 0, badRead = 0;
     for (const QVariant& fv : forms.forms()) {

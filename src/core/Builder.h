@@ -54,6 +54,14 @@ bool isRunning(qint64 pid);
 // "Everlasting Summer.exe" <root> lint -> the lines of the report that mention this mod (empty = clean)
 QStringList lint(const QString& esRoot, const QString& modId, QString* err, int timeoutMs = 180000);
 bool zipMod(const QString& modDir, const QString& zipPath, QString* err);
+// «Экспорт» (V1): the mod as OTHER people get it.
+// every "mods/<id>/..." file the mod's .rpy point at that is not inside its folder (empty = self-contained)
+QStringList missingModFiles(const QString& modDir, const QString& modId);
+// the ZIP for players: <id>/... + КАК_УСТАНОВИТЬ.txt, file names in UTF-8 (Qt's zip writer marks them - the old
+// tar-made archive could turn Cyrillic names into garbage on another PC), then read back and compared byte for byte
+bool exportZip(const QString& modDir, const QString& modId, const QString& modName, const QString& zipPath, QString* err);
+// what the game's own Workshop uploader wants: <dest>/mods/<id>/... + КАК_ВЫЛОЖИТЬ.txt (preview.jpg: the caller)
+bool exportWorkshopFolder(const QString& modDir, const QString& modId, const QString& modName, const QString& dest, QString* err);
 // game/mods/<id>/.genrybl_owner: the project folder that built the mod. Another copy of GenryBL (a developer
 // own build vs the public one) never overwrites a mod it did not build. "" = free (or ours).
 QString modOwner(const QString& esRoot, const QString& modId);

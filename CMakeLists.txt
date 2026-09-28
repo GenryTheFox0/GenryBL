@@ -40,7 +40,7 @@ add_library(gb_core STATIC
     src/core/Cinema.cpp
 )
 target_include_directories(gb_core PUBLIC src/core)
-target_link_libraries(gb_core PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent)
+target_link_libraries(gb_core PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent PRIVATE Qt6::CorePrivate)
 
 qt_add_executable(gb_selftest tools/selftest.cpp)
 set_target_properties(gb_selftest PROPERTIES WIN32_EXECUTABLE OFF)
@@ -84,6 +84,7 @@ qt_add_qml_module(GenryBL
         qml/LibraryBrowser.qml
         qml/ChoiceDialog.qml
         qml/ModTitleDialog.qml
+        qml/ExportDialog.qml
         qml/Editor.qml
         qml/CodeEditor.qml
         qml/Palette.qml
