@@ -33,6 +33,9 @@ static void logHandler(QtMsgType type, const QMessageLogContext& ctx, const QStr
 
 int main(int argc, char** argv)
 {
+    // how GenryBL draws and where its Qt plugins are is its own business: a Qt setting inherited from whoever started it
+    // (a Qt tool, a game a mod launched it from) must not break the window ("no Qt platform plugin could be initialized")
+    for (const char* v : {"QT_QPA_PLATFORM", "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH"}) qunsetenv(v);
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral("GenryBL"));

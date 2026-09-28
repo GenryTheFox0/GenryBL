@@ -22,7 +22,10 @@ QT = os.environ.get('GENRYBL_QT', r'E:\Qt\6.8.3\msvc2022_64')
 BUILD = os.path.join(ROOT, 'build_release')
 DIST = os.path.join(ROOT, 'dist')
 STAGE = os.path.join(DIST, 'stage', 'GenryBL')
-OUT = os.path.join(DIST, 'github')
+# --workshop: the installer that rides in the Steam Workshop item (tools/workshop): no copy of the 18+ patch inside -
+# in the Workshop the patch is its author's own item, GenryBL takes it from the subscription
+WORKSHOP = '--workshop' in sys.argv
+OUT = os.path.join(DIST, 'workshop_setup' if WORKSHOP else 'github')
 MAGIC = b'GENRYBL1'
 
 
@@ -150,9 +153,18 @@ def main():
         os.makedirs(data, exist_ok=True)
         shutil.copy2(os.path.join(ROOT, 'data', f), data)
     copy_tree(os.path.join(ROOT, 'data', 'mod_assets'), os.path.join(data, 'mod_assets'))
-    copy_tree(os.path.join(ROOT, 'data', 'patch'), os.path.join(data, 'patch'))     # the 18+ patch inside (bundle_patch.py)
+    if not WORKSHOP:
+        copy_tree(os.path.join(ROOT, 'data', 'patch'), os.path.join(data, 'patch'))     # the 18+ patch inside (bundle_patch.py)
     copy_tree(os.path.join(ROOT, 'third_party', 'ffmpeg'), os.path.join(data, 'tools'))
     shutil.copy2(os.path.join(ROOT, 'release_files', 'ПРОЧТИ.txt'), STAGE)
+    if WORKSHOP:
+        readme = os.path.join(STAGE, 'ПРОЧТИ.txt')
+        text = open(readme, encoding='utf-8').read()
+        old = '— он встроен,\n  подписываться не надо.'
+        assert old in text, 'ПРОЧТИ.txt: the sentence about the built-in patch moved'
+        text = text.replace(old, '— подпишись на него\n  в Мастерской, GenryBL подхватит его сам.')
+        text = text.replace('в форматы игры), 18+ патч и всё остальное', 'в форматы игры) и всё остальное')
+        open(readme, 'w', encoding='utf-8', newline='\n').write(text)
 
     print('== pack')
     os.makedirs(OUT, exist_ok=True)
@@ -183,9 +195,12 @@ def main():
         with open(payload, 'rb') as f:
             shutil.copyfileobj(f, out)
         out.write(struct.pack('<Q', size) + MAGIC)
-    shutil.move(payload, os.path.join(OUT, 'GenryBL_V1_portable.zip'))
-    shutil.copy2(os.path.join(ROOT, 'release_files', 'README.md'), OUT)
-    print('== dist/github')
+    if WORKSHOP:
+        os.remove(payload)
+    else:
+        shutil.move(payload, os.path.join(OUT, 'GenryBL_V1_portable.zip'))
+        shutil.copy2(os.path.join(ROOT, 'release_files', 'README.md'), OUT)
+    print('== ' + os.path.relpath(OUT, ROOT).replace(os.sep, '/'))
     for f in sorted(os.listdir(OUT)):
         p = os.path.join(OUT, f)
         print(f'   {f:28} {os.path.getsize(p) / 1048576:8.1f} MB  sha256 {sha(p)[:16]}')

@@ -115,7 +115,7 @@ public:
     QVariantList ambience() const;
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
-    QString version() const { return QStringLiteral("V1.0"); }
+    QString version() const { return QStringLiteral("V1.0.1"); }
 
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;

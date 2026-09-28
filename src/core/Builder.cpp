@@ -31,6 +31,16 @@ namespace {
 
 const char* const kManaged[] = {"images", "audio", "video", "fonts", nullptr};
 
+// the game gets this computer's environment minus the Qt settings of whoever started it (gb_cli draws «offscreen»):
+// the game passes its environment on to what a mod runs - GenryBL's own installer is a Qt program too
+QProcessEnvironment gameEnvironment()
+{
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    for (const QString& k : env.keys())
+        if (k.startsWith(QLatin1String("QT_"), Qt::CaseInsensitive) || k.startsWith(QLatin1String("QML"), Qt::CaseInsensitive)) env.remove(k);
+    return env;
+}
+
 void say(const BuildLog& log, const QString& s)
 {
     if (log) log(s);
@@ -404,7 +414,12 @@ qint64 runAt(const BuildEnv& env, const QString& modId, const QString& label, QS
     }
     QDir().mkpath(env.saveDir);
     qint64 pid = 0;
-    if (!QProcess::startDetached(esExe(env.esRoot), {QStringLiteral("--savedir"), QDir::toNativeSeparators(env.saveDir)}, env.esRoot, &pid)) {
+    QProcess game;
+    game.setProgram(esExe(env.esRoot));
+    game.setArguments({QStringLiteral("--savedir"), QDir::toNativeSeparators(env.saveDir)});
+    game.setWorkingDirectory(env.esRoot);
+    game.setProcessEnvironment(gameEnvironment());
+    if (!game.startDetached(&pid)) {
         removeHook(env.esRoot);
         if (err) *err = QStringLiteral("Everlasting Summer.exe не запустился");
         return 0;
@@ -432,6 +447,7 @@ QStringList lint(const QString& esRoot, const QString& modId, QString* err, int 
     const QString reportPath = QDir::tempPath() + QStringLiteral("/genrybl_lint_%1.txt").arg(QCoreApplication::applicationPid());
     QProcess p;
     p.setWorkingDirectory(esRoot);
+    p.setProcessEnvironment(gameEnvironment());
     p.setStandardOutputFile(reportPath);
     p.setStandardErrorFile(reportPath, QIODevice::Append);
     p.start(esExe(esRoot), {esRoot, QStringLiteral("lint")});
