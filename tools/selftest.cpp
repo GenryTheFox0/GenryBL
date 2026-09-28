@@ -272,8 +272,27 @@ static void testFixes()
               r8.contains(QString::fromUtf8("        \"Сюда\" (img=\"cg d1_food_normal\", kind=\"bg\"):")),
           "«выбор кнопки» = dark buttons, «выбор визуальный» = 7DL strips");
     const QString r9 = compileText(QString::fromUtf8("@mod_id genry_t\nмузыка everlasting_summer\n@mod_name Т\nприбавить trust 1\n: start\nтекст а\n"), es);
-    check(orphanIndent(r9).isEmpty() && r9.contains(QStringLiteral("label genry_t:\n    $ _genry_music_file")),
+    check(orphanIndent(r9).isEmpty() && r9.contains(QStringLiteral("label genry_t:\n    window auto\n    $ _genry_music_file")),
           "commands above the first scene open the mod (old: left outside any label -> the whole game failed to start) " + orphanIndent(r9));
+    {
+        // the dialogue box the ES way: gone before a new background, back with the next line (old: an empty box
+        // over every fade to black); a title is a card, not a line in the box; faces melt instead of snapping
+        const QString rw = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nтитр Глава 1\nфон ext_square_day fade\n"
+                                                         "показать sl smile pioneer right\nСлавя: а\nпоказать sl shy pioneer right\n"
+                                                         "показать dv grin pioneer left none\nтелефонначать Мику\nсмс Мику: б\nтелефонконец\n"
+                                                         "окноскрыть\nокнопоказать dissolve\nпереход two\n: two\nтекст в\n"), es);
+        const QString body = rw.mid(rw.indexOf(QStringLiteral("label genry_t:")));
+        check(body.contains(QStringLiteral("label genry_t:\n    window auto\n")) && body.contains(QStringLiteral("label genry_t__two:\n    window auto\n")) &&
+                  !body.contains(QStringLiteral("    window show\n")) && !body.contains(QStringLiteral("    window hide\n")) &&
+                  body.contains(QStringLiteral("    $ _window_hide()\n")) && body.contains(QStringLiteral("    $ _window_show(dissolve)\n")),
+              "V1 «window auto»: no empty dialogue box over a fade; the author's own окноскрыть/окнопоказать stay as written");
+        check(body.contains(QString::fromUtf8("Text(u\"Глава 1\"")) && !body.contains(QStringLiteral("{size=38}")),
+              "титр = a title card on black (old: the title printed inside the dialogue box)");
+        check(body.contains(QStringLiteral("    show sl smile pioneer at right, genry_sprite_time_tint with dissolve\n")) &&
+                  body.contains(QStringLiteral("    show sl shy pioneer at right, genry_sprite_time_tint with dspr\n")) &&
+                  body.contains(QStringLiteral("    show dv grin pioneer at left, genry_sprite_time_tint\n")),
+              "показать: a heroine dissolves in, a new face melts (dspr), «none» = instant");
+    }
     // every V1 feature at once: meters, timed choice, «запомнит», inventory, gallery, achievements, the mod's menu
     QFile ft(QStringLiteral(GB_SOURCE_DIR "/work/featuretest/story.txt"));
     if (ft.open(QIODevice::ReadOnly)) {

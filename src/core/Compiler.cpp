@@ -579,10 +579,20 @@ SL compileShake(const QString& rest)
     return r;
 }
 
-SL compileTitlecard(const QString& rest)
+SL compileTitlecard(const QString& rest, bool v1 = false)
 {
     QString text = pyStrip(rest);
     if (text.isEmpty()) text = U("Титр");
+    if (v1) {
+        // V1: a real title card - black, the name alone in the middle in the menu's Corbel; no dialogue box.
+        // A click skips it, like any ES pause.
+        return {QStringLiteral("    window hide"), QStringLiteral("    show genry_black"), QStringLiteral("    with Dissolve(0.8)"),
+                QStringLiteral("    show expression Text(%1, size=66, color=\"#f1ece0\", font=\"fonts/corbel.ttf\", text_align=0.5, "
+                               "outlines=[(2, \"#00000099\", 0, 0)]) as genry_title:").arg(pyUQ(text)),
+                QStringLiteral("        xcenter 0.5"), QStringLiteral("        ycenter 0.47"), QStringLiteral("        alpha 0.0"),
+                QStringLiteral("        linear 1.0 alpha 1.0"), QStringLiteral("    $ renpy.pause(3.0)"), QStringLiteral("    hide genry_title"),
+                QStringLiteral("    with Dissolve(0.7)"), QStringLiteral("    hide genry_black"), QStringLiteral("    with Dissolve(0.8)")};
+    }
     return {QStringLiteral("    show genry_black"), QStringLiteral("    with dissolve"), QStringLiteral("    window hide"),
             QStringLiteral("    $ renpy.pause(0.2, hard=True)"), I4 + pyQ(QStringLiteral("{size=38}{b}%1{/b}{/size}").arg(text)),
             QStringLiteral("    window show"), QStringLiteral("    hide genry_black"), QStringLiteral("    with dissolve")};
@@ -2018,7 +2028,7 @@ static SL compileV1Feature(const QString& cmd, const QString& rest, const QStrin
         const QString title = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
         if (title.isEmpty()) return {U("    # новаяглава Название | картинка")};
         SL r{QStringLiteral("    $ persistent.%1 = True").arg(persistentKey(modId, QStringLiteral("ch_") + title, QStringLiteral("chapter"), c.opt))};
-        r << compileTitlecard(title);
+        r << compileTitlecard(title, !c.opt.legacy);
         return r;
     }
     if (cmd == QLatin1String("chapters"))
@@ -2146,6 +2156,10 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
         if (!opt.legacy) {       // V1 «показать dv smile pioneer румянец пот»: the sprite with its overlay picture
             image = withOverlays(image);
             if (image.contains(QLatin1String(" genry_ov_"))) st.overlayImages.insert(image);
+            // as ES writes it: a new face melts in (dspr), a heroine walks in with dissolve - no snapping.
+            // «none» after the sprite keeps it instant.
+            if (effect.isEmpty())
+                effect = st.activeSpriteTags.contains(image.section(QLatin1Char(' '), 0, 0)) ? QStringLiteral("dspr") : QStringLiteral("dissolve");
         }
         const QString out = withEffectLine(QStringLiteral("    show ") + image + spriteShowAtClause(image, pos), effect);
         rememberSpriteTag(st, image);
@@ -2177,7 +2191,7 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
     if (cmd == QLatin1String("stopsleepyeyes")) return {QStringLiteral("    hide blinking onlayer overlay")};
     if (cmd == QLatin1String("ghostmove")) return compileGhostMove(rest);
     if (cmd == QLatin1String("flash")) return compileFlash(rest);
-    if (cmd == QLatin1String("titlecard")) return compileTitlecard(rest);
+    if (cmd == QLatin1String("titlecard")) return compileTitlecard(rest, !opt.legacy);
     if (cmd == QLatin1String("creditsroll")) return compileCreditsRoll(rest);
     if (cmd == QLatin1String("note")) return compileLargeText(QStringLiteral("note"), rest, opt.legacy);
     if (cmd == QLatin1String("monologue") || cmd == QLatin1String("diary") || cmd == QLatin1String("memorynote") || cmd == QLatin1String("bigtext"))
@@ -2224,6 +2238,13 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
     if (cmd == QLatin1String("voicedsay")) return compileVoicedSay(rest, modId, st, c);
     if (cmd == QLatin1String("punchedsay")) return compilePunchedSay(rest, st, c);
     if (cmd == QLatin1String("ambience")) return compileAmbience(rest, modId, c);
+    if ((cmd == QLatin1String("windowhide") || cmd == QLatin1String("windowshow")) && !opt.legacy) {
+        // V1: the author's own «окно скрыть/показать» - stays as written (the V1 «window auto» pass leaves these
+        // alone); the transition is the statement's argument, «window hide with x» does not parse
+        const QString e = effectOf(rest);
+        const QString f = cmd == QLatin1String("windowhide") ? QStringLiteral("_window_hide") : QStringLiteral("_window_show");
+        return {e.isEmpty() || e == QLatin1String("none") ? QStringLiteral("    $ %1()").arg(f) : QStringLiteral("    $ %1(%2)").arg(f, e)};
+    }
     if (cmd == QLatin1String("windowhide")) return {withEffectLine(QStringLiteral("    window hide"), effectOf(rest))};
     if (cmd == QLatin1String("windowshow")) return {withEffectLine(QStringLiteral("    window show"), effectOf(rest))};
     if (cmd == QLatin1String("nvlstart")) {
@@ -3229,6 +3250,18 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
     out = appendMissingTargetLabels(out, screenmenuTargets);
     out = ensureLabelExits(out, choiceTargets);
     out = collapseRedundantReturns(out);
+    if (!opt.legacy) {
+        // V1: the dialogue box the way ES itself shows it («window auto»): it melts away before a new background
+        // or a menu and comes back with the next line - never an empty box over a fade to black. Every scene turns
+        // the mode on (a jump from the app lands mid-mod); the builder's own hide/show keep it on.
+        int i = 0;
+        while (i < out.size() && !out[i].startsWith(QLatin1String("label "))) ++i;
+        for (; i < out.size(); ++i) {
+            if (out[i] == QLatin1String("    window hide")) out[i] = QStringLiteral("    window auto hide");
+            else if (out[i] == QLatin1String("    window show")) out[i] = QStringLiteral("    window auto");
+            else if (out[i].startsWith(QLatin1String("label ")) && out[i].endsWith(QLatin1Char(':'))) out.insert(++i, QStringLiteral("    window auto"));
+        }
+    }
     if (!opt.legacy) out << hentaiPatchFallback(out, meta.modId);
     if (usedImageMenu) out << imageMenuScreen();
     if (!opt.legacy) {
