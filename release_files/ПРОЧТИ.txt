@@ -41,6 +41,7 @@ GenryBL — конструктор модов «Бесконечного лет�
   Discord          https://discord.gg/2Yy45gJap3
   Telegram         https://t.me/teamgenrythefox
   Отзывы и баги    https://github.com/GenryTheFox0/GenryBL/issues
+  Мастерская Steam https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763
 
 ГДЕ ЧТО ЛЕЖИТ
   app\        программа (GenryBL.exe)

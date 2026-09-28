@@ -187,6 +187,11 @@ Item {
                         }
                         PillButton {
                             visible: launcher.dialog === "about"
+                            text: "Мастерская Steam"
+                            onClicked: Qt.openUrlExternally("https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763")
+                        }
+                        PillButton {
+                            visible: launcher.dialog === "about"
                             text: "Отзывы и баги"
                             onClicked: Qt.openUrlExternally("https://github.com/GenryTheFox0/GenryBL/issues")
                         }

@@ -364,6 +364,7 @@ Item {
                 Repeater {
                     model: [["Discord", "https://discord.gg/2Yy45gJap3", "#5865f2"],
                             ["Telegram", "https://t.me/teamgenrythefox", "#229ed9"],
+                            ["Мастерская Steam", "https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763", "#1b2838"],
                             ["GitHub · отзывы и баги", "https://github.com/GenryTheFox0/GenryBL/issues", "#2d333b"]]
                     LinkChip { label: modelData[0]; url: modelData[1]; tint: modelData[2] }
                 }

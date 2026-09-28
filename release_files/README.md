@@ -38,7 +38,8 @@ GenryBL бесплатный. Нравится — закинь на донат,
 [Boosty](https://boosty.to/genrythefox). Если удобнее так — [Patreon](https://www.patreon.com/cw/GenryTheFox).
 
 Сообщество: [Discord](https://discord.gg/2Yy45gJap3) · [Telegram](https://t.me/teamgenrythefox) ·
-отзывы и баги — [GitHub Issues](https://github.com/GenryTheFox0/GenryBL/issues)
+отзывы и баги — [GitHub Issues](https://github.com/GenryTheFox0/GenryBL/issues) ·
+[Мастерская Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763)
 
 ## Ответственность
 

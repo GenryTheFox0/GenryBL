@@ -7,7 +7,8 @@
 <p align="center"><strong>От создателя Project 2099 и Project Iron 6 · From the creator of Project 2099 and Project Iron 6</strong></p>
 
 <p align="center">
-  <a href="https://github.com/GenryTheFox0/GenryBL/releases/latest/download/GenryBL_Setup.exe"><b>Скачать V1.0</b></a> ·
+  <a href="https://github.com/GenryTheFox0/GenryBL/releases/latest/download/GenryBL_Setup.exe"><b>Скачать</b></a> ·
+  <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763"><b>Мастерская Steam</b></a> ·
   <a href="#russian">Русский</a> ·
   <a href="#english">English</a> ·
   <a href="docs/README.md">Вики</a> ·
@@ -89,6 +90,10 @@ GenryBL — **для взрослых**, и я этого не прячу.
 2. Запусти. Windows может испугаться неподписанной программы — «Подробнее» → «Выполнить в любом случае».
 3. Подтверди 18+, выбери папку (админ не нужен). Игру установщик найдёт сам.
 4. «Новый мод» — и понеслась. Всё по шагам — в **[вики](docs/README.md)**.
+
+**Или прямо из игры:** подпишись на GenryBL в [Мастерской Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763),
+запусти БЛ → «Моды» → «GenryBL — конструктор модов» — лагерь покажет, что умеет конструктор, а в конце кнопка
+«Установить GenryBL сейчас».
 
 Нужны Windows 10/11 и «Бесконечное лето» из Steam (оно бесплатное). **Больше ничего качать не надо**: Qt,
 Visual C++, ffmpeg и 18+ патч уже внутри — заводится даже на голой Windows.
@@ -204,7 +209,8 @@ subscribed to — adult heroines only. **Ulyana has no 18+ and never will.**
 ### Install
 
 Download **[GenryBL_Setup.exe](https://github.com/GenryTheFox0/GenryBL/releases/latest/download/GenryBL_Setup.exe)**
-(or the portable zip), run it, confirm you're 18+, pick a folder — the game is found automatically.
+(or the portable zip), run it, confirm you're 18+, pick a folder — the game is found automatically. Or subscribe in the
+[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763) and install it from the game's Mods menu.
 Windows 10/11 and Everlasting Summer from Steam (free) are all you need.
 
 ### AI-assisted development, openly credited
