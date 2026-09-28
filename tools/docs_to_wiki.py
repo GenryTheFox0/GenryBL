@@ -24,6 +24,7 @@ PAGES = {                      # docs file -> wiki page name
     'cinema-check.md': 'Кино-режим-и-проверка',
     'publish.md': 'Выложить-мод',
     'faq.md': 'Вопросы-и-проблемы',
+    'facts.md': 'Интересные-факты',
     'developers.md': 'Для-разработчиков',
 }
 
