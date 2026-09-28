@@ -28,6 +28,7 @@ struct PhoneMessage {
 struct SceneState {
     QString timeOfDay = QStringLiteral("day");   // day / sunset / night / prologue
     QString spriteTime = QStringLiteral("day");  // persistent.sprite_time
+    bool timeExplicit = false;                   // the story said «время» (a picture of another time swaps)
     QString bg;                                   // "bg ext_road_day", "cg d1", "black", custom name
     QVector<SpriteShow> sprites;                  // draw order
     bool dream = false;

@@ -305,12 +305,15 @@ Item {
         }
     }
 
+    Component.onCompleted: Engine.checkUpdates(false)       // once a session (Updater.cpp), quietly
+
     // ---- support: a note pinned over the gate - donations, the community, reviews
     component LinkChip: Rectangle {
         id: chip
         property string label
         property string url
         property color tint
+        property var action: null                   // a function instead of a link («Обновить»)
         height: 40
         width: chipText.implicitWidth + 28
         radius: 20
@@ -324,7 +327,7 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: { Sfx.click(); Qt.openUrlExternally(chip.url) }
+            onClicked: { Sfx.click(); if (chip.action) chip.action(); else Qt.openUrlExternally(chip.url) }
         }
     }
     Item {
@@ -368,6 +371,42 @@ Item {
                             ["GitHub · отзывы и баги", "https://github.com/GenryTheFox0/GenryBL/issues", "#2d333b"]]
                     LinkChip { label: modelData[0]; url: modelData[1]; tint: modelData[2] }
                 }
+            }
+            // «Обновить»: the newest GenryBL from GitHub or the Steam Workshop, installed over this one (Updater.cpp)
+            Rectangle { width: parent.width; height: 1; color: "#c9b58a" }
+            Item {
+                width: parent.width; height: 40
+                readonly property var u: Engine.updateInfo
+                readonly property bool working: u.state === "checking" || u.state === "downloading" || u.state === "starting"
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Обновления"; color: "#5a3e1e"; font.family: Theme.ui; font.pixelSize: 19; font.bold: true
+                }
+                LinkChip {
+                    anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                    label: parent.u.state === "available" ? "Обновить до " + parent.u.version
+                         : parent.u.state === "checking" ? "Проверяю…"
+                         : parent.u.state === "downloading" ? "Качаю " + Math.round(parent.u.progress * 100) + "%"
+                         : parent.u.state === "starting" ? "Ставлю…" : "Проверить"
+                    tint: parent.u.state === "available" ? "#2f9e44" : "#7a6440"
+                    action: function() {
+                        if (parent.u.state === "available") Engine.startUpdate()
+                        else if (!parent.working) Engine.checkUpdates(true)
+                    }
+                }
+            }
+            Text {
+                visible: text !== ""
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: Engine.updateInfo.text || ""
+                color: Engine.updateInfo.state === "error" ? "#b3261e" : Theme.ink
+                font.family: Theme.ui; font.pixelSize: 17
+            }
+            Rectangle {
+                visible: Engine.updateInfo.state === "downloading"
+                width: parent.width; height: 8; radius: 4; color: "#e3d6b2"
+                Rectangle { width: parent.width * (Engine.updateInfo.progress || 0); height: parent.height; radius: 4; color: "#2f9e44" }
             }
         }
     }

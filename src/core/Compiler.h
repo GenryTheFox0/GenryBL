@@ -41,6 +41,11 @@ struct CompileState {
     bool modMenu = false;                     // V1: «менюмода» - the mod opens with its own menu, ": start" = <mod>__start
     QHash<QString, QStringList> meters;       // V1: «шкала» var (namespaced) -> {title, #color, min, max}
     QSet<QString> overlayImages;              // V1: "dv smile pioneer genry_ov_blush" (Overlays.h)
+    bool eyesClosed = false;                  // V1: the eyes are shut right now (text order within a scene)
+    bool autoOpen = false;                    // V1: «скачок» shut them - GenryBL opens them before the next line
+    QString timeOfDay;                        // V1: day / sunset / night the story set last («время» or a «фон»)
+    bool timeSynced = false;                  // V1: this scene has set the sprites' time already
+    bool timeExplicit = false;                // V1: that time came from «время», not from a picture
 };
 
 // `image <name> = "<path>"` for the mod's own pictures (paths relative to game/).

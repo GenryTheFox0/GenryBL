@@ -46,12 +46,29 @@ struct EsCharacter {
 struct EsMapZone {
     QString id, title;
     int x1, y1, x2, y2;
+    int cx, cy;                 // V1: where the heroine's face stands - beside the place's name, not on it
 };
 const QVector<EsMapZone>& esMapZones();
 QStringList esChibiIds();                                   // "sl", "dv", ... (ES store.map_chibi)
 // The Steam build ships no map_icon_nXX.png (a stock «set_chibi» shows a missing file), so V1
 // brings its own round faces: data/mod_assets/chibi/<file>.png -> <mod>/images/genry_chibi/
 QString esChibiFile(const QString& id);                     // "sl", "unknown" for "?", "" if not a chibi id
+QString esChibiId(const QString& word);                     // "sl" / "Славя" / "славя" -> "sl", "" if none
+
+// «карта [обход] площадь: сцена @sl, beach: сцена2 @Алиса, готово: дальше» - one grammar for the compiler,
+// the check and the preview. A place is the ES key or its Russian name; «обход» = ES day 2's walk-around list:
+// a visited place goes out, «готово» is where the mod goes once all are visited.
+struct MapEntry {
+    QString raw, zone, target, chibi;       // zone = ES key ("" if the place is unknown), chibi = ES id or ""
+};
+struct MapSpec {
+    bool tour = false;
+    QVector<MapEntry> places;
+    QString done;                           // «готово: сцена»
+};
+MapSpec parseMapSpec(const QString& rest);
+QString esMapZoneId(const QString& word);                   // "square" / "площадь" / "Площадь" -> "square"
+const EsMapZone* esMapZone(const QString& id);
 QString esChibiName(const QString& id);
 
 // The Workshop «hentai patch» (1118110148, the 18+ scenes cut from the Steam build): everything it brings

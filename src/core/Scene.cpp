@@ -382,6 +382,19 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             QString image = w.join(QLatin1Char(' '));
             const QString low = image.toLower();
             st.videoBg.clear();
+            if (cmd == QLatin1String("bg") || cmd == QLatin1String("showbg")) {
+                // as the compiler does it: the heroines take the picture's time, «время ночь» + a day picture = its night one
+                QString t = bgTimeOf(image);
+                if (!t.isEmpty() && st.timeExplicit && t != st.spriteTime) {
+                    const QString other = bgAtTime(image, st.spriteTime);
+                    if (!other.isEmpty()) {
+                        image = other;
+                        t = st.spriteTime;
+                    }
+                }
+                if (!t.isEmpty() && t != st.spriteTime) st.timeExplicit = false;
+                if (!t.isEmpty()) st.timeOfDay = st.spriteTime = t;
+            }
             if (cmd == QLatin1String("scene")) st.bg = rest;
             else if (cmd == QLatin1String("cg")) st.bg = QStringLiteral("cg ") + image;
             else st.bg = (low == QLatin1String("black") || low == QLatin1String("white")) ? low : QStringLiteral("bg ") + image;
@@ -594,6 +607,7 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
                 st.timeOfDay = st.spriteTime = QStringLiteral("sunset");
             else if (m == U("ночь") || m == QLatin1String("night")) st.timeOfDay = st.spriteTime = QStringLiteral("night");
             else if (m == U("пролог") || m == QLatin1String("prolog") || m == QLatin1String("prologue")) st.timeOfDay = QStringLiteral("prologue");
+            st.timeExplicit = true;
             continue;
         }
         if (cmd == QLatin1String("timeskip")) {
@@ -762,22 +776,11 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             continue;
         }
         if (cmd == QLatin1String("map")) {
-            // «карта square: square @sl, beach: beach» - the same entry grammar as the compiler
+            // «карта [обход] площадь: сцена @sl, beach: сцена2» - the compiler's grammar (parseMapSpec)
             st.map = true;
             st.mapZones.clear();
-            for (QString e : rest.split(QLatin1Char(','))) {
-                e = e.trimmed();
-                QString chibi;
-                const int at = int(e.lastIndexOf(QLatin1Char('@')));
-                if (at >= 0) {
-                    chibi = e.mid(at + 1).trimmed().section(QLatin1Char(' '), 0, 0);
-                    e = e.left(at).trimmed();
-                }
-                const int sep = e.contains(QLatin1Char(':')) ? int(e.indexOf(QLatin1Char(':'))) : int(e.indexOf(QLatin1String("->")));
-                if (sep < 0) continue;
-                const QString zone = e.left(sep).trimmed(), target = e.mid(sep + (e.at(sep) == QLatin1Char(':') ? 1 : 2)).trimmed();
-                st.mapZones << zone + QLatin1Char('|') + target + QLatin1Char('|') + chibi;
-            }
+            for (const MapEntry& p : parseMapSpec(rest).places)
+                if (!p.zone.isEmpty()) st.mapZones << p.zone + QLatin1Char('|') + p.target + QLatin1Char('|') + p.chibi;
             continue;
         }
         if (cmd == QLatin1String("windowhide")) { st.windowHidden = true; continue; }

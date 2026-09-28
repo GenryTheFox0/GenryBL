@@ -42,6 +42,12 @@ Item {
         target: Engine
         function onInstallProgress(done, total, file) { inst.progress = done / Math.max(1, total); inst.current = file }
         function onInstallFinished(ok, message) {
+            const a = Qt.application.arguments
+            if (inst.silent && a.indexOf("--relaunch") >= 0) {
+                // «Обновить» from inside GenryBL: straight back into the new program; a failure is shown, not swallowed
+                if (ok) { Engine.launchInstalled(inst.dir); Qt.exit(0); return }
+                inst.silent = false
+            }
             if (inst.silent) { console.warn("INSTALL " + (ok ? "OK " : "FAIL ") + message); Qt.exit(ok ? 0 : 2); return }
             if (ok) { inst.doneText = message; inst.step = 4 }
             else { inst.error = message; inst.step = inst.uninstalling ? 0 : 1 }

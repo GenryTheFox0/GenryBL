@@ -280,6 +280,27 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                     targets.push_back({ln, pyStrip(item.section(QStringLiteral("->"), 1))});
             continue;
         }
+        if (cmd == QLatin1String("map") && !ctx.opt.legacy) {
+            const MapSpec m = parseMapSpec(rest);
+            if (m.places.isEmpty()) add(ln, LintIssue::Error, U("На карте нет мест: карта площадь: сцена @sl, пляж: сцена2"));
+            for (const MapEntry& p : m.places) {
+                if (!p.target.isEmpty()) targets.push_back({ln, p.target});
+                else add(ln, LintIssue::Error, U("Место «%1» никуда не ведёт: «%1: сцена»").arg(p.raw));
+                if (p.zone.isEmpty()) {
+                    QStringList known;
+                    for (const EsMapZone& z : esMapZones()) known << z.title.toLower();
+                    add(ln, LintIssue::Error, U("На карте игры нет места «%1» — есть: %2").arg(p.raw, known.join(QStringLiteral(", "))));
+                }
+            }
+            if (!m.done.isEmpty()) targets.push_back({ln, m.done});
+            else if (m.tour) add(ln, LintIssue::Info, U("Обход без «готово: сцена» — когда все места пройдены, карта начнётся заново"));
+            for (const QString& e : rest.split(QLatin1Char(','))) {
+                if (!e.contains(QLatin1Char('@'))) continue;
+                const QString who = pyStrip(e.section(QLatin1Char('@'), 1)).section(QLatin1Char(' '), 0, 0);
+                if (esChibiId(who).isEmpty()) add(ln, LintIssue::Warning, U("Нет мордочки «%1» для карты — пиши sl, dv, un, mi, us, mt… или имя: @Славя").arg(who));
+            }
+            continue;
+        }
         if (cmd == QLatin1String("map")) {
             for (const QString& e : rest.split(QLatin1Char(','))) {
                 QString entry = e.section(QLatin1Char('@'), 0, 0);

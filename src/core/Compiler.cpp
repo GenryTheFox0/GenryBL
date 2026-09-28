@@ -579,10 +579,23 @@ SL compileShake(const QString& rest)
     return r;
 }
 
-SL compileTitlecard(const QString& rest, bool v1 = false)
+// V1, the eyes shut: closing them IS the transition. The words come over the closed lids themselves (ES's blink
+// lives on the overlay layer) - no fade to black, no black screen; the place changes under the lids unseen.
+SL overLidsText(const QString& tag, const QString& text, int size, const QString& hold)
+{
+    return {QStringLiteral("    window hide"),
+            QStringLiteral("    show expression Text(%1, size=%2, color=\"#f1ece0\", font=\"fonts/corbel.ttf\", text_align=0.5, "
+                           "outlines=[(2, \"#00000099\", 0, 0)]) as %3 onlayer overlay zorder 10:").arg(pyUQ(text)).arg(size).arg(tag),
+            QStringLiteral("        xcenter 0.5"), QStringLiteral("        ycenter 0.5"), QStringLiteral("        alpha 0.0"),
+            QStringLiteral("        linear 0.8 alpha 1.0"), QStringLiteral("        pause ") + hold, QStringLiteral("        linear 0.7 alpha 0.0"),
+            QStringLiteral("    $ renpy.pause(%1)").arg(0.8 + hold.toDouble() + 0.7), QStringLiteral("    hide %1 onlayer overlay").arg(tag)};
+}
+
+SL compileTitlecard(const QString& rest, bool v1 = false, bool eyesClosed = false)
 {
     QString text = pyStrip(rest);
     if (text.isEmpty()) text = U("Титр");
+    if (v1 && eyesClosed) return overLidsText(QStringLiteral("genry_title"), text, 66, QStringLiteral("2.2"));
     if (v1) {
         // V1: a real title card - black, the name alone in the middle in the menu's Corbel; no dialogue box.
         // A click skips it, like any ES pause.
@@ -598,7 +611,7 @@ SL compileTitlecard(const QString& rest, bool v1 = false)
             QStringLiteral("    window show"), QStringLiteral("    hide genry_black"), QStringLiteral("    with dissolve")};
 }
 
-SL compileCreditsRoll(const QString& rest)
+SL compileCreditsRoll(const QString& rest, bool eyesClosed = false)
 {
     const SL p = splitPipeItems(rest);
     QString text = stripWrappedQuotes(!p.isEmpty() ? p[0] : rest);
@@ -609,7 +622,8 @@ SL compileCreditsRoll(const QString& rest)
     const QString seconds = p.size() > 1 ? cleanNumber(p[1], QStringLiteral("18.0")) : QStringLiteral("18.0");
     const QString size = p.size() > 2 ? cleanNumber(p[2], QStringLiteral("34")) : QStringLiteral("34");
     const QString effect = p.size() > 3 && isEffect(p[3]) ? p[3] : QStringLiteral("dissolve2");
-    return {QStringLiteral("    window hide"), QStringLiteral("    scene black with ") + effect,
+    return {QStringLiteral("    window hide"),
+            eyesClosed ? QStringLiteral("    scene black\n    hide blink onlayer overlay") : QStringLiteral("    scene black with ") + effect,
             QStringLiteral("    show expression Text(%1, text_align=0.5, size=%2, color=\"#f5f5f5\") as genry_credits_roll:").arg(lit, size),
             QStringLiteral("        xalign 0.5"), QStringLiteral("        ypos 1.05"), QStringLiteral("        linear %1 ypos -1.20").arg(seconds),
             QStringLiteral("    $ renpy.pause(%1, hard=True)").arg(seconds), QStringLiteral("    hide genry_credits_roll"),
@@ -884,7 +898,7 @@ SL compileChapterPng(const QString& rest, const Ctx& c)
             QStringLiteral("    with dissolve"), QStringLiteral("    scene black"), QStringLiteral("    with dissolve")};
 }
 
-SL compileTimeskip(const QString& restIn)
+SL compileTimeskip(const QString& restIn, bool v1 = false, bool eyesClosed = false)
 {
     const QString rest = pyStrip(restIn);
     QString text;
@@ -892,6 +906,12 @@ SL compileTimeskip(const QString& restIn)
     if (rest.isEmpty()) text = U("Прошло немного времени…");
     else if (digit.match(rest).hasMatch()) text = U("Прошло ") + rest;
     else text = rest;
+    if (v1) {
+        // V1: the eyes ARE the transition - shut (unless already), the words over the lids, no darkness;
+        // compileLine opens them again before the next thing the player sees
+        SL r = eyesClosed ? SL{} : compileEyesClose(QStringLiteral("1.6"));
+        return r << overLidsText(QStringLiteral("genry_timeskip"), text, 62, QStringLiteral("1.9"));
+    }
     return {QStringLiteral("    window hide"), QStringLiteral("    scene black"), QStringLiteral("    with dissolve"),
             QStringLiteral("    show expression Text(%1, size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:").arg(pyUQ(text)),
             QStringLiteral("        xcenter 0.5"), QStringLiteral("        ycenter 0.5"), QStringLiteral("        alpha 0.0"),
@@ -2028,7 +2048,7 @@ static SL compileV1Feature(const QString& cmd, const QString& rest, const QStrin
         const QString title = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
         if (title.isEmpty()) return {U("    # новаяглава Название | картинка")};
         SL r{QStringLiteral("    $ persistent.%1 = True").arg(persistentKey(modId, QStringLiteral("ch_") + title, QStringLiteral("chapter"), c.opt))};
-        r << compileTitlecard(title, !c.opt.legacy);
+        r << compileTitlecard(title, !c.opt.legacy, st.eyesClosed);
         return r;
     }
     if (cmd == QLatin1String("chapters"))
@@ -2085,7 +2105,7 @@ static SL compileV1Feature(const QString& cmd, const QString& rest, const QStrin
     return {};
 }
 
-QStringList compileLine(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt)
+static QStringList compileLineCore(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt)
 {
     const Ctx c{opt, modId, &st.modVars, st.modMenu};
     const QString stripped = pyStrip(repairStoryLine(line, opt));
@@ -2094,6 +2114,8 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
     if (stripped.startsWith(QLatin1Char(':'))) {
         QString name = c.sl(pyStrip(stripped.mid(1)));
         name = name == QLatin1String("start") && !(st.modMenu && !opt.legacy) ? c.sl(modId, "genry_mod") : c.lab(pyStrip(stripped.mid(1)));
+        st.eyesClosed = st.autoOpen = false;
+        st.timeSynced = false;
         return {QString(), QStringLiteral("label %1:").arg(name)};
     }
     const QString low = stripped.toLower();
@@ -2124,9 +2146,28 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
         SL w = words(rest);
         QString effect;
         if (!w.isEmpty() && isEffect(w.last())) effect = w.takeLast();
-        const QString image = joinW(w);
+        QString image = joinW(w);
         const QString lowImg = pyStrip(image).toLower();
         const bool plain = lowImg == QLatin1String("black") || lowImg == QLatin1String("white");
+        SL timeLines;
+        if (!opt.legacy && cmd != QLatin1String("cg") && !plain) {
+            // V1: a night heroine on a day beach no more. The story said «ночь» and the picture is a day one -> the
+            // game's night version of the same place when there is one; otherwise the heroines follow the picture.
+            QString t = bgTimeOf(image);
+            if (!t.isEmpty() && st.timeExplicit && t != st.timeOfDay) {
+                const QString other = bgAtTime(image, st.timeOfDay);
+                if (!other.isEmpty()) {
+                    image = other;
+                    t = st.timeOfDay;
+                }
+            }
+            if (!t.isEmpty() && (t != st.timeOfDay || !st.timeSynced)) {
+                timeLines = compileTimeOfDay(t);        // a scene opened from the app mid-mod gets the right colours too
+                if (t != st.timeOfDay) st.timeExplicit = false;
+                st.timeOfDay = t;
+                st.timeSynced = true;
+            }
+        }
         QString out;
         if (cmd == QLatin1String("cg")) out = QStringLiteral("    scene cg ") + image;
         else if (cmd == QLatin1String("bg")) out = plain ? QStringLiteral("    scene ") + image : QStringLiteral("    scene bg ") + image;
@@ -2135,7 +2176,7 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
             st.activePrologueDream = false;
             st.activeSpriteTags.clear();
         }
-        return {withEffectLine(out, effect)};
+        return timeLines << withEffectLine(out, effect);
     }
     if (cmd == QLatin1String("scene")) {
         st.activePrologueDream = false;
@@ -2183,16 +2224,38 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
     if (cmd == QLatin1String("exitleft")) return compileExitShow(rest, true);
     if (cmd == QLatin1String("exitright")) return compileExitShow(rest, false);
     if (cmd == QLatin1String("pulse")) return compilePulse(rest);
-    if (cmd == QLatin1String("timeofday")) return compileTimeOfDay(rest);
-    if (cmd == QLatin1String("eyesclose")) return compileEyesClose(rest);
-    if (cmd == QLatin1String("eyesopen")) return compileEyesOpen(rest);
-    if (cmd == QLatin1String("eyesblink")) return compileEyesBlink(rest);
+    if (cmd == QLatin1String("timeofday")) {
+        const SL r = compileTimeOfDay(rest);
+        for (const QString& x : r) {
+            if (x.contains(QLatin1String("day_time()"))) st.timeOfDay = QStringLiteral("day");
+            else if (x.contains(QLatin1String("sunset_time()"))) st.timeOfDay = QStringLiteral("sunset");
+            else if (x.contains(QLatin1String("night_time()"))) st.timeOfDay = QStringLiteral("night");
+        }
+        st.timeSynced = st.timeExplicit = true;
+        return r;
+    }
+    if (cmd == QLatin1String("eyesclose")) {
+        st.eyesClosed = !opt.legacy;
+        return compileEyesClose(rest);
+    }
+    if (cmd == QLatin1String("eyesopen")) {
+        st.eyesClosed = st.autoOpen = false;
+        return compileEyesOpen(rest);
+    }
+    if (cmd == QLatin1String("eyesblink")) {
+        st.eyesClosed = st.autoOpen = false;
+        return compileEyesBlink(rest);
+    }
     if (cmd == QLatin1String("sleepyeyes")) return {QStringLiteral("    show blinking onlayer overlay")};
     if (cmd == QLatin1String("stopsleepyeyes")) return {QStringLiteral("    hide blinking onlayer overlay")};
     if (cmd == QLatin1String("ghostmove")) return compileGhostMove(rest);
     if (cmd == QLatin1String("flash")) return compileFlash(rest);
-    if (cmd == QLatin1String("titlecard")) return compileTitlecard(rest, !opt.legacy);
-    if (cmd == QLatin1String("creditsroll")) return compileCreditsRoll(rest);
+    if (cmd == QLatin1String("titlecard")) return compileTitlecard(rest, !opt.legacy, st.eyesClosed);
+    if (cmd == QLatin1String("creditsroll")) {
+        const bool shut = !opt.legacy && st.eyesClosed;
+        st.eyesClosed = st.autoOpen = false;
+        return compileCreditsRoll(rest, shut);
+    }
     if (cmd == QLatin1String("note")) return compileLargeText(QStringLiteral("note"), rest, opt.legacy);
     if (cmd == QLatin1String("monologue") || cmd == QLatin1String("diary") || cmd == QLatin1String("memorynote") || cmd == QLatin1String("bigtext"))
         return compileLargeText(cmd, rest, opt.legacy);
@@ -2337,12 +2400,53 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
     if (cmd == QLatin1String("timeskip")) {
         st.activePrologueDream = false;
         st.activeSpriteTags.clear();
-        return compileTimeskip(rest);
+        const SL r = compileTimeskip(rest, !opt.legacy, st.eyesClosed);
+        if (!opt.legacy) st.eyesClosed = st.autoOpen = true;
+        return r;
     }
     if (cmd == QLatin1String("achievement")) {
         const SL p = words(rest);
         if (p.isEmpty()) return {U("    # achievement command needs image path")};
         return compileAchievementPopup(relModPath(modId, p[0]), p.size() > 1 ? p[1] : QStringLiteral("3"), c);
+    }
+    if (cmd == QLatin1String("map") && !opt.legacy) {
+        // V1: our own camp map on the game's art (genry_camp_map). ES's map gets its zones in ES's own
+        // `label start` (init_map_zones), which a mod started from «Моды» never passes, other mods (7DL)
+        // hang on the same layer, and the Steam build has no chibi icons - the stock map came up dead.
+        const MapSpec m = parseMapSpec(rest);
+        SL items;
+        for (const MapEntry& p : m.places) {
+            const EsMapZone* z = esMapZone(p.zone);
+            if (!z) continue;                                               // the check names the wrong place
+            const QString file = esChibiFile(p.chibi);
+            const QString chibi = file.isEmpty() ? QStringLiteral("None")
+                                                 : pyQ(relModPath(modId, QStringLiteral("images/genry_chibi/") + file + QStringLiteral(".png")));
+            items << QStringLiteral("(%1, %2, %3, %4, %5, %6, %7, %8, %9, %10)")
+                         .arg(pyQ(z->id), pyQ(c.lab(p.target)), chibi, pyUQ(z->title))
+                         .arg(z->x1).arg(z->y1).arg(z->x2).arg(z->y2).arg(z->cx).arg(z->cy);
+        }
+        SL r{QStringLiteral("    window hide"), QStringLiteral("    $ _genry_map = [%1]").arg(items.join(QStringLiteral(", ")))};
+        if (m.tour) {
+            // ES day 2's walk-around list: a visited place goes out; all visited -> «готово» (or the list starts over)
+            QStringList ids;
+            for (const MapEntry& p : m.places) if (!p.zone.isEmpty()) ids << p.zone;
+            const QString seen = c.sys(QStringLiteral("map_seen"));
+            const QString key = pyQ(ids.join(QLatin1Char(',')));
+            r << QStringLiteral("    $ _genry_map = [genry_z for genry_z in _genry_map if genry_z[0] not in %1.get(%2, [])]").arg(seen, key);
+            r << QStringLiteral("    if not _genry_map:");
+            if (!m.done.isEmpty()) r << QStringLiteral("        jump ") + c.lab(m.done);
+            else r << QStringLiteral("        $ %1[%2] = []").arg(seen, key)
+                   << QStringLiteral("        $ _genry_map = [%1]").arg(items.join(QStringLiteral(", ")));
+            r << QStringLiteral("    scene expression genry_map_pic(\"bgpic\")") << QStringLiteral("    $ renpy.transition(dissolve)")
+              << QStringLiteral("    call screen genry_camp_map(_genry_map)")
+              << QStringLiteral("    $ %1.setdefault(%2, []).append(_return[0])").arg(seen, key);
+        } else {
+            // the map itself under the places: the way into a place dissolves from the map, not the scene before it
+            r << QStringLiteral("    scene expression genry_map_pic(\"bgpic\")") << QStringLiteral("    $ renpy.transition(dissolve)")
+              << QStringLiteral("    call screen genry_camp_map(_genry_map)");
+        }
+        r << QStringLiteral("    jump expression _return[1]");
+        return r;
     }
     if (cmd == QLatin1String("map")) {
         SL r{QStringLiteral("    $ disable_all_zones()")};
@@ -2719,6 +2823,44 @@ static SL hentaiPatchFallback(const SL& rpy, const QString& modId)
               "size=40, color=\"#e8e8e8\", text_align=0.5, xalign=0.5, yalign=0.5)))")};
 }
 
+// V1: under shut eyes nothing plays a transition (it would be dead time in the dark), and after «скачок» the eyes
+// open by themselves right before the first thing the player has to see or answer - a line, a choice, a popup, a
+// jump to another scene. The place, the heroines, the time of day, the music are set up under the lids first.
+bool quietUnderLids(const QString& cmd)
+{
+    static const QSet<QString> quiet{
+        QStringLiteral("bg"), QStringLiteral("showbg"), QStringLiteral("cg"), QStringLiteral("scene"), QStringLiteral("show"),
+        QStringLiteral("hide"), QStringLiteral("hideall"), QStringLiteral("timeofday"), QStringLiteral("music"), QStringLiteral("musicfile"),
+        QStringLiteral("musicqueue"), QStringLiteral("ambience"), QStringLiteral("stopmusic"), QStringLiteral("stopambience"),
+        QStringLiteral("stopsound"), QStringLiteral("stopallaudio"), QStringLiteral("stop"), QStringLiteral("setvar"), QStringLiteral("addvar"),
+        QStringLiteral("variable"), QStringLiteral("persistentvar"), QStringLiteral("weather"), QStringLiteral("colorfilter"),
+        QStringLiteral("character"), QStringLiteral("meter")};
+    return quiet.contains(cmd);
+}
+
+QStringList compileLine(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt)
+{
+    if (opt.legacy || !st.eyesClosed) return compileLineCore(line, modId, st, opt);
+    const QString stripped = pyStrip(line);
+    if (stripped.isEmpty() || stripped.startsWith(QLatin1Char('#')) || stripped.startsWith(QLatin1Char(':'))) return compileLineCore(line, modId, st, opt);
+    const QString cmd = normalizeCommand(firstWord(stripped));
+    const bool say = stripped.contains(QLatin1Char(':')) && !isCommandName(cmdOf(stripped));
+    if (!say && quietUnderLids(cmd)) {
+        QStringList r = compileLineCore(line, modId, st, opt);
+        static const QRegularExpression withRe(QStringLiteral("^(    (?:scene|show|hide) .+?) with [A-Za-z0-9_]+$"));
+        for (QString& x : r) {
+            const auto m = withRe.match(x);
+            if (m.hasMatch()) x = m.captured(1);
+        }
+        return r;
+    }
+    if (!st.autoOpen || cmd == QLatin1String("eyesopen") || cmd == QLatin1String("eyesblink") || cmd == QLatin1String("timeskip") ||
+        cmd == QLatin1String("titlecard") || cmd == QLatin1String("creditsroll"))
+        return compileLineCore(line, modId, st, opt);
+    st.eyesClosed = st.autoOpen = false;
+    return compileEyesOpen(QStringLiteral("1.6")) + compileLineCore(line, modId, st, opt);
+}
+
 QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const CompileOptions& opt, const QVector<CustomImage>& images, QString* error)
 {
     // V1 «пиши как сценарий»: headings, «Алиса (злая, слева): …», prose -> ordinary commands first
@@ -2981,6 +3123,10 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             return {};
         }
         if (cmd == QLatin1String("choice")) {
+            if (!opt.legacy && st.autoOpen) {           // the choice after «скачок»: the eyes open first
+                out << compileEyesOpen(QStringLiteral("1.6"));
+                st.eyesClosed = st.autoOpen = false;
+            }
             inChoice = true;
             choiceItems.clear();
             const QString style = pyStrip(stripped.mid(firstWord(stripped).size()));
@@ -3256,7 +3402,32 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         // the mode on (a jump from the app lands mid-mod); the builder's own hide/show keep it on.
         int i = 0;
         while (i < out.size() && !out[i].startsWith(QLatin1String("label "))) ++i;
+        // a title card right before a new background: straight from the card's black into the new place
+        // (old: the card faded back to the old scene and «фон … fade» went dark a second time)
+        for (int k = i; k + 1 < out.size(); ++k) {
+            if (out[k] != QLatin1String("    hide genry_black") || out[k + 1] != QLatin1String("    with Dissolve(0.8)")) continue;
+            int n = k + 2;
+            while (n < out.size() && out[n].startsWith(QLatin1String("    $ ")) && !out[n].contains(QLatin1String("pause"))) ++n;
+            if (n < out.size() && out[n].startsWith(QLatin1String("    scene "))) {
+                out.removeAt(k + 1);
+                out.removeAt(k);
+            }
+        }
         for (; i < out.size(); ++i) {
+            // closed eyes («закрытьглаза») and then a card on black («скачок», «титр»): the lids come off only once the
+            // black is really on screen. ES's lids live on the overlay layer, which a transition does not touch - taken
+            // off together with the fade, the old scene showed through for a second before going dark.
+            if (out[i] == QLatin1String("    scene black") || out[i].startsWith(QLatin1String("    scene black with ")) ||
+                out[i] == QLatin1String("    show genry_black")) {
+                if (!out[i].contains(QLatin1String(" with ")) && i + 1 < out.size() && out[i + 1].startsWith(QLatin1String("    with "))) ++i;
+                if (i + 1 < out.size() && out[i + 1] == QLatin1String("    hide blink onlayer overlay")) continue;
+                out.insert(++i, QStringLiteral("    hide blink onlayer overlay"));
+                continue;
+            }
+            if (out[i].startsWith(QLatin1String("    $ new_chapter("))) {
+                out.insert(i++, QStringLiteral("    hide blink onlayer overlay"));
+                continue;
+            }
             if (out[i] == QLatin1String("    window hide")) out[i] = QStringLiteral("    window auto hide");
             else if (out[i] == QLatin1String("    window show")) out[i] = QStringLiteral("    window auto");
             else if (out[i].startsWith(QLatin1String("label ")) && out[i].endsWith(QLatin1Char(':'))) out.insert(++i, QStringLiteral("    window auto"));
@@ -3270,6 +3441,8 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         auto block = [&](const char* rpy) { out << QString::fromUtf8(rpy).split(QLatin1Char('\n')); };
         const bool meters = all.contains(QLatin1String("genry_meter"));
         if (all.contains(QLatin1String("genry_choice_timed"))) block(kV1TimedChoice);
+        if (all.contains(QLatin1String("genry_camp_map"))) block(kV1Map);
+        if (all.contains(c.sys(QStringLiteral("map_seen")))) out << QString() << QStringLiteral("default %1 = {}").arg(c.sys(QStringLiteral("map_seen")));
         const bool memories = all.contains(QLatin1String("genry_remember(")) || all.contains(QLatin1String("genry_memories"));
         if (meters || memories) block(kV1Popups);
         if (memories) out << QString() << QStringLiteral("default %1 = []").arg(c.sys(QStringLiteral("memories")));

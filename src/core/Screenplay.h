@@ -22,6 +22,10 @@ struct ScreenplayNote {
 };
 
 // srcOf[i] = the input line out[i] came from
+// «фон» and the time of day: "ext_beach_day" -> "day" ("" = a timeless place); the same place at another time
+// ("ext_beach_night") or "" when the game has no such picture
+QString bgTimeOf(const QString& bg);
+QString bgAtTime(const QString& bg, const QString& time);
 QStringList expandScreenplay(const QStringList& lines, QVector<int>* srcOf = nullptr, QVector<ScreenplayNote>* notes = nullptr);
 // the commands a single line becomes, with the stage set up by the lines before it ({} = not a play line)
 QStringList expandScreenplayLine(const QStringList& lines, int index, QVector<ScreenplayNote>* notes = nullptr);

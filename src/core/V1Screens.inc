@@ -517,3 +517,49 @@ init 2 python:
         return HBox(*tiles, spacing=5), (None if done else 0.05)
 )rpy";
 
+
+static const char* const kV1Map = R"rpy(
+# GenryBL V1: карта лагеря на рисунке самой игры. Своя: родная берёт места из label start игры (мод из «Моды»
+# его не проходит), а другие моды (7ДЛ) вешаются на тот же слой - там карта не нажималась. Открытые места
+# жёлтые, под мышкой - подсвечены и подписаны, мордочка героини покачивается рядом с подписью места.
+init python:
+    def genry_map_pic(kind):
+        genry_p = getattr(store, "map_pics", None)
+        if isinstance(genry_p, dict) and genry_p.get(kind) and renpy.loadable(genry_p[kind]):
+            return genry_p[kind]
+        return {"bgpic": "images/maps/map.jpg", "available": "images/maps/map_available.jpg",
+                "selected": "images/maps/map_selected.jpg"}[kind]
+
+transform genry_map_chibi(x, y):
+    xcenter x
+    ycenter y
+    yoffset 0
+    ease 0.9 yoffset -7
+    ease 0.9 yoffset 0
+    repeat
+
+screen genry_camp_map(places, title=u"Куда пойти?"):
+    modal True
+    zorder 40
+    default genry_hov = None
+    add genry_map_pic("bgpic")
+    for genry_z in places:
+        imagebutton:
+            idle im.Crop(genry_map_pic("available"), genry_z[4], genry_z[5], genry_z[6] - genry_z[4], genry_z[7] - genry_z[5])
+            hover im.Crop(genry_map_pic("selected"), genry_z[4], genry_z[5], genry_z[6] - genry_z[4], genry_z[7] - genry_z[5])
+            xpos genry_z[4]
+            ypos genry_z[5]
+            activate_sound "sound/sfx/click_1.ogg"
+            hovered SetScreenVariable("genry_hov", genry_z[3])
+            unhovered SetScreenVariable("genry_hov", None)
+            action Return((genry_z[0], genry_z[1]))
+    for genry_z in places:
+        if genry_z[2]:
+            add genry_z[2] at genry_map_chibi(genry_z[8], genry_z[9])
+    frame:
+        xalign 0.5
+        ypos 34
+        background Solid("#000000b4")
+        padding (34, 12)
+        text (genry_hov or title) size 36 color ("#ffd27d" if genry_hov else "#f1ece0") font "fonts/corbel.ttf"
+)rpy";

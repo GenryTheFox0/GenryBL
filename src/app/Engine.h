@@ -24,6 +24,7 @@
 #include <functional>
 
 class QJSEngine;
+class QNetworkAccessManager;
 class QQmlEngine;
 
 class Engine : public QObject {
@@ -49,6 +50,8 @@ class Engine : public QObject {
     Q_PROPERTY(QVariantList ambience READ ambience NOTIFY assetsChanged)
     Q_PROPERTY(QString appRoot READ appRoot CONSTANT)
     Q_PROPERTY(QString esRoot READ esRoot NOTIFY readyChanged)
+    // «Обновить»: {state: ""|checking|latest|available|downloading|starting|error|dev, text, version, source: github|steam, progress 0..1}
+    Q_PROPERTY(QVariantMap updateInfo READ updateInfo NOTIFY updateChanged)
     Q_PROPERTY(QString version READ version CONSTANT)
     Q_PROPERTY(int libraryState READ libraryState NOTIFY libraryChanged)   // 0 not scanned, 1 scanning, 2 ready
     Q_PROPERTY(int wardrobeState READ wardrobeState NOTIFY wardrobeChanged) // 0 / 1 loading / 2 ready
@@ -98,6 +101,11 @@ public:
     Q_INVOKABLE void install(const QString& folder, const QString& esRoot, bool desktop, bool startMenu);   // -> installProgress / installFinished
     Q_INVOKABLE bool launchInstalled(const QString& folder);
     Q_INVOKABLE void uninstall(bool removeProjects);                      // -> installFinished
+    // Updater.cpp: the newest GenryBL on GitHub (releases/latest) or in the Steam Workshop item (Steam keeps it fresh);
+    // startUpdate runs that installer over this very folder (mods and settings stay) and restarts the program
+    QVariantMap updateInfo() const { return m_update; }
+    Q_INVOKABLE void checkUpdates(bool manual);
+    Q_INVOKABLE void startUpdate();
     QString startupError() const { return m_startupError; }
     bool busy() const { return m_busy; }
     QString busyText() const { return m_busyText; }
@@ -115,7 +123,7 @@ public:
     QVariantList ambience() const;
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
-    QString version() const { return QStringLiteral("V1.0.1"); }
+    QString version() const { return QStringLiteral("V1.0.2"); }
 
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;
@@ -233,6 +241,7 @@ signals:
     void buildFinished(bool ok, const QString& message);
     void engineCheckFinished(bool clean, const QStringList& lines);
     void audioImported(const QStringList& rels, bool ok);
+    void updateChanged();
 
 private:
     explicit Engine(QObject* parent = nullptr);
@@ -251,6 +260,12 @@ private:
 
     static Engine* s_instance;
     QString m_root;
+    QVariantMap m_update;
+    QNetworkAccessManager* m_net = nullptr;
+    QString m_updUrl, m_updSums, m_updLocal;            // GitHub setup + SHA256SUMS.txt / the Workshop's setup
+    qint64 m_updSize = 0;
+    void setUpdate(const QString& state, const QString& text, double progress = 0);
+    void runUpdater(const QString& setup);
     bool m_ready = false;
     QString m_startupError;
     bool m_busy = false;

@@ -4,7 +4,7 @@ project(GenryBL VERSION 1.0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia Concurrent)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia Concurrent Network)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # GB_RELEASE=ON: the build for people (GitHub): the same program, only its own lists go to work/ and no edition badge;
@@ -103,9 +103,10 @@ qt_add_qml_module(GenryBL
         src/app/Images.h src/app/Images.cpp
         src/app/Highlighter.h src/app/Highlighter.cpp
         src/app/Installer.cpp
+        src/app/Updater.cpp
 )
 target_include_directories(GenryBL PRIVATE src/app)
-target_link_libraries(GenryBL PRIVATE gb_core Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Concurrent)
+target_link_libraries(GenryBL PRIVATE gb_core Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Concurrent Qt6::Network)
 if(WIN32)
     target_link_libraries(GenryBL PRIVATE ole32 shell32 uuid)
 endif()

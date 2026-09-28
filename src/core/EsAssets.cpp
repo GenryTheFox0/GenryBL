@@ -1,9 +1,12 @@
 #include "EsAssets.h"
 
 #include <QFile>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
+#include <QSet>
 #include <algorithm>
 
 namespace gb {
@@ -208,19 +211,19 @@ QStringList EsAssets::cgs() const
 const QVector<EsMapZone>& esMapZones()
 {
     static const QVector<EsMapZone> z{
-        {QStringLiteral("me_mt_house"), QStringLiteral("Мой домик"), 825, 47, 1005, 230},
-        {QStringLiteral("estrade"), QStringLiteral("Эстрада"), 1039, 47, 1288, 230},
-        {QStringLiteral("music_club"), QStringLiteral("Музклуб"), 541, 231, 711, 356},
-        {QStringLiteral("square"), QStringLiteral("Площадь"), 825, 357, 1005, 665},
-        {QStringLiteral("dining_hall"), QStringLiteral("Столовая"), 1006, 457, 1159, 665},
-        {QStringLiteral("sport_area"), QStringLiteral("Спорткомплекс"), 1160, 457, 1578, 665},
-        {QStringLiteral("beach"), QStringLiteral("Пляж"), 1160, 666, 1578, 871},
-        {QStringLiteral("boat_station"), QStringLiteral("Лодочный причал"), 825, 666, 1005, 871},
-        {QStringLiteral("clubs"), QStringLiteral("Клубы"), 418, 357, 711, 665},
-        {QStringLiteral("library"), QStringLiteral("Библиотека"), 1160, 231, 1288, 456},
-        {QStringLiteral("medic_house"), QStringLiteral("Медпункт"), 1039, 231, 1159, 456},
-        {QStringLiteral("camp_entrance"), QStringLiteral("Ворота в лагерь"), 278, 357, 417, 665},
-        {QStringLiteral("forest"), QStringLiteral("Лес"), 541, 47, 711, 230}};
+        {QStringLiteral("me_mt_house"), QStringLiteral("Мой домик"), 825, 47, 1005, 230, 910, 100},
+        {QStringLiteral("estrade"), QStringLiteral("Эстрада"), 1039, 47, 1288, 230, 1205, 120},
+        {QStringLiteral("music_club"), QStringLiteral("Музклуб"), 541, 231, 711, 356, 590, 295},
+        {QStringLiteral("square"), QStringLiteral("Площадь"), 825, 357, 1005, 665, 915, 605},
+        {QStringLiteral("dining_hall"), QStringLiteral("Столовая"), 1006, 457, 1159, 665, 1080, 612},
+        {QStringLiteral("sport_area"), QStringLiteral("Спорткомплекс"), 1160, 457, 1578, 665, 1262, 628},
+        {QStringLiteral("beach"), QStringLiteral("Пляж"), 1160, 666, 1578, 871, 1265, 740},
+        {QStringLiteral("boat_station"), QStringLiteral("Лодочный причал"), 825, 666, 1005, 871, 975, 762},
+        {QStringLiteral("clubs"), QStringLiteral("Клубы"), 418, 357, 711, 665, 470, 410},
+        {QStringLiteral("library"), QStringLiteral("Библиотека"), 1160, 231, 1288, 456, 1230, 405},
+        {QStringLiteral("medic_house"), QStringLiteral("Медпункт"), 1039, 231, 1159, 456, 1098, 300},
+        {QStringLiteral("camp_entrance"), QStringLiteral("Ворота в лагерь"), 278, 357, 417, 665, 350, 600},
+        {QStringLiteral("forest"), QStringLiteral("Лес"), 541, 47, 711, 230, 680, 185}};
     return z;
 }
 
@@ -243,6 +246,89 @@ QString esChibiFile(const QString& id)
     for (const Chibi& c : kChibi)
         if (id == QLatin1String(c.id)) return id == QLatin1String("?") ? QStringLiteral("unknown") : id;
     return {};
+}
+
+QString esChibiId(const QString& word)
+{
+    const QString w = word.trimmed();
+    if (!esChibiFile(w).isEmpty()) return w;
+    const QString low = w.toLower();
+    for (const Chibi& c : kChibi) {
+        const QString name = QString::fromUtf8(c.name).toLower();
+        if (low == name || low == name.section(QLatin1Char(' '), 0, 0)) return QString::fromLatin1(c.id);
+    }
+    if (low == QStringLiteral("алиса")) return QStringLiteral("dv");
+    return {};
+}
+
+QString esMapZoneId(const QString& word)
+{
+    QString low = word.trimmed().toLower();
+    low.replace(QChar(0x0451), QChar(0x0435));      // ё -> е
+    for (const EsMapZone& z : esMapZones()) {
+        QString title = z.title.toLower();
+        title.replace(QChar(0x0451), QChar(0x0435));
+        if (low == z.id || low == title) return z.id;
+    }
+    static const QHash<QString, QString> alias{
+        {QStringLiteral("домик"), QStringLiteral("me_mt_house")}, {QStringLiteral("домик вожатой"), QStringLiteral("me_mt_house")},
+        {QStringLiteral("сцена"), QStringLiteral("estrade")}, {QStringLiteral("музкружок"), QStringLiteral("music_club")},
+        {QStringLiteral("музыкальный клуб"), QStringLiteral("music_club")}, {QStringLiteral("спортплощадка"), QStringLiteral("sport_area")},
+        {QStringLiteral("стадион"), QStringLiteral("sport_area")}, {QStringLiteral("лодочная станция"), QStringLiteral("boat_station")},
+        {QStringLiteral("причал"), QStringLiteral("boat_station")}, {QStringLiteral("лодки"), QStringLiteral("boat_station")},
+        {QStringLiteral("кружки"), QStringLiteral("clubs")}, {QStringLiteral("ворота"), QStringLiteral("camp_entrance")},
+        {QStringLiteral("вход"), QStringLiteral("camp_entrance")}, {QStringLiteral("остановка"), QStringLiteral("camp_entrance")}};
+    return alias.value(low);
+}
+
+const EsMapZone* esMapZone(const QString& id)
+{
+    for (const EsMapZone& z : esMapZones())
+        if (z.id == id) return &z;
+    return nullptr;
+}
+
+MapSpec parseMapSpec(const QString& restIn)
+{
+    MapSpec m;
+    QString rest = restIn.trimmed();
+    static const QRegularExpression tour(QStringLiteral("^(обходной\\s+лист|обходнойлист|обходной|обход|tour)(\\s+|$)"),
+                                         QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption);
+    const auto t = tour.match(rest);
+    if (t.hasMatch()) {
+        m.tour = true;
+        rest = rest.mid(t.capturedLength()).trimmed();
+    }
+    static const QSet<QString> doneWords{QStringLiteral("готово"), QStringLiteral("потом"), QStringLiteral("дальше"), QStringLiteral("всё"),
+                                         QStringLiteral("все"), QStringLiteral("done"), QStringLiteral("after")};
+    for (QString e : rest.split(QLatin1Char(','))) {
+        e = e.trimmed();
+        if (e.isEmpty()) continue;
+        QString chibi;
+        bool hasChibi = false;
+        if (e.contains(QLatin1Char('@'))) {
+            const int at = int(e.lastIndexOf(QLatin1Char('@')));
+            chibi = e.mid(at + 1).trimmed().section(QLatin1Char(' '), 0, 0);
+            e = e.left(at).trimmed();
+            hasChibi = true;
+        } else if (e.contains(QLatin1String(" chibi "))) {
+            const int at = int(e.lastIndexOf(QLatin1String(" chibi ")));
+            chibi = e.mid(at + 7).trimmed().section(QLatin1Char(' '), 0, 0);
+            e = e.left(at).trimmed();
+            hasChibi = true;
+        }
+        const int colon = int(e.indexOf(QLatin1Char(':'))), arrow = int(e.indexOf(QLatin1String("->")));
+        if (colon < 0 && arrow < 0) continue;
+        const bool byColon = colon >= 0 && (arrow < 0 || colon < arrow);
+        const int sep = byColon ? colon : arrow;
+        const QString raw = e.left(sep).trimmed(), target = e.mid(sep + (byColon ? 1 : 2)).trimmed();
+        if (doneWords.contains(raw.toLower())) {
+            m.done = target;
+            continue;
+        }
+        m.places.push_back({raw, esMapZoneId(raw), target, hasChibi ? esChibiId(chibi) : QString()});
+    }
+    return m;
 }
 
 QString esChibiName(const QString& id)

@@ -924,6 +924,26 @@ QStringList splitSentences(const QString& text, int maxLen = 260)
 
 } // namespace
 
+QString bgTimeOf(const QString& bg)
+{
+    const QString b = bg.trimmed().toLower();
+    if (b.endsWith(QLatin1String("_night_without_light")) || b.endsWith(QLatin1String("_night2")) || b.endsWith(QLatin1String("_night")))
+        return QStringLiteral("night");
+    if (b.endsWith(QLatin1String("_sunset"))) return QStringLiteral("sunset");
+    if (b.endsWith(QLatin1String("_day"))) return QStringLiteral("day");
+    return {};
+}
+
+QString bgAtTime(const QString& bg, const QString& time)
+{
+    static const QRegularExpression suffix(QStringLiteral("_(day|sunset|night|night2|night_without_light)$"));
+    QString base = bg.trimmed();
+    base.remove(suffix);
+    bool fallback = false;
+    const QString r = bgFor(base, time, &fallback);
+    return fallback ? QString() : r;
+}
+
 QStringList expandScreenplay(const QStringList& lines, QVector<int>* srcOf, QVector<ScreenplayNote>* notes)
 {
     Expander ex;

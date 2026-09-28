@@ -1041,9 +1041,18 @@ QImage Renderer::render(const SceneState& s, bool hud) const
                                                                                  r.width() * open.width() / W, r.height() * open.height() / H));
                 const QString cf = esChibiFile(f.value(2));
                 const QImage chibi = cf.isEmpty() ? QImage() : QImage(m_dataDir + QStringLiteral("/mod_assets/chibi/") + cf + QStringLiteral(".png"));
-                if (!chibi.isNull()) p.drawImage(QPointF(r.x(), r.y()), chibi);
+                // V1 (genry_camp_map): the face beside the place's name
+                if (!chibi.isNull()) p.drawImage(QPointF(mz.cx - chibi.width() / 2.0, mz.cy - chibi.height() / 2.0), chibi);
             }
         }
+        // the caption over the map, as genry_camp_map draws it
+        QFont cf(m_family);
+        cf.setPixelSize(36);
+        const QString cap = QStringLiteral("Куда пойти?");
+        const qreal tw = QFontMetricsF(cf).horizontalAdvance(cap);
+        const QRectF cr(W / 2.0 - tw / 2 - 34, 34, tw + 68, QFontMetricsF(cf).height() + 24);
+        p.fillRect(cr, QColor(0, 0, 0, 180));
+        outlineText(p, QPointF(cr.left() + 34, cr.top() + 12 + QFontMetricsF(cf).ascent()), cap, cf, QColor(0xf1, 0xec, 0xe0), Qt::black, 1);
     }
     if (!s.notifyText.isEmpty()) {
         QFont tf(m_family);

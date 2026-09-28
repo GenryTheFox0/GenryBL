@@ -293,6 +293,39 @@ static void testFixes()
                   body.contains(QStringLiteral("    show dv grin pioneer at left, genry_sprite_time_tint\n")),
               "показать: a heroine dissolves in, a new face melts (dspr), «none» = instant");
     }
+    {
+        // «скачок» = the eyes are the transition: shut, the words over the lids, the place changes unseen,
+        // they open before the first line; no fade to black anywhere (old: dissolve to black, text, dissolve)
+        const QString rs = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_square_day\nСлавя: а\nскачок Прошла пара часов\n"
+                                                         "время ночь\nфон ext_square_night fade\nпоказать sl smile pioneer center\nСлавя: б\n"), es);
+        const QString body = rs.mid(rs.indexOf(QStringLiteral("label genry_t:")));
+        const int shut = int(body.indexOf(QStringLiteral("    show blink onlayer overlay")));
+        const int words = int(body.indexOf(QString::fromUtf8("Text(u\"Прошла пара часов\"")));
+        const int place = int(body.indexOf(QStringLiteral("    scene bg ext_square_night\n")));
+        const int open = int(body.indexOf(QStringLiteral("    show unblink onlayer overlay")));
+        const int line = int(body.indexOf(QString::fromUtf8("sl \"б\"")));
+        check(shut > 0 && words > shut && place > words && open > place && line > open &&
+                  body.contains(QStringLiteral("as genry_timeskip onlayer overlay zorder 10:")) &&
+                  body.contains(QStringLiteral("    show sl smile pioneer at center, genry_sprite_time_tint\n")) &&
+                  !body.contains(QStringLiteral("scene black")),
+              "скачок: eyes shut -> «Прошла пара часов» over the lids -> new place under them -> eyes open; no darkness");
+    }
+    {
+        // the heroines take the picture's time (old: a night Alisa on the day beach after a night scene elsewhere);
+        // «время ночь» + a day picture -> the game's night version of the place; a night picture without «время» stays
+        const QString rt = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_beach_day\nАлиса: а\nпереход two\n"
+                                                         ": two\nвремя ночь\nфон ext_beach_day\nАлиса: б\nфон ext_square_day\nтекст в\n"
+                                                         "фон ext_square_night\nтекст г\n"), es);
+        const QString one = rt.mid(rt.indexOf(QStringLiteral("label genry_t:")));
+        const QString two = rt.mid(rt.indexOf(QStringLiteral("label genry_t__two:")));
+        check(one.contains(QStringLiteral("    $ persistent.sprite_time = \"day\"\n    $ day_time()\n    scene bg ext_beach_day\n")) &&
+                  two.contains(QStringLiteral("    scene bg ext_beach_night\n")) && !two.contains(QStringLiteral("scene bg ext_beach_day")) &&
+                  two.contains(QStringLiteral("    scene bg ext_square_night\n")) && !two.contains(QStringLiteral("scene bg ext_square_day")),
+              "фон sets the heroines' time; «время ночь» turns a day picture into its night version");
+        const QString rn = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_square_day\nтекст а\nфон ext_square_night\nтекст б\n"), es);
+        check(rn.contains(QStringLiteral("    scene bg ext_square_night\n")) && rn.contains(QStringLiteral("    $ night_time()\n    scene bg ext_square_night")),
+              "a night picture without «время» stays night and turns the heroines night");
+    }
     // every V1 feature at once: meters, timed choice, «запомнит», inventory, gallery, achievements, the mod's menu
     QFile ft(QStringLiteral(GB_SOURCE_DIR "/work/featuretest/story.txt"));
     if (ft.open(QIODevice::ReadOnly)) {
@@ -542,9 +575,28 @@ static void testForms()
           "V1 Телефон 3.0: push banner, one-time photo, replies inside the phone, feed comments, home screen, generated pictures + avatars");
     CompileState mst;
     const QString mp = compileLine(QString::fromUtf8("карта square: square @sl, beach: beach"), QStringLiteral("genry_m"), mst, v1).join(QLatin1Char('\n'));
-    check(mp.contains(QStringLiteral("    $ map.chibi[\"sl\"] = \"mods/genry_m/images/genry_chibi/sl.png\"\n    $ set_chibi(\"square\", \"sl\")")) &&
-              mp.contains(QStringLiteral("$ set_zone(\"beach\", \"genry_m__beach\")")),
-          "V1 map chibi: the mod's own face (the Steam build has no map_icon_nXX.png)");
+    check(mp.contains(QStringLiteral("(\"square\", \"genry_m__square\", \"mods/genry_m/images/genry_chibi/sl.png\", u\"")) &&
+              mp.contains(QStringLiteral("(\"beach\", \"genry_m__beach\", None, u\"")) &&
+              mp.contains(QStringLiteral("    call screen genry_camp_map(_genry_map)\n    jump expression _return[1]")) &&
+              !mp.contains(QStringLiteral("set_zone")),
+          "V1 map: our own map screen with the mod's own faces (old: ES's map - dead from «Моды», no icons in the Steam build)");
+    {
+        // «обход» = ES day 2's walk-around list; Russian place names and heroine names
+        CompileState tst;
+        const QString tp = compileLine(QString::fromUtf8("карта обход площадь: a @Славя, Пляж: b @dv, готово: c"), QStringLiteral("genry_m"), tst, v1)
+                               .join(QLatin1Char('\n'));
+        check(tp.contains(QStringLiteral("(\"square\", \"genry_m__a\", \"mods/genry_m/images/genry_chibi/sl.png\"")) &&
+                  tp.contains(QStringLiteral("(\"beach\", \"genry_m__b\", \"mods/genry_m/images/genry_chibi/dv.png\"")) &&
+                  tp.contains(QStringLiteral("genry_m__map_seen.get(\"square,beach\", [])")) &&
+                  tp.contains(QStringLiteral("    if not _genry_map:\n        jump genry_m__c")) &&
+                  tp.contains(QStringLiteral("genry_m__map_seen.setdefault(\"square,beach\", []).append(_return[0])")),
+              "карта обход: visited places go out, «готово» when all are visited; «площадь», «@Славя» understood");
+        const QString full = compileText(QString::fromUtf8("@mod_id genry_m\n: start\nкарта обход площадь: a, пляж: b, готово: c\n: a\nтекст а\nпереход start\n"
+                                                           ": b\nтекст б\nпереход start\n: c\nтекст в\n"), v1);
+        check(full.contains(QStringLiteral("screen genry_camp_map(places")) && full.contains(QStringLiteral("default genry_m__map_seen = {}")) &&
+                  orphanIndent(full).isEmpty(),
+              "the map screen and the visited list ride only in mods that use them");
+    }
     CompileState vst;
     const QString vid = compileLine(QString::fromUtf8("видео es:video/opening.ogv"), QStringLiteral("m"), vst, v1).join(QLatin1Char('\n'));
     check(vid.contains(QStringLiteral("movie_cutscene(\"video/opening.ogv\")")), "«видео es:video/…» plays the game's own video " + vid);

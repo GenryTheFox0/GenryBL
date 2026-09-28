@@ -181,8 +181,15 @@ void Engine::install(const QString& folder, const QString& esRootIn, bool deskto
         // an update: the running old version holds its exe
         const QString oldExe = dir + QStringLiteral("/app/GenryBL.exe");
         if (QFileInfo::exists(oldExe)) {
-            QFile probe(oldExe);
-            if (!probe.open(QIODevice::ReadWrite)) return U("GenryBL сейчас открыт — закрой его и нажми «Установить» ещё раз");
+            // «Обновить» from inside GenryBL (--update): the old program is closing right now - give it a minute
+            const int tries = QCoreApplication::arguments().contains(QStringLiteral("--update")) ? 120 : 1;
+            bool free = false;
+            for (int t = 0; t < tries && !free; ++t) {
+                QFile probe(oldExe);
+                free = probe.open(QIODevice::ReadWrite);
+                if (!free && t + 1 < tries) QThread::msleep(500);
+            }
+            if (!free) return U("GenryBL сейчас открыт — закрой его и нажми «Установить» ещё раз");
         }
         qint64 done = 0;
         int n = 0;
