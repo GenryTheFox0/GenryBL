@@ -368,6 +368,34 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             add(ln, LintIssue::Warning, U("Фильтр «%1» неизвестен: сепия, чб, ночь, тепло, холод, сон, выцвет, хоррор, нет").arg(w[0]));
     }
     if (choiceOpen) add(choiceOpen, LintIssue::Warning, U("Выбор не закрыт «конецвыбора» — закрою сам в конце"));
+    // a scene runs to its end and the mod ends there (V1 closes every scene): the next scene in the text is not
+    // «the next one» - it needs a «переход». Said at the scene's last line, with the fix.
+    if (!ctx.opt.legacy) {
+        const QStringList& all = rawLines;
+        struct Head { int line; QString name; };
+        QVector<Head> heads;
+        for (int i = 0; i < all.size(); ++i) {
+            const QString s = pyStrip(all[i]);
+            if (s.startsWith(QLatin1Char(':'))) heads.push_back({i, pyStrip(s.mid(1))});
+        }
+        static const QSet<QString> ends{QStringLiteral("jump"), QStringLiteral("return"), QStringLiteral("endgame"), QStringLiteral("endchoice"),
+                                        QStringLiteral("bestmeter"), QStringLiteral("map"), QStringLiteral("screenmenu")};
+        for (int k = 0; k + 1 < heads.size(); ++k) {
+            int last = -1;
+            for (int i = heads[k + 1].line - 1; i > heads[k].line; --i) {
+                const QString s = pyStrip(all[i]);
+                if (!s.isEmpty() && !s.startsWith(QLatin1Char('#'))) { last = i; break; }
+            }
+            if (last < 0) continue;                                       // an empty scene: said elsewhere
+            const QString s = pyStrip(all[last]);
+            const QString word = normalizeCommand(s.section(QLatin1Char(' '), 0, 0));
+            if (ends.contains(word) || s.startsWith(QLatin1Char('-')) || s.toLower().startsWith(U("конецменюмода"))) continue;
+            if (word == QLatin1String("renpy") && (s.contains(QLatin1String("jump ")) || s.endsWith(QLatin1String("return")))) continue;
+            add(last + 1, LintIssue::Warning,
+                U("Сцена «%1» кончается без перехода — в игре мод тут и закончится. Нужна следующая «%2»? Допиши «переход %2»")
+                    .arg(heads[k].name, heads[k + 1].name));
+        }
+    }
     for (const Ref& t : targets) {
         QString l = sl(t.name);
         if (l == QLatin1String("start")) l = meta.modId;
