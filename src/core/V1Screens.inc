@@ -563,3 +563,9 @@ screen genry_camp_map(places, title=u"Куда пойти?"):
         padding (34, 12)
         text (genry_hov or title) size 36 color ("#ffd27d" if genry_hov else "#f1ece0") font "fonts/corbel.ttf"
 )rpy";
+
+static const char* const kV1Lids = R"rpy(
+# GenryBL V1: закрытые веки без анимации - «фон» под закрытыми глазами стирает blink вместе со сценой (scene),
+# веки возвращаются сразу, до первого кадра; ES blink в конце анимации стоит ровно так
+image genry_lids = Fixed("anim blink_up", "anim blink_down")
+)rpy";

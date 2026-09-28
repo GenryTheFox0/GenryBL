@@ -299,10 +299,10 @@ static void testFixes()
         const QString rs = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_square_day\nСлавя: а\nскачок Прошла пара часов\n"
                                                          "время ночь\nфон ext_square_night fade\nпоказать sl smile pioneer center\nСлавя: б\n"), es);
         const QString body = rs.mid(rs.indexOf(QStringLiteral("label genry_t:")));
-        const int shut = int(body.indexOf(QStringLiteral("    show blink onlayer overlay")));
+        const int shut = int(body.indexOf(QStringLiteral("    show blink zorder 90")));
         const int words = int(body.indexOf(QString::fromUtf8("Text(u\"Прошла пара часов\"")));
         const int place = int(body.indexOf(QStringLiteral("    scene bg ext_square_night\n")));
-        const int open = int(body.indexOf(QStringLiteral("    show unblink onlayer overlay")));
+        const int open = int(body.indexOf(QStringLiteral("    show unblink zorder 90")));
         const int line = int(body.indexOf(QString::fromUtf8("sl \"б\"")));
         check(shut > 0 && words > shut && place > words && open > place && line > open &&
                   body.contains(QStringLiteral("as genry_timeskip onlayer overlay zorder 10:")) &&
@@ -325,6 +325,18 @@ static void testFixes()
         const QString rn = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_square_day\nтекст а\nфон ext_square_night\nтекст б\n"), es);
         check(rn.contains(QStringLiteral("    scene bg ext_square_night\n")) && rn.contains(QStringLiteral("    $ night_time()\n    scene bg ext_square_night")),
               "a night picture without «время» stays night and turns the heroines night");
+    }
+    {
+        // the lids as ES shows them (master layer, over the heroines, UNDER the dialogue box): a line said with the
+        // eyes shut is seen; a «фон» under shut eyes puts the still lids back; «моргнуть» = the game's own blinking
+        const QString rl = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_square_day\nзакрытьглаза\nтекст Темнота.\n"
+                                                         "фон ext_beach_day\nоткрытьглаза\nтекст Пляж.\nморгнуть\nтекст всё\n"), es);
+        const QString body = rl.mid(rl.indexOf(QStringLiteral("label genry_t:")));
+        check(body.contains(QStringLiteral("    show blink zorder 90\n    $ renpy.pause(1.5, hard=True)\n")) && !body.contains(QStringLiteral("onlayer overlay")) &&
+                  body.contains(QStringLiteral("    scene bg ext_beach_day\n    show genry_lids zorder 90\n")) &&
+                  body.contains(QStringLiteral("    hide blink\n    hide genry_lids\n")) && body.contains(QStringLiteral("image genry_lids = ")) &&
+                  body.contains(QStringLiteral("    show blinking zorder 90\n    $ renpy.pause(3.5, hard=True)\n    hide blinking\n")),
+              "eyes on the master layer like ES (a line with shut eyes is seen), still lids after a «фон», «моргнуть» = ES blinking");
     }
     // every V1 feature at once: meters, timed choice, «запомнит», inventory, gallery, achievements, the mod's menu
     QFile ft(QStringLiteral(GB_SOURCE_DIR "/work/featuretest/story.txt"));

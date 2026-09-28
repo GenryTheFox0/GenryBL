@@ -623,7 +623,7 @@ SL compileCreditsRoll(const QString& rest, bool eyesClosed = false)
     const QString size = p.size() > 2 ? cleanNumber(p[2], QStringLiteral("34")) : QStringLiteral("34");
     const QString effect = p.size() > 3 && isEffect(p[3]) ? p[3] : QStringLiteral("dissolve2");
     return {QStringLiteral("    window hide"),
-            eyesClosed ? QStringLiteral("    scene black\n    hide blink onlayer overlay") : QStringLiteral("    scene black with ") + effect,
+            eyesClosed ? QStringLiteral("    scene black") : QStringLiteral("    scene black with ") + effect,
             QStringLiteral("    show expression Text(%1, text_align=0.5, size=%2, color=\"#f5f5f5\") as genry_credits_roll:").arg(lit, size),
             QStringLiteral("        xalign 0.5"), QStringLiteral("        ypos 1.05"), QStringLiteral("        linear %1 ypos -1.20").arg(seconds),
             QStringLiteral("    $ renpy.pause(%1, hard=True)").arg(seconds), QStringLiteral("    hide genry_credits_roll"),
@@ -909,7 +909,7 @@ SL compileTimeskip(const QString& restIn, bool v1 = false, bool eyesClosed = fal
     if (v1) {
         // V1: the eyes ARE the transition - shut (unless already), the words over the lids, no darkness;
         // compileLine opens them again before the next thing the player sees
-        SL r = eyesClosed ? SL{} : compileEyesClose(QStringLiteral("1.6"));
+        SL r = eyesClosed ? SL{} : compileEyesClose(QStringLiteral("1.5"));
         return r << overLidsText(QStringLiteral("genry_timeskip"), text, 62, QStringLiteral("1.9"));
     }
     return {QStringLiteral("    window hide"), QStringLiteral("    scene black"), QStringLiteral("    with dissolve"),
@@ -2236,14 +2236,18 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
     }
     if (cmd == QLatin1String("eyesclose")) {
         st.eyesClosed = !opt.legacy;
-        return compileEyesClose(rest);
+        return compileEyesClose(rest.isEmpty() && !opt.legacy ? QStringLiteral("1.5") : rest);     // ES's lids: 1.5 s
     }
     if (cmd == QLatin1String("eyesopen")) {
         st.eyesClosed = st.autoOpen = false;
-        return compileEyesOpen(rest);
+        return compileEyesOpen(rest.isEmpty() && !opt.legacy ? QStringLiteral("1.5") : rest);
     }
     if (cmd == QLatin1String("eyesblink")) {
         st.eyesClosed = st.autoOpen = false;
+        // V1: the game's own blink (es-doc «Моргание»: `show blinking` - shut 1.5 s, hold, open 1.5 s = 3.5 s)
+        if (!opt.legacy && rest.isEmpty())
+            return {QStringLiteral("    window hide"), QStringLiteral("    show blinking zorder 90"), QStringLiteral("    $ renpy.pause(3.5, hard=True)"),
+                    QStringLiteral("    hide blinking")};
         return compileEyesBlink(rest);
     }
     if (cmd == QLatin1String("sleepyeyes")) return {QStringLiteral("    show blinking onlayer overlay")};
@@ -2848,17 +2852,21 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
     if (!say && quietUnderLids(cmd)) {
         QStringList r = compileLineCore(line, modId, st, opt);
         static const QRegularExpression withRe(QStringLiteral("^(    (?:scene|show|hide) .+?) with [A-Za-z0-9_]+$"));
+        bool wiped = false;
         for (QString& x : r) {
             const auto m = withRe.match(x);
             if (m.hasMatch()) x = m.captured(1);
+            if (x.startsWith(QLatin1String("    scene "))) wiped = true;
         }
+        // `scene` clears the master layer, the lids too: the still closed lids go back before anything is drawn
+        if (wiped) r << QStringLiteral("    show genry_lids zorder 90");
         return r;
     }
     if (!st.autoOpen || cmd == QLatin1String("eyesopen") || cmd == QLatin1String("eyesblink") || cmd == QLatin1String("timeskip") ||
         cmd == QLatin1String("titlecard") || cmd == QLatin1String("creditsroll"))
         return compileLineCore(line, modId, st, opt);
     st.eyesClosed = st.autoOpen = false;
-    return compileEyesOpen(QStringLiteral("1.6")) + compileLineCore(line, modId, st, opt);
+    return compileEyesOpen(QStringLiteral("1.5")) + compileLineCore(line, modId, st, opt);
 }
 
 QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const CompileOptions& opt, const QVector<CustomImage>& images, QString* error)
@@ -3124,7 +3132,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         }
         if (cmd == QLatin1String("choice")) {
             if (!opt.legacy && st.autoOpen) {           // the choice after «скачок»: the eyes open first
-                out << compileEyesOpen(QStringLiteral("1.6"));
+                out << compileEyesOpen(QStringLiteral("1.5"));
                 st.eyesClosed = st.autoOpen = false;
             }
             inChoice = true;
@@ -3414,18 +3422,22 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             }
         }
         for (; i < out.size(); ++i) {
-            // closed eyes («закрытьглаза») and then a card on black («скачок», «титр»): the lids come off only once the
-            // black is really on screen. ES's lids live on the overlay layer, which a transition does not touch - taken
-            // off together with the fade, the old scene showed through for a second before going dark.
-            if (out[i] == QLatin1String("    scene black") || out[i].startsWith(QLatin1String("    scene black with ")) ||
-                out[i] == QLatin1String("    show genry_black")) {
-                if (!out[i].contains(QLatin1String(" with ")) && i + 1 < out.size() && out[i + 1].startsWith(QLatin1String("    with "))) ++i;
-                if (i + 1 < out.size() && out[i + 1] == QLatin1String("    hide blink onlayer overlay")) continue;
-                out.insert(++i, QStringLiteral("    hide blink onlayer overlay"));
+            // the lids as ES shows them (es-doc «Моргание»: plain `show blink`) - on the master layer, above the heroines.
+            // The stock GenryBL put them on `overlay`, the TOP layer: a line said with the eyes shut went under the
+            // lids and the player saw black. On master the dialogue box stays over the dark, like in the game.
+            static const QHash<QString, QString> lids{
+                {QStringLiteral("    show blink onlayer overlay"), QStringLiteral("    show blink zorder 90")},
+                {QStringLiteral("    show unblink onlayer overlay"), QStringLiteral("    show unblink zorder 90")},
+                {QStringLiteral("    show blinking onlayer overlay"), QStringLiteral("    show blinking zorder 90")},
+                {QStringLiteral("    hide unblink onlayer overlay"), QStringLiteral("    hide unblink")},
+                {QStringLiteral("    hide blinking onlayer overlay"), QStringLiteral("    hide blinking")}};
+            if (lids.contains(out[i])) {
+                out[i] = lids.value(out[i]);
                 continue;
             }
-            if (out[i].startsWith(QLatin1String("    $ new_chapter("))) {
-                out.insert(i++, QStringLiteral("    hide blink onlayer overlay"));
+            if (out[i] == QLatin1String("    hide blink onlayer overlay")) {
+                out[i] = QStringLiteral("    hide blink");
+                out.insert(++i, QStringLiteral("    hide genry_lids"));        // the still lids a «фон» under shut eyes left
                 continue;
             }
             if (out[i] == QLatin1String("    window hide")) out[i] = QStringLiteral("    window auto hide");
@@ -3442,6 +3454,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         const bool meters = all.contains(QLatin1String("genry_meter"));
         if (all.contains(QLatin1String("genry_choice_timed"))) block(kV1TimedChoice);
         if (all.contains(QLatin1String("genry_camp_map"))) block(kV1Map);
+        if (all.contains(QLatin1String("genry_lids"))) block(kV1Lids);
         if (all.contains(c.sys(QStringLiteral("map_seen")))) out << QString() << QStringLiteral("default %1 = {}").arg(c.sys(QStringLiteral("map_seen")));
         const bool memories = all.contains(QLatin1String("genry_remember(")) || all.contains(QLatin1String("genry_memories"));
         if (meters || memories) block(kV1Popups);
