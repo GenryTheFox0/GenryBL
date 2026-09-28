@@ -1,0 +1,9 @@
+{
+ "mod_id": "title_mod",
+ "mod_name": "Мой \"мод\"",
+ "author": "Я",
+ "mod_title_font": "fonts/x.ttf",
+ "mod_title_color": "#ff0000",
+ "mod_title_size": "40",
+ "playable": true
+}

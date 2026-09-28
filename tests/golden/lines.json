@@ -1,0 +1,8347 @@
+[
+{
+"line": "bg ext_camp_entrance_day",
+"out": [
+"    scene bg ext_camp_entrance_day"
+]
+},
+{
+"line": "фон ext_camp_entrance_day",
+"out": [
+"    scene bg ext_camp_entrance_day"
+]
+},
+{
+"line": "bg ext_camp_entrance_day dissolve",
+"out": [
+"    scene bg ext_camp_entrance_day with dissolve"
+]
+},
+{
+"line": "фон ext_camp_entrance_day dissolve",
+"out": [
+"    scene bg ext_camp_entrance_day with dissolve"
+]
+},
+{
+"line": "bg black fade",
+"out": [
+"    scene black with fade"
+]
+},
+{
+"line": "фон black fade",
+"out": [
+"    scene black with fade"
+]
+},
+{
+"line": "bg White",
+"out": [
+"    scene White"
+]
+},
+{
+"line": "фон White",
+"out": [
+"    scene White"
+]
+},
+{
+"line": "bg int_dining_hall_day none",
+"out": [
+"    scene bg int_dining_hall_day"
+]
+},
+{
+"line": "фон int_dining_hall_day none",
+"out": [
+"    scene bg int_dining_hall_day"
+]
+},
+{
+"line": "bg",
+"out": [
+"    scene bg "
+]
+},
+{
+"line": "фон",
+"out": [
+"    scene bg "
+]
+},
+{
+"line": "showbg ext_square_day dissolve",
+"out": [
+"    show bg ext_square_day with dissolve"
+]
+},
+{
+"line": "сменитьфон ext_square_day dissolve",
+"out": [
+"    show bg ext_square_day with dissolve"
+]
+},
+{
+"line": "showbg black",
+"out": [
+"    show black"
+]
+},
+{
+"line": "сменитьфон black",
+"out": [
+"    show black"
+]
+},
+{
+"line": "showbg",
+"out": [
+"    show bg "
+]
+},
+{
+"line": "сменитьфон",
+"out": [
+"    show bg "
+]
+},
+{
+"line": "cg d1_food_normal dissolve",
+"out": [
+"    scene cg d1_food_normal with dissolve"
+]
+},
+{
+"line": "цг d1_food_normal dissolve",
+"out": [
+"    scene cg d1_food_normal with dissolve"
+]
+},
+{
+"line": "cg d3_un_dance",
+"out": [
+"    scene cg d3_un_dance"
+]
+},
+{
+"line": "цг d3_un_dance",
+"out": [
+"    scene cg d3_un_dance"
+]
+},
+{
+"line": "cg",
+"out": [
+"    scene cg "
+]
+},
+{
+"line": "цг",
+"out": [
+"    scene cg "
+]
+},
+{
+"line": "арт d1_food_normal dissolve",
+"out": [
+"    scene cg d1_food_normal with dissolve"
+]
+},
+{
+"line": "scene bg ext_road_day",
+"out": [
+"    scene bg ext_road_day"
+]
+},
+{
+"line": "scene",
+"out": [
+"    scene "
+]
+},
+{
+"line": "show dv smile pioneer",
+"out": [
+"    show dv smile pioneer at genry_sprite_time_tint"
+]
+},
+{
+"line": "показать dv smile pioneer",
+"out": [
+"    show dv smile pioneer at genry_sprite_time_tint"
+]
+},
+{
+"line": "show dv smile pioneer center",
+"out": [
+"    show dv smile pioneer at center, genry_sprite_time_tint"
+]
+},
+{
+"line": "показать dv smile pioneer center",
+"out": [
+"    show dv smile pioneer at center, genry_sprite_time_tint"
+]
+},
+{
+"line": "show dv smile pioneer at left dissolve",
+"out": [
+"    show dv smile pioneer at left, genry_sprite_time_tint with dissolve"
+]
+},
+{
+"line": "показать dv smile pioneer at left dissolve",
+"out": [
+"    show dv smile pioneer at left, genry_sprite_time_tint with dissolve"
+]
+},
+{
+"line": "show un normal dress right none",
+"out": [
+"    show un normal dress at right, genry_sprite_time_tint"
+]
+},
+{
+"line": "показать un normal dress right none",
+"out": [
+"    show un normal dress at right, genry_sprite_time_tint"
+]
+},
+{
+"line": "show genry_custom",
+"out": [
+"    show genry_custom"
+]
+},
+{
+"line": "показать genry_custom",
+"out": [
+"    show genry_custom"
+]
+},
+{
+"line": "show black",
+"out": [
+"    show black"
+]
+},
+{
+"line": "показать black",
+"out": [
+"    show black"
+]
+},
+{
+"line": "show blink",
+"out": [
+"    show blink"
+]
+},
+{
+"line": "показать blink",
+"out": [
+"    show blink"
+]
+},
+{
+"line": "show prologue_dream",
+"out": [
+"    show prologue_dream"
+]
+},
+{
+"line": "показать prologue_dream",
+"out": [
+"    show prologue_dream"
+]
+},
+{
+"line": "show",
+"out": [
+"    show "
+]
+},
+{
+"line": "показать",
+"out": [
+"    show "
+]
+},
+{
+"line": "show sl smile pioneer far fleft moveinleft",
+"out": [
+"    show sl smile pioneer far at fleft, genry_sprite_time_tint with moveinleft"
+]
+},
+{
+"line": "показать sl smile pioneer far fleft moveinleft",
+"out": [
+"    show sl smile pioneer far at fleft, genry_sprite_time_tint with moveinleft"
+]
+},
+{
+"line": "show genry_x at center",
+"out": [
+"    show genry_x at center"
+]
+},
+{
+"line": "показать genry_x at center",
+"out": [
+"    show genry_x at center"
+]
+},
+{
+"line": "hide dv",
+"out": [
+"    hide dv"
+]
+},
+{
+"line": "убрать dv",
+"out": [
+"    hide dv"
+]
+},
+{
+"line": "hide dv dissolve",
+"out": [
+"    hide dv with dissolve"
+]
+},
+{
+"line": "убрать dv dissolve",
+"out": [
+"    hide dv with dissolve"
+]
+},
+{
+"line": "hide un none",
+"out": [
+"    hide un"
+]
+},
+{
+"line": "убрать un none",
+"out": [
+"    hide un"
+]
+},
+{
+"line": "hide",
+"out": [
+"    hide "
+]
+},
+{
+"line": "убрать",
+"out": [
+"    hide "
+]
+},
+{
+"line": "walk dv smile pioneer left right 2.5",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2.5 xalign 0.82"
+]
+},
+{
+"line": "идти dv smile pioneer left right 2.5",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2.5 xalign 0.82"
+]
+},
+{
+"line": "walk dv smile pioneer badpos worse abc",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.0 xalign 0.50"
+]
+},
+{
+"line": "идти dv smile pioneer badpos worse abc",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.0 xalign 0.50"
+]
+},
+{
+"line": "walk un normal pioneer fleft fright",
+"out": [
+"    show un normal:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.0 xalign 0.05"
+]
+},
+{
+"line": "идти un normal pioneer fleft fright",
+"out": [
+"    show un normal:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.0 xalign 0.05"
+]
+},
+{
+"line": "walk a b c",
+"out": [
+"    # walk command needs: image from_position to_position seconds"
+]
+},
+{
+"line": "идти a b c",
+"out": [
+"    # walk command needs: image from_position to_position seconds"
+]
+},
+{
+"line": "walk x left right 2",
+"out": [
+"    show x:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2 xalign 0.82"
+]
+},
+{
+"line": "идти x left right 2",
+"out": [
+"    show x:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2 xalign 0.82"
+]
+},
+{
+"line": "подойти dv smile pioneer left right 2.5",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2.5 xalign 0.82"
+]
+},
+{
+"line": "пройти dv smile pioneer left right 2.5",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2.5 xalign 0.82"
+]
+},
+{
+"line": "bigshow dv smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.25",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "крупно dv smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.25",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "bigshow dv smile pioneer left 1.4 dissolve",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.4",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "крупно dv smile pioneer left 1.4 dissolve",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.4",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "bigshow dv scared pioneer center cleft 3.0 0.45 0.58",
+"out": [
+"    show dv scared pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.58",
+"        alpha 0.45",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3.0 xalign 0.35",
+"    with dissolve"
+]
+},
+{
+"line": "крупно dv scared pioneer center cleft 3.0 0.45 0.58",
+"out": [
+"    show dv scared pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.58",
+"        alpha 0.45",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3.0 xalign 0.35",
+"    with dissolve"
+]
+},
+{
+"line": "bigshow dv scared pioneer center cleft 0 0.45 0.58",
+"out": [
+"    show dv scared pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.58",
+"        alpha 0.45",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "крупно dv scared pioneer center cleft 0 0.45 0.58",
+"out": [
+"    show dv scared pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.58",
+"        alpha 0.45",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "bigshow center 1.5",
+"out": [
+"    # bigshow command needs an image name"
+]
+},
+{
+"line": "крупно center 1.5",
+"out": [
+"    # bigshow command needs an image name"
+]
+},
+{
+"line": "bigshow",
+"out": [
+"    # bigshow command needs: image [position] [zoom] [effect]"
+]
+},
+{
+"line": "крупно",
+"out": [
+"    # bigshow command needs: image [position] [zoom] [effect]"
+]
+},
+{
+"line": "bigshow genry_a fright 2",
+"out": [
+"    show genry_a:",
+"        xalign 0.95",
+"        yalign 1.0",
+"        zoom 2",
+"    with dissolve"
+]
+},
+{
+"line": "крупно genry_a fright 2",
+"out": [
+"    show genry_a:",
+"        xalign 0.95",
+"        yalign 1.0",
+"        zoom 2",
+"    with dissolve"
+]
+},
+{
+"line": "показатькрупно dv smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.25",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "mirror dv smile pioneer",
+"out": [
+"    show dv smile pioneer as genry_mirror_dv_smile_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.0",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "зеркало dv smile pioneer",
+"out": [
+"    show dv smile pioneer as genry_mirror_dv_smile_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.0",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "mirror un shy pioneer left 0.9 fade",
+"out": [
+"    show un shy pioneer as genry_mirror_un_shy_pioneer_left:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 0.9",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with fade"
+]
+},
+{
+"line": "зеркало un shy pioneer left 0.9 fade",
+"out": [
+"    show un shy pioneer as genry_mirror_un_shy_pioneer_left:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 0.9",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with fade"
+]
+},
+{
+"line": "mirror",
+"out": [
+"    # mirror command needs: image [position] [zoom] [effect]"
+]
+},
+{
+"line": "зеркало",
+"out": [
+"    # mirror command needs: image [position] [zoom] [effect]"
+]
+},
+{
+"line": "mirror 1.2",
+"out": [
+"    # mirror command needs an image name"
+]
+},
+{
+"line": "зеркало 1.2",
+"out": [
+"    # mirror command needs an image name"
+]
+},
+{
+"line": "mirror sl normal pioneer none",
+"out": [
+"    show sl normal pioneer as genry_mirror_sl_normal_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.0",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "зеркало sl normal pioneer none",
+"out": [
+"    show sl normal pioneer as genry_mirror_sl_normal_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.0",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "отзеркалить dv smile pioneer",
+"out": [
+"    show dv smile pioneer as genry_mirror_dv_smile_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.0",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "отзеркалитьперсонажа dv smile pioneer",
+"out": [
+"    show dv smile pioneer as genry_mirror_dv_smile_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.0",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "mirrorbig dv smile pioneer right",
+"out": [
+"    show dv smile pioneer as genry_mirror_dv_smile_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.25",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "зеркалобольшой dv smile pioneer right",
+"out": [
+"    show dv smile pioneer as genry_mirror_dv_smile_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.25",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "mirrorbig blink",
+"out": [
+"    show blink as genry_mirror_blink_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.25",
+"        xzoom -1.0"
+]
+},
+{
+"line": "зеркалобольшой blink",
+"out": [
+"    show blink as genry_mirror_blink_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.25",
+"        xzoom -1.0"
+]
+},
+{
+"line": "отзеркалитькрупно dv smile pioneer right",
+"out": [
+"    show dv smile pioneer as genry_mirror_dv_smile_pioneer_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.25",
+"        xzoom -1.0",
+"        matrixcolor genry_sprite_time_matrix()"
+]
+},
+{
+"line": "conflictfocus dv angry pioneer | un scared pioneer",
+"out": [
+"    show un scared pioneer as genry_focus_un_scared_pioneer_passive:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 0.96",
+"        alpha 0.72",
+"        xzoom -1.0",
+"    show dv angry pioneer as genry_focus_dv_angry_pioneer_active:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.12",
+"        alpha 1.0",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "фокус dv angry pioneer | un scared pioneer",
+"out": [
+"    show un scared pioneer as genry_focus_un_scared_pioneer_passive:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 0.96",
+"        alpha 0.72",
+"        xzoom -1.0",
+"    show dv angry pioneer as genry_focus_dv_angry_pioneer_active:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.12",
+"        alpha 1.0",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "conflictfocus dv angry pioneer | un scared pioneer | right | left | 1.3 | 0.8 | fade",
+"out": [
+"    show un scared pioneer as genry_focus_un_scared_pioneer_passive:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 0.8",
+"        alpha 0.72",
+"        xzoom 1.0",
+"    show dv angry pioneer as genry_focus_dv_angry_pioneer_active:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.3",
+"        alpha 1.0",
+"        xzoom -1.0",
+"    with fade"
+]
+},
+{
+"line": "фокус dv angry pioneer | un scared pioneer | right | left | 1.3 | 0.8 | fade",
+"out": [
+"    show un scared pioneer as genry_focus_un_scared_pioneer_passive:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 0.8",
+"        alpha 0.72",
+"        xzoom 1.0",
+"    show dv angry pioneer as genry_focus_dv_angry_pioneer_active:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.3",
+"        alpha 1.0",
+"        xzoom -1.0",
+"    with fade"
+]
+},
+{
+"line": "conflictfocus one",
+"out": [
+"    # conflictfocus needs: active image | passive image | [active_pos] | [passive_pos] | [active_zoom] | [passive_zoom] | [effect]"
+]
+},
+{
+"line": "фокус one",
+"out": [
+"    # conflictfocus needs: active image | passive image | [active_pos] | [passive_pos] | [active_zoom] | [passive_zoom] | [effect]"
+]
+},
+{
+"line": "conflictfocus a | b | bad | worse | x | y | zz",
+"out": [
+"    show b as genry_focus_b_passive:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 0.96",
+"        alpha 0.72",
+"        xzoom -1.0",
+"    show a as genry_focus_a_active:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.12",
+"        alpha 1.0",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "фокус a | b | bad | worse | x | y | zz",
+"out": [
+"    show b as genry_focus_b_passive:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 0.96",
+"        alpha 0.72",
+"        xzoom -1.0",
+"    show a as genry_focus_a_active:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.12",
+"        alpha 1.0",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "фокусконфликта dv angry pioneer | un scared pioneer",
+"out": [
+"    show un scared pioneer as genry_focus_un_scared_pioneer_passive:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 0.96",
+"        alpha 0.72",
+"        xzoom -1.0",
+"    show dv angry pioneer as genry_focus_dv_angry_pioneer_active:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.12",
+"        alpha 1.0",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "fullheight dv smile pioneer | right | 1.3 | auto | 0.9 | fade",
+"out": [
+"    show dv smile pioneer as genry_fullheight_dv_smile_pioneer_fullheight_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.3",
+"        alpha 0.9",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom -1.0",
+"    with fade"
+]
+},
+{
+"line": "полныйрост dv smile pioneer | right | 1.3 | auto | 0.9 | fade",
+"out": [
+"    show dv smile pioneer as genry_fullheight_dv_smile_pioneer_fullheight_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.3",
+"        alpha 0.9",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom -1.0",
+"    with fade"
+]
+},
+{
+"line": "fullheight dv smile pioneer right 1.3 mirror 0.8 dissolve",
+"out": [
+"    show dv smile pioneer right 1.3 mirror 0.8 dissolve as genry_fullheight_dv_smile_pioneer_right_1_3_mirror_0_8_dissolve_fullheight_center:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "полныйрост dv smile pioneer right 1.3 mirror 0.8 dissolve",
+"out": [
+"    show dv smile pioneer right 1.3 mirror 0.8 dissolve as genry_fullheight_dv_smile_pioneer_right_1_3_mirror_0_8_dissolve_fullheight_center:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "fullheight sl normal pioneer",
+"out": [
+"    show sl normal pioneer as genry_fullheight_sl_normal_pioneer_fullheight_center:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "полныйрост sl normal pioneer",
+"out": [
+"    show sl normal pioneer as genry_fullheight_sl_normal_pioneer_fullheight_center:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "fullheight un smile pioneer | cright | x | normal",
+"out": [
+"    show un smile pioneer as genry_fullheight_un_smile_pioneer_fullheight_cright:",
+"        xalign 0.65",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "полныйрост un smile pioneer | cright | x | normal",
+"out": [
+"    show un smile pioneer as genry_fullheight_un_smile_pioneer_fullheight_cright:",
+"        xalign 0.65",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "fullheight",
+"out": [
+"    # fullheight needs: image | [position] | [zoom] | [mirror/normal/auto] | [alpha] | [effect]"
+]
+},
+{
+"line": "полныйрост",
+"out": [
+"    # fullheight needs: image | [position] | [zoom] | [mirror/normal/auto] | [alpha] | [effect]"
+]
+},
+{
+"line": "fullheight mi smile pioneer | left | 1.1 | yes",
+"out": [
+"    show mi smile pioneer as genry_fullheight_mi_smile_pioneer_fullheight_left:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.1",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom -1.0",
+"    with dissolve"
+]
+},
+{
+"line": "полныйрост mi smile pioneer | left | 1.1 | yes",
+"out": [
+"    show mi smile pioneer as genry_fullheight_mi_smile_pioneer_fullheight_left:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.1",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom -1.0",
+"    with dissolve"
+]
+},
+{
+"line": "fullheight us grin sport flip",
+"out": [
+"    show us grin sport flip as genry_fullheight_us_grin_sport_flip_fullheight_center:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "полныйрост us grin sport flip",
+"out": [
+"    show us grin sport flip as genry_fullheight_us_grin_sport_flip_fullheight_center:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "fullheight genry_a 0.7",
+"out": [
+"    show genry_a 0.7 as genry_fullheight_genry_a_0_7_fullheight_center:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "полныйрост genry_a 0.7",
+"out": [
+"    show genry_a 0.7 as genry_fullheight_genry_a_0_7_fullheight_center:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.28",
+"        alpha 1.0",
+"        xzoom 1.0",
+"    with dissolve"
+]
+},
+{
+"line": "полныйростфокус dv smile pioneer | right | 1.3 | auto | 0.9 | fade",
+"out": [
+"    show dv smile pioneer as genry_fullheight_dv_smile_pioneer_fullheight_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.3",
+"        alpha 0.9",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom -1.0",
+"    with fade"
+]
+},
+{
+"line": "фокусречи dv smile pioneer | right | 1.3 | auto | 0.9 | fade",
+"out": [
+"    show dv smile pioneer as genry_fullheight_dv_smile_pioneer_fullheight_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.3",
+"        alpha 0.9",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom -1.0",
+"    with fade"
+]
+},
+{
+"line": "говориткрупно dv smile pioneer | right | 1.3 | auto | 0.9 | fade",
+"out": [
+"    show dv smile pioneer as genry_fullheight_dv_smile_pioneer_fullheight_right:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 1.3",
+"        alpha 0.9",
+"        matrixcolor genry_sprite_time_matrix()",
+"        xzoom -1.0",
+"    with fade"
+]
+},
+{
+"line": "crowdshow dv smile pioneer | un smile pioneer | sl smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.25",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show un smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show sl smile pioneer:",
+"        xalign 0.75",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "массовка dv smile pioneer | un smile pioneer | sl smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.25",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show un smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show sl smile pioneer:",
+"        xalign 0.75",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "crowdshow a|b|c|d|e|f|g",
+"out": [
+"    show a:",
+"        xalign 0.12",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show b:",
+"        xalign 0.25",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show c:",
+"        xalign 0.38",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show d:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show e:",
+"        xalign 0.62",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show f:",
+"        xalign 0.75",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show g:",
+"        xalign 0.88",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "массовка a|b|c|d|e|f|g",
+"out": [
+"    show a:",
+"        xalign 0.12",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show b:",
+"        xalign 0.25",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show c:",
+"        xalign 0.38",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show d:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show e:",
+"        xalign 0.62",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show f:",
+"        xalign 0.75",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show g:",
+"        xalign 0.88",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "crowdshow a|b|c|d|e|f|g|h|i|j|k|l",
+"out": [
+"    show a:",
+"        xalign 0.09",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show b:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show c:",
+"        xalign 0.27",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show d:",
+"        xalign 0.36",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show e:",
+"        xalign 0.45",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show f:",
+"        xalign 0.55",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show g:",
+"        xalign 0.64",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show h:",
+"        xalign 0.73",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show i:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show j:",
+"        xalign 0.91",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "массовка a|b|c|d|e|f|g|h|i|j|k|l",
+"out": [
+"    show a:",
+"        xalign 0.09",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show b:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show c:",
+"        xalign 0.27",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show d:",
+"        xalign 0.36",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show e:",
+"        xalign 0.45",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show f:",
+"        xalign 0.55",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show g:",
+"        xalign 0.64",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show h:",
+"        xalign 0.73",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show i:",
+"        xalign 0.82",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show j:",
+"        xalign 0.91",
+"        yalign 1.0",
+"        zoom 0.72",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "crowdshow",
+"out": [
+"    # crowd command needs: image | image | image"
+]
+},
+{
+"line": "массовка",
+"out": [
+"    # crowd command needs: image | image | image"
+]
+},
+{
+"line": "crowdshow a|b|c|d|e",
+"out": [
+"    show a:",
+"        xalign 0.17",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show b:",
+"        xalign 0.33",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show c:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show d:",
+"        xalign 0.67",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show e:",
+"        xalign 0.83",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "массовка a|b|c|d|e",
+"out": [
+"    show a:",
+"        xalign 0.17",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show b:",
+"        xalign 0.33",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show c:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show d:",
+"        xalign 0.67",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show e:",
+"        xalign 0.83",
+"        yalign 1.0",
+"        zoom 0.86",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "показатьмного dv smile pioneer | un smile pioneer | sl smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.25",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show un smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    show sl smile pioneer:",
+"        xalign 0.75",
+"        yalign 1.0",
+"        zoom 0.98",
+"        matrixcolor genry_sprite_time_matrix()",
+"    with dissolve"
+]
+},
+{
+"line": "enterleft dv smile pioneer center 1.5",
+"out": [
+"    show dv smile pioneer:",
+"        xalign -0.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.5 xalign 0.50"
+]
+},
+{
+"line": "входслева dv smile pioneer center 1.5",
+"out": [
+"    show dv smile pioneer:",
+"        xalign -0.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.5 xalign 0.50"
+]
+},
+{
+"line": "enterleft dv smile pioneer left 1.5 1.2",
+"out": [
+"    show dv smile pioneer:",
+"        xalign -0.18",
+"        yalign 1.0",
+"        zoom 1.2",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.5 xalign 0.18"
+]
+},
+{
+"line": "входслева dv smile pioneer left 1.5 1.2",
+"out": [
+"    show dv smile pioneer:",
+"        xalign -0.18",
+"        yalign 1.0",
+"        zoom 1.2",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.5 xalign 0.18"
+]
+},
+{
+"line": "enterleft a b",
+"out": [
+"    # enter command needs: image target_position seconds [zoom]"
+]
+},
+{
+"line": "входслева a b",
+"out": [
+"    # enter command needs: image target_position seconds [zoom]"
+]
+},
+{
+"line": "enterleft x zz 2",
+"out": [
+"    show x:",
+"        xalign -0.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2 xalign 0.50"
+]
+},
+{
+"line": "входслева x zz 2",
+"out": [
+"    show x:",
+"        xalign -0.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2 xalign 0.50"
+]
+},
+{
+"line": "enterright un normal pioneer right 2",
+"out": [
+"    show un normal pioneer:",
+"        xalign 1.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2 xalign 0.82"
+]
+},
+{
+"line": "входсправа un normal pioneer right 2",
+"out": [
+"    show un normal pioneer:",
+"        xalign 1.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2 xalign 0.82"
+]
+},
+{
+"line": "enterright a",
+"out": [
+"    # enter command needs: image target_position seconds [zoom]"
+]
+},
+{
+"line": "входсправа a",
+"out": [
+"    # enter command needs: image target_position seconds [zoom]"
+]
+},
+{
+"line": "zoomshow cg d1_food 3 1.4 0.4 0.6",
+"out": [
+"    show cg d1_food:",
+"        xalign 0.50",
+"        yalign 0.50",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3 zoom 1.4 xalign 0.4 yalign 0.6"
+]
+},
+{
+"line": "кинозум cg d1_food 3 1.4 0.4 0.6",
+"out": [
+"    show cg d1_food:",
+"        xalign 0.50",
+"        yalign 0.50",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3 zoom 1.4 xalign 0.4 yalign 0.6"
+]
+},
+{
+"line": "zoomshow dv a b",
+"out": [
+"    # zoom command needs: image seconds zoom xalign yalign"
+]
+},
+{
+"line": "кинозум dv a b",
+"out": [
+"    # zoom command needs: image seconds zoom xalign yalign"
+]
+},
+{
+"line": "zoomshow img abc 1.2 x y",
+"out": [
+"    show img:",
+"        xalign 0.50",
+"        yalign 0.50",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2.0 zoom 1.2 xalign 0.50 yalign 0.50"
+]
+},
+{
+"line": "кинозум img abc 1.2 x y",
+"out": [
+"    show img:",
+"        xalign 0.50",
+"        yalign 0.50",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2.0 zoom 1.2 xalign 0.50 yalign 0.50"
+]
+},
+{
+"line": "зум cg d1_food 3 1.4 0.4 0.6",
+"out": [
+"    show cg d1_food:",
+"        xalign 0.50",
+"        yalign 0.50",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3 zoom 1.4 xalign 0.4 yalign 0.6"
+]
+},
+{
+"line": "dim",
+"out": [
+"    show genry_black:",
+"        alpha 0.55",
+"    with dissolve"
+]
+},
+{
+"line": "затемнить",
+"out": [
+"    show genry_black:",
+"        alpha 0.55",
+"    with dissolve"
+]
+},
+{
+"line": "dim 0.7",
+"out": [
+"    show genry_black:",
+"        alpha 0.7",
+"    with dissolve"
+]
+},
+{
+"line": "затемнить 0.7",
+"out": [
+"    show genry_black:",
+"        alpha 0.7",
+"    with dissolve"
+]
+},
+{
+"line": "dim abc",
+"out": [
+"    show genry_black:",
+"        alpha 0.55",
+"    with dissolve"
+]
+},
+{
+"line": "затемнить abc",
+"out": [
+"    show genry_black:",
+"        alpha 0.55",
+"    with dissolve"
+]
+},
+{
+"line": "undim",
+"out": [
+"    hide genry_black",
+"    with dissolve"
+]
+},
+{
+"line": "свет",
+"out": [
+"    hide genry_black",
+"    with dissolve"
+]
+},
+{
+"line": "убратьзатемнение",
+"out": [
+"    hide genry_black",
+"    with dissolve"
+]
+},
+{
+"line": "exitleft dv smile pioneer 1.2",
+"out": [
+"    show dv smile pioneer:",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.2 xalign -0.25",
+"    $ renpy.pause(1.2, hard=True)"
+]
+},
+{
+"line": "выходслева dv smile pioneer 1.2",
+"out": [
+"    show dv smile pioneer:",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.2 xalign -0.25",
+"    $ renpy.pause(1.2, hard=True)"
+]
+},
+{
+"line": "exitleft dv smile pioneer 1.2 0.9",
+"out": [
+"    show dv smile pioneer:",
+"        yalign 1.0",
+"        zoom 0.9",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.2 xalign -0.25",
+"    $ renpy.pause(1.2, hard=True)"
+]
+},
+{
+"line": "выходслева dv smile pioneer 1.2 0.9",
+"out": [
+"    show dv smile pioneer:",
+"        yalign 1.0",
+"        zoom 0.9",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.2 xalign -0.25",
+"    $ renpy.pause(1.2, hard=True)"
+]
+},
+{
+"line": "exitleft x",
+"out": [
+"    # exit command needs: image seconds [zoom]"
+]
+},
+{
+"line": "выходслева x",
+"out": [
+"    # exit command needs: image seconds [zoom]"
+]
+},
+{
+"line": "exitright un 2",
+"out": [
+"    show un:",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2 xalign 1.25",
+"    $ renpy.pause(2, hard=True)"
+]
+},
+{
+"line": "выходсправа un 2",
+"out": [
+"    show un:",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 2 xalign 1.25",
+"    $ renpy.pause(2, hard=True)"
+]
+},
+{
+"line": "exitright a b c",
+"out": [
+"    show a b:",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.0 xalign 1.25",
+"    $ renpy.pause(1.0, hard=True)"
+]
+},
+{
+"line": "выходсправа a b c",
+"out": [
+"    show a b:",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1.0 xalign 1.25",
+"    $ renpy.pause(1.0, hard=True)"
+]
+},
+{
+"line": "pulse dv smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 0.14 zoom 1.08",
+"        linear 0.14 zoom 1.0"
+]
+},
+{
+"line": "пульс dv smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 0.14 zoom 1.08",
+"        linear 0.14 zoom 1.0"
+]
+},
+{
+"line": "pulse dv smile pioneer left 0.2 1.1",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 0.2 zoom 1.1",
+"        linear 0.2 zoom 1.0"
+]
+},
+{
+"line": "пульс dv smile pioneer left 0.2 1.1",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 0.2 zoom 1.1",
+"        linear 0.2 zoom 1.0"
+]
+},
+{
+"line": "pulse dv 0.3",
+"out": [
+"    show dv:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 0.14 zoom 0.3",
+"        linear 0.14 zoom 1.0"
+]
+},
+{
+"line": "пульс dv 0.3",
+"out": [
+"    show dv:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 0.14 zoom 0.3",
+"        linear 0.14 zoom 1.0"
+]
+},
+{
+"line": "pulse",
+"out": [
+"    # pulse command needs: image [position] [seconds] [zoom]"
+]
+},
+{
+"line": "пульс",
+"out": [
+"    # pulse command needs: image [position] [seconds] [zoom]"
+]
+},
+{
+"line": "акцент dv smile pioneer",
+"out": [
+"    show dv smile pioneer:",
+"        xalign 0.50",
+"        yalign 1.0",
+"        zoom 1.0",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 0.14 zoom 1.08",
+"        linear 0.14 zoom 1.0"
+]
+},
+{
+"line": "timeofday день",
+"out": [
+"    $ persistent.sprite_time = \"day\"",
+"    $ day_time()"
+]
+},
+{
+"line": "время день",
+"out": [
+"    $ persistent.sprite_time = \"day\"",
+"    $ day_time()"
+]
+},
+{
+"line": "timeofday вечер",
+"out": [
+"    $ persistent.sprite_time = \"sunset\"",
+"    $ sunset_time()"
+]
+},
+{
+"line": "время вечер",
+"out": [
+"    $ persistent.sprite_time = \"sunset\"",
+"    $ sunset_time()"
+]
+},
+{
+"line": "timeofday ночь",
+"out": [
+"    $ persistent.sprite_time = \"night\"",
+"    $ night_time()"
+]
+},
+{
+"line": "время ночь",
+"out": [
+"    $ persistent.sprite_time = \"night\"",
+"    $ night_time()"
+]
+},
+{
+"line": "timeofday пролог",
+"out": [
+"    $ prolog_time()"
+]
+},
+{
+"line": "время пролог",
+"out": [
+"    $ prolog_time()"
+]
+},
+{
+"line": "timeofday Night",
+"out": [
+"    $ persistent.sprite_time = \"night\"",
+"    $ night_time()"
+]
+},
+{
+"line": "время Night",
+"out": [
+"    $ persistent.sprite_time = \"night\"",
+"    $ night_time()"
+]
+},
+{
+"line": "timeofday утро",
+"out": [
+"    $ persistent.sprite_time = \"day\"",
+"    $ day_time()"
+]
+},
+{
+"line": "время утро",
+"out": [
+"    $ persistent.sprite_time = \"day\"",
+"    $ day_time()"
+]
+},
+{
+"line": "timeofday закат",
+"out": [
+"    $ persistent.sprite_time = \"sunset\"",
+"    $ sunset_time()"
+]
+},
+{
+"line": "время закат",
+"out": [
+"    $ persistent.sprite_time = \"sunset\"",
+"    $ sunset_time()"
+]
+},
+{
+"line": "timeofday abc",
+"out": [
+"    # timeofday command needs: day / sunset / night / prolog"
+]
+},
+{
+"line": "время abc",
+"out": [
+"    # timeofday command needs: day / sunset / night / prolog"
+]
+},
+{
+"line": "timeofday",
+"out": [
+"    # timeofday command needs: day / sunset / night / prolog"
+]
+},
+{
+"line": "время",
+"out": [
+"    # timeofday command needs: day / sunset / night / prolog"
+]
+},
+{
+"line": "времясуток день",
+"out": [
+"    $ persistent.sprite_time = \"day\"",
+"    $ day_time()"
+]
+},
+{
+"line": "спрайтвремя день",
+"out": [
+"    $ persistent.sprite_time = \"day\"",
+"    $ day_time()"
+]
+},
+{
+"line": "времяспрайтов день",
+"out": [
+"    $ persistent.sprite_time = \"day\"",
+"    $ day_time()"
+]
+},
+{
+"line": "цветспрайтов день",
+"out": [
+"    $ persistent.sprite_time = \"day\"",
+"    $ day_time()"
+]
+},
+{
+"line": "eyesclose",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)"
+]
+},
+{
+"line": "закрытьглаза",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)"
+]
+},
+{
+"line": "eyesclose 1.5",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(1.5, hard=True)"
+]
+},
+{
+"line": "закрытьглаза 1.5",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(1.5, hard=True)"
+]
+},
+{
+"line": "eyesclose 0.3",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)"
+]
+},
+{
+"line": "закрытьглаза 0.3",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)"
+]
+},
+{
+"line": "eyesclose abc",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)"
+]
+},
+{
+"line": "закрытьглаза abc",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)"
+]
+},
+{
+"line": "глазазакрыть",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)"
+]
+},
+{
+"line": "eyesopen",
+"out": [
+"    window hide",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "открытьглаза",
+"out": [
+"    window hide",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "eyesopen 1.5",
+"out": [
+"    window hide",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(1.5, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "открытьглаза 1.5",
+"out": [
+"    window hide",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(1.5, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "eyesopen 0.3",
+"out": [
+"    window hide",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "открытьглаза 0.3",
+"out": [
+"    window hide",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "глазаоткрыть",
+"out": [
+"    window hide",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "eyesblink",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "моргнуть",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "eyesblink 0.2 0.4",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "моргнуть 0.2 0.4",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "eyesblink 1 2",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(1, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "моргнуть 1 2",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(1, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "eyesblink x",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "моргнуть x",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "eyesblink 0.5",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(0.5, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "моргнуть 0.5",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(0.5, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "моргание",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    show unblink onlayer overlay",
+"    hide blink onlayer overlay",
+"    $ renpy.pause(2.00, hard=True)",
+"    hide unblink onlayer overlay"
+]
+},
+{
+"line": "sleepyeyes",
+"out": [
+"    show blinking onlayer overlay"
+]
+},
+{
+"line": "сонныеглаза",
+"out": [
+"    show blinking onlayer overlay"
+]
+},
+{
+"line": "stopsleepyeyes",
+"out": [
+"    hide blinking onlayer overlay"
+]
+},
+{
+"line": "стопморгание",
+"out": [
+"    hide blinking onlayer overlay"
+]
+},
+{
+"line": "ghostmove un normal pioneer left right 3 0.4 1.1",
+"out": [
+"    show un normal pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.1",
+"        alpha 0.4",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3 xalign 0.82"
+]
+},
+{
+"line": "призрак un normal pioneer left right 3 0.4 1.1",
+"out": [
+"    show un normal pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.1",
+"        alpha 0.4",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3 xalign 0.82"
+]
+},
+{
+"line": "ghostmove x a b 1 2 3",
+"out": [
+"    show x:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 3",
+"        alpha 2",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1 xalign 0.82"
+]
+},
+{
+"line": "призрак x a b 1 2 3",
+"out": [
+"    show x:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 3",
+"        alpha 2",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 1 xalign 0.82"
+]
+},
+{
+"line": "ghostmove short",
+"out": [
+"    # ghost command needs: image from_position to_position seconds alpha zoom"
+]
+},
+{
+"line": "призрак short",
+"out": [
+"    # ghost command needs: image from_position to_position seconds alpha zoom"
+]
+},
+{
+"line": "ghostmove dv q w e r t y",
+"out": [
+"    show dv q:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        alpha 0.45",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3.0 xalign 0.82"
+]
+},
+{
+"line": "призрак dv q w e r t y",
+"out": [
+"    show dv q:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.0",
+"        alpha 0.45",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3.0 xalign 0.82"
+]
+},
+{
+"line": "прозрачныйперсонаж un normal pioneer left right 3 0.4 1.1",
+"out": [
+"    show un normal pioneer:",
+"        xalign 0.18",
+"        yalign 1.0",
+"        zoom 1.1",
+"        alpha 0.4",
+"        matrixcolor genry_sprite_time_matrix()",
+"        linear 3 xalign 0.82"
+]
+},
+{
+"line": "flash",
+"out": [
+"    show genry_flash",
+"    with dissolve",
+"    $ renpy.pause(0.18, hard=True)",
+"    hide genry_flash",
+"    with dissolve"
+]
+},
+{
+"line": "вспышка",
+"out": [
+"    show genry_flash",
+"    with dissolve",
+"    $ renpy.pause(0.18, hard=True)",
+"    hide genry_flash",
+"    with dissolve"
+]
+},
+{
+"line": "flash 0.3",
+"out": [
+"    show genry_flash",
+"    with dissolve",
+"    $ renpy.pause(0.3, hard=True)",
+"    hide genry_flash",
+"    with dissolve"
+]
+},
+{
+"line": "вспышка 0.3",
+"out": [
+"    show genry_flash",
+"    with dissolve",
+"    $ renpy.pause(0.3, hard=True)",
+"    hide genry_flash",
+"    with dissolve"
+]
+},
+{
+"line": "flash z",
+"out": [
+"    show genry_flash",
+"    with dissolve",
+"    $ renpy.pause(0.18, hard=True)",
+"    hide genry_flash",
+"    with dissolve"
+]
+},
+{
+"line": "вспышка z",
+"out": [
+"    show genry_flash",
+"    with dissolve",
+"    $ renpy.pause(0.18, hard=True)",
+"    hide genry_flash",
+"    with dissolve"
+]
+},
+{
+"line": "flash",
+"out": [
+"    show genry_flash",
+"    with dissolve",
+"    $ renpy.pause(0.18, hard=True)",
+"    hide genry_flash",
+"    with dissolve"
+]
+},
+{
+"line": "вспышкапереход",
+"out": [
+"    show genry_flash",
+"    with dissolve",
+"    $ renpy.pause(0.18, hard=True)",
+"    hide genry_flash",
+"    with dissolve"
+]
+},
+{
+"line": "titlecard Глава 1",
+"out": [
+"    show genry_black",
+"    with dissolve",
+"    window hide",
+"    $ renpy.pause(0.2, hard=True)",
+"    \"{size=38}{b}Глава 1{/b}{/size}\"",
+"    window show",
+"    hide genry_black",
+"    with dissolve"
+]
+},
+{
+"line": "титр Глава 1",
+"out": [
+"    show genry_black",
+"    with dissolve",
+"    window hide",
+"    $ renpy.pause(0.2, hard=True)",
+"    \"{size=38}{b}Глава 1{/b}{/size}\"",
+"    window show",
+"    hide genry_black",
+"    with dissolve"
+]
+},
+{
+"line": "titlecard",
+"out": [
+"    show genry_black",
+"    with dissolve",
+"    window hide",
+"    $ renpy.pause(0.2, hard=True)",
+"    \"{size=38}{b}Титр{/b}{/size}\"",
+"    window show",
+"    hide genry_black",
+"    with dissolve"
+]
+},
+{
+"line": "титр",
+"out": [
+"    show genry_black",
+"    with dissolve",
+"    window hide",
+"    $ renpy.pause(0.2, hard=True)",
+"    \"{size=38}{b}Титр{/b}{/size}\"",
+"    window show",
+"    hide genry_black",
+"    with dissolve"
+]
+},
+{
+"line": "карточка Глава 1",
+"out": [
+"    show genry_black",
+"    with dissolve",
+"    window hide",
+"    $ renpy.pause(0.2, hard=True)",
+"    \"{size=38}{b}Глава 1{/b}{/size}\"",
+"    window show",
+"    hide genry_black",
+"    with dissolve"
+]
+},
+{
+"line": "creditsroll Конец | 20 | 40 | fade",
+"out": [
+"    window hide",
+"    scene black with fade",
+"    show expression Text(\"Конец\", text_align=0.5, size=40, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 20 ypos -1.20",
+"    $ renpy.pause(20, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "титрыпрокрутка Конец | 20 | 40 | fade",
+"out": [
+"    window hide",
+"    scene black with fade",
+"    show expression Text(\"Конец\", text_align=0.5, size=40, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 20 ypos -1.20",
+"    $ renpy.pause(20, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "creditsroll \"Спасибо\\nза игру\"",
+"out": [
+"    window hide",
+"    scene black with dissolve2",
+"    show expression Text(\"Спасибо\\nза игру\", text_align=0.5, size=34, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 18.0 ypos -1.20",
+"    $ renpy.pause(18.0, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "титрыпрокрутка \"Спасибо\\nза игру\"",
+"out": [
+"    window hide",
+"    scene black with dissolve2",
+"    show expression Text(\"Спасибо\\nза игру\", text_align=0.5, size=34, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 18.0 ypos -1.20",
+"    $ renpy.pause(18.0, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "creditsroll",
+"out": [
+"    window hide",
+"    scene black with dissolve2",
+"    show expression Text(\"КОНЕЦ\", text_align=0.5, size=34, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 18.0 ypos -1.20",
+"    $ renpy.pause(18.0, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "титрыпрокрутка",
+"out": [
+"    window hide",
+"    scene black with dissolve2",
+"    show expression Text(\"КОНЕЦ\", text_align=0.5, size=34, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 18.0 ypos -1.20",
+"    $ renpy.pause(18.0, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "creditsroll Текст | abc",
+"out": [
+"    window hide",
+"    scene black with dissolve2",
+"    show expression Text(\"Текст\", text_align=0.5, size=34, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 18.0 ypos -1.20",
+"    $ renpy.pause(18.0, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "титрыпрокрутка Текст | abc",
+"out": [
+"    window hide",
+"    scene black with dissolve2",
+"    show expression Text(\"Текст\", text_align=0.5, size=34, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 18.0 ypos -1.20",
+"    $ renpy.pause(18.0, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "creditsroll a | 5 | 30 | nope",
+"out": [
+"    window hide",
+"    scene black with dissolve2",
+"    show expression Text(\"a\", text_align=0.5, size=30, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 5 ypos -1.20",
+"    $ renpy.pause(5, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "титрыпрокрутка a | 5 | 30 | nope",
+"out": [
+"    window hide",
+"    scene black with dissolve2",
+"    show expression Text(\"a\", text_align=0.5, size=30, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 5 ypos -1.20",
+"    $ renpy.pause(5, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "прокруткакредитов Конец | 20 | 40 | fade",
+"out": [
+"    window hide",
+"    scene black with fade",
+"    show expression Text(\"Конец\", text_align=0.5, size=40, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 20 ypos -1.20",
+"    $ renpy.pause(20, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "роллтитры Конец | 20 | 40 | fade",
+"out": [
+"    window hide",
+"    scene black with fade",
+"    show expression Text(\"Конец\", text_align=0.5, size=40, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 20 ypos -1.20",
+"    $ renpy.pause(20, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "creditsroll Конец | 20 | 40 | fade",
+"out": [
+"    window hide",
+"    scene black with fade",
+"    show expression Text(\"Конец\", text_align=0.5, size=40, color=\"#f5f5f5\") as genry_credits_roll:",
+"        xalign 0.5",
+"        ypos 1.05",
+"        linear 20 ypos -1.20",
+"    $ renpy.pause(20, hard=True)",
+"    hide genry_credits_roll",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "note Текст заметки",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"Текст заметки\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "заметка Текст заметки",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"Текст заметки\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "note \"В кавычках\"",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"В кавычках\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "заметка \"В кавычках\"",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"В кавычках\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "note",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"...\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "заметка",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"...\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "курсив Текст заметки",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"Текст заметки\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "monologue Думаю",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}Думаю{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "монолог Думаю",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}Думаю{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "monologue",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}...{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "монолог",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}...{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "внутренниймонолог Думаю",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}Думаю{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "diary Запись дня",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{b}Дневник{/b}\nЗапись дня\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "дневник Запись дня",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{b}Дневник{/b}\nЗапись дня\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "memorynote Помню это",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    show prologue_dream zorder 100",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}Помню это{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide prologue_dream",
+"    with dissolve",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "воспоминание Помню это",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    show prologue_dream zorder 100",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}Помню это{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide prologue_dream",
+"    with dissolve",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "memorynote 'одинарные'",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    show prologue_dream zorder 100",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}одинарные{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide prologue_dream",
+"    with dissolve",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "воспоминание 'одинарные'",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    show prologue_dream zorder 100",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{i}одинарные{/i}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide prologue_dream",
+"    with dissolve",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "bigtext КРУПНО",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{size=34}КРУПНО{/size}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "большойтекст КРУПНО",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{size=34}КРУПНО{/size}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "экрантекста КРУПНО",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show",
+"    \"{size=34}КРУПНО{/size}\"",
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "notedim",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve"
+]
+},
+{
+"line": "заметказатемнение",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve"
+]
+},
+{
+"line": "notedim 0.8",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.80",
+"    with dissolve"
+]
+},
+{
+"line": "заметказатемнение 0.8",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.80",
+"    with dissolve"
+]
+},
+{
+"line": "notedim 2",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 1.00",
+"    with dissolve"
+]
+},
+{
+"line": "заметказатемнение 2",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 1.00",
+"    with dissolve"
+]
+},
+{
+"line": "notedim -1",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve"
+]
+},
+{
+"line": "заметказатемнение -1",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve"
+]
+},
+{
+"line": "notedim x",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve"
+]
+},
+{
+"line": "заметказатемнение x",
+"out": [
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve"
+]
+},
+{
+"line": "notebg bg ext_road_day dissolve",
+"out": [
+"    scene bg ext_road_day with dissolve"
+]
+},
+{
+"line": "заметкафон bg ext_road_day dissolve",
+"out": [
+"    scene bg ext_road_day with dissolve"
+]
+},
+{
+"line": "notebg cg d1 fade",
+"out": [
+"    scene cg d1 with fade"
+]
+},
+{
+"line": "заметкафон cg d1 fade",
+"out": [
+"    scene cg d1 with fade"
+]
+},
+{
+"line": "notebg black",
+"out": [
+"    scene black"
+]
+},
+{
+"line": "заметкафон black",
+"out": [
+"    scene black"
+]
+},
+{
+"line": "notebg white none",
+"out": [
+"    scene white"
+]
+},
+{
+"line": "заметкафон white none",
+"out": [
+"    scene white"
+]
+},
+{
+"line": "notebg bg black",
+"out": [
+"    scene black"
+]
+},
+{
+"line": "заметкафон bg black",
+"out": [
+"    scene black"
+]
+},
+{
+"line": "notebg something else dissolve",
+"out": [
+"    scene something else with dissolve"
+]
+},
+{
+"line": "заметкафон something else dissolve",
+"out": [
+"    scene something else with dissolve"
+]
+},
+{
+"line": "notebg",
+"out": [
+"    # notebg needs: bg/cg/image name"
+]
+},
+{
+"line": "заметкафон",
+"out": [
+"    # notebg needs: bg/cg/image name"
+]
+},
+{
+"line": "notenvl",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show"
+]
+},
+{
+"line": "заметкаnvl",
+"out": [
+"    window hide",
+"    show genry_note_dim onlayer overlay:",
+"        alpha 0.60",
+"    with dissolve",
+"    $ set_mode_nvl()",
+"    nvl show"
+]
+},
+{
+"line": "noteadv",
+"out": [
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "заметкаadv",
+"out": [
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "closenote",
+"out": [
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "закрытьзаметку",
+"out": [
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    hide genry_note_dim onlayer overlay",
+"    with dissolve",
+"    window show"
+]
+},
+{
+"line": "staticfx",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "помехи",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "staticfx 0.5",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.50"
+]
+},
+{
+"line": "помехи 0.5",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.50"
+]
+},
+{
+"line": "staticfx 1",
+"out": [
+"    show prologue_dream zorder 100"
+]
+},
+{
+"line": "помехи 1",
+"out": [
+"    show prologue_dream zorder 100"
+]
+},
+{
+"line": "staticfx 0.9 fade",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.90",
+"    with fade"
+]
+},
+{
+"line": "помехи 0.9 fade",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.90",
+"    with fade"
+]
+},
+{
+"line": "staticfx dissolve",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    with dissolve"
+]
+},
+{
+"line": "помехи dissolve",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    with dissolve"
+]
+},
+{
+"line": "staticfx none",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "помехи none",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "staticfx 2",
+"out": [
+"    show prologue_dream zorder 100"
+]
+},
+{
+"line": "помехи 2",
+"out": [
+"    show prologue_dream zorder 100"
+]
+},
+{
+"line": "noisefx",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "шум",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "noisefx 0.4 dissolve",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.40",
+"    with dissolve"
+]
+},
+{
+"line": "шум 0.4 dissolve",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.40",
+"    with dissolve"
+]
+},
+{
+"line": "шумпереход",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "glitchfx",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    with hpunch"
+]
+},
+{
+"line": "глитч",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    with hpunch"
+]
+},
+{
+"line": "glitchfx 0.6",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.60",
+"    with hpunch"
+]
+},
+{
+"line": "глитч 0.6",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.60",
+"    with hpunch"
+]
+},
+{
+"line": "glitch",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    with hpunch"
+]
+},
+{
+"line": "vhsfx",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "vhs",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "vhsfx 1.0 fade",
+"out": [
+"    show prologue_dream zorder 100",
+"    with fade"
+]
+},
+{
+"line": "vhs 1.0 fade",
+"out": [
+"    show prologue_dream zorder 100",
+"    with fade"
+]
+},
+{
+"line": "vhsшум",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70"
+]
+},
+{
+"line": "memoryfx",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(0.25, hard=True)",
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    hide blink onlayer overlay",
+"    show unblink onlayer overlay",
+"    $ renpy.pause(1.0, hard=True)",
+"    hide unblink onlayer overlay",
+"    window show"
+]
+},
+{
+"line": "эффектпамяти",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(0.25, hard=True)",
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    hide blink onlayer overlay",
+"    show unblink onlayer overlay",
+"    $ renpy.pause(1.0, hard=True)",
+"    hide unblink onlayer overlay",
+"    window show"
+]
+},
+{
+"line": "memoryfx 0.3",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(0.25, hard=True)",
+"    show prologue_dream zorder 100:",
+"        alpha 0.30",
+"    hide blink onlayer overlay",
+"    show unblink onlayer overlay",
+"    $ renpy.pause(1.0, hard=True)",
+"    hide unblink onlayer overlay",
+"    window show"
+]
+},
+{
+"line": "эффектпамяти 0.3",
+"out": [
+"    window hide",
+"    show blink onlayer overlay",
+"    $ renpy.pause(0.25, hard=True)",
+"    show prologue_dream zorder 100:",
+"        alpha 0.30",
+"    hide blink onlayer overlay",
+"    show unblink onlayer overlay",
+"    $ renpy.pause(1.0, hard=True)",
+"    hide unblink onlayer overlay",
+"    window show"
+]
+},
+{
+"line": "dreamfx",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    show blinking onlayer overlay"
+]
+},
+{
+"line": "сонныйэффект",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    show blinking onlayer overlay"
+]
+},
+{
+"line": "dreamfx 0.8 fade",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.80",
+"    show blinking onlayer overlay",
+"    with fade"
+]
+},
+{
+"line": "сонныйэффект 0.8 fade",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.80",
+"    show blinking onlayer overlay",
+"    with fade"
+]
+},
+{
+"line": "dreamfx none",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    show blinking onlayer overlay"
+]
+},
+{
+"line": "сонныйэффект none",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    show blinking onlayer overlay"
+]
+},
+{
+"line": "сонныйпереход",
+"out": [
+"    show prologue_dream zorder 100:",
+"        alpha 0.70",
+"    show blinking onlayer overlay"
+]
+},
+{
+"line": "pixelfx",
+"out": [
+"    with pixellate"
+]
+},
+{
+"line": "пиксели",
+"out": [
+"    with pixellate"
+]
+},
+{
+"line": "pixelfx 0.3",
+"out": [
+"    with pixellate"
+]
+},
+{
+"line": "пиксели 0.3",
+"out": [
+"    with pixellate"
+]
+},
+{
+"line": "пиксельпереход",
+"out": [
+"    with pixellate"
+]
+},
+{
+"line": "clearfx",
+"out": [
+"    hide genry_note_dim onlayer overlay",
+"    hide prologue_dream",
+"    hide blinking onlayer overlay",
+"    hide blink onlayer overlay",
+"    hide unblink onlayer overlay",
+"    with dissolve"
+]
+},
+{
+"line": "выключитьпомехи",
+"out": [
+"    hide genry_note_dim onlayer overlay",
+"    hide prologue_dream",
+"    hide blinking onlayer overlay",
+"    hide blink onlayer overlay",
+"    hide unblink onlayer overlay",
+"    with dissolve"
+]
+},
+{
+"line": "убратьпомехи",
+"out": [
+"    hide genry_note_dim onlayer overlay",
+"    hide prologue_dream",
+"    hide blinking onlayer overlay",
+"    hide blink onlayer overlay",
+"    hide unblink onlayer overlay",
+"    with dissolve"
+]
+},
+{
+"line": "стоппомехи",
+"out": [
+"    hide genry_note_dim onlayer overlay",
+"    hide prologue_dream",
+"    hide blinking onlayer overlay",
+"    hide blink onlayer overlay",
+"    hide unblink onlayer overlay",
+"    with dissolve"
+]
+},
+{
+"line": "dream",
+"out": [
+"    show prologue_dream zorder 100 with dissolve"
+]
+},
+{
+"line": "сон",
+"out": [
+"    show prologue_dream zorder 100 with dissolve"
+]
+},
+{
+"line": "dream fade",
+"out": [
+"    show prologue_dream zorder 100 with fade"
+]
+},
+{
+"line": "сон fade",
+"out": [
+"    show prologue_dream zorder 100 with fade"
+]
+},
+{
+"line": "dream none",
+"out": [
+"    show prologue_dream zorder 100"
+]
+},
+{
+"line": "сон none",
+"out": [
+"    show prologue_dream zorder 100"
+]
+},
+{
+"line": "dream xyz",
+"out": [
+"    show prologue_dream zorder 100 with dissolve"
+]
+},
+{
+"line": "сон xyz",
+"out": [
+"    show prologue_dream zorder 100 with dissolve"
+]
+},
+{
+"line": "сонныйфильтр",
+"out": [
+"    show prologue_dream zorder 100 with dissolve"
+]
+},
+{
+"line": "stopdream",
+"out": [
+"    hide prologue_dream with dissolve"
+]
+},
+{
+"line": "стопсон",
+"out": [
+"    hide prologue_dream with dissolve"
+]
+},
+{
+"line": "stopdream fade",
+"out": [
+"    hide prologue_dream with fade"
+]
+},
+{
+"line": "стопсон fade",
+"out": [
+"    hide prologue_dream with fade"
+]
+},
+{
+"line": "stopdream none",
+"out": [
+"    hide prologue_dream"
+]
+},
+{
+"line": "стопсон none",
+"out": [
+"    hide prologue_dream"
+]
+},
+{
+"line": "убратьсон",
+"out": [
+"    hide prologue_dream with dissolve"
+]
+},
+{
+"line": "chapterpng genry_day1 | 1 | Первый день",
+"out": [
+"    window hide",
+"    scene genry_chapter_back",
+"    show genry_chapter_noise",
+"    show expression Text(u\"День 1\", size=96, color=\"#d8d8d8\", text_align=0.5) as genry_chapter_day:",
+"        xcenter 0.455",
+"        ycenter 0.405",
+"        alpha 0.72",
+"    show expression Text(u\"Первый день\", size=28, color=\"#cfd4dc\", text_align=0.5) as genry_chapter_title:",
+"        xcenter 0.455",
+"        ycenter 0.515",
+"        alpha 0.82",
+"    show genry_day1 as genry_chapter_png:",
+"        xcenter -0.08",
+"        ycenter 0.58",
+"        alpha 0.0",
+"        zoom 1.18",
+"        parallel:",
+"            linear 0.45 alpha 0.92",
+"        parallel:",
+"            linear 4.0 xcenter 0.18",
+"    with dissolve",
+"    $ renpy.pause(4.0, hard=True)",
+"    hide genry_chapter_png",
+"    hide genry_chapter_day",
+"    hide genry_chapter_title",
+"    hide genry_chapter_noise",
+"    with dissolve",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "главаpng genry_day1 | 1 | Первый день",
+"out": [
+"    window hide",
+"    scene genry_chapter_back",
+"    show genry_chapter_noise",
+"    show expression Text(u\"День 1\", size=96, color=\"#d8d8d8\", text_align=0.5) as genry_chapter_day:",
+"        xcenter 0.455",
+"        ycenter 0.405",
+"        alpha 0.72",
+"    show expression Text(u\"Первый день\", size=28, color=\"#cfd4dc\", text_align=0.5) as genry_chapter_title:",
+"        xcenter 0.455",
+"        ycenter 0.515",
+"        alpha 0.82",
+"    show genry_day1 as genry_chapter_png:",
+"        xcenter -0.08",
+"        ycenter 0.58",
+"        alpha 0.0",
+"        zoom 1.18",
+"        parallel:",
+"            linear 0.45 alpha 0.92",
+"        parallel:",
+"            linear 4.0 xcenter 0.18",
+"    with dissolve",
+"    $ renpy.pause(4.0, hard=True)",
+"    hide genry_chapter_png",
+"    hide genry_chapter_day",
+"    hide genry_chapter_title",
+"    hide genry_chapter_noise",
+"    with dissolve",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "chapterpng img | 2 | Title | back | 5 | 0.5 | 1.0 | -0.2 | 0.3 | 0.6",
+"out": [
+"    window hide",
+"    scene genry_chapter_back",
+"    show genry_chapter_noise",
+"    show expression Text(u\"День 2\", size=96, color=\"#d8d8d8\", text_align=0.5) as genry_chapter_day:",
+"        xcenter 0.455",
+"        ycenter 0.405",
+"        alpha 0.72",
+"    show expression Text(u\"Title\", size=28, color=\"#cfd4dc\", text_align=0.5) as genry_chapter_title:",
+"        xcenter 0.455",
+"        ycenter 0.515",
+"        alpha 0.82",
+"    show img as genry_chapter_png:",
+"        xcenter -0.08",
+"        ycenter 0.6",
+"        alpha 0.0",
+"        zoom 1.18",
+"        parallel:",
+"            linear 0.45 alpha 0.92",
+"        parallel:",
+"            linear 5 xcenter 0.3",
+"    with dissolve",
+"    $ renpy.pause(5, hard=True)",
+"    hide genry_chapter_png",
+"    hide genry_chapter_day",
+"    hide genry_chapter_title",
+"    hide genry_chapter_noise",
+"    with dissolve",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "главаpng img | 2 | Title | back | 5 | 0.5 | 1.0 | -0.2 | 0.3 | 0.6",
+"out": [
+"    window hide",
+"    scene genry_chapter_back",
+"    show genry_chapter_noise",
+"    show expression Text(u\"День 2\", size=96, color=\"#d8d8d8\", text_align=0.5) as genry_chapter_day:",
+"        xcenter 0.455",
+"        ycenter 0.405",
+"        alpha 0.72",
+"    show expression Text(u\"Title\", size=28, color=\"#cfd4dc\", text_align=0.5) as genry_chapter_title:",
+"        xcenter 0.455",
+"        ycenter 0.515",
+"        alpha 0.82",
+"    show img as genry_chapter_png:",
+"        xcenter -0.08",
+"        ycenter 0.6",
+"        alpha 0.0",
+"        zoom 1.18",
+"        parallel:",
+"            linear 0.45 alpha 0.92",
+"        parallel:",
+"            linear 5 xcenter 0.3",
+"    with dissolve",
+"    $ renpy.pause(5, hard=True)",
+"    hide genry_chapter_png",
+"    hide genry_chapter_day",
+"    hide genry_chapter_title",
+"    hide genry_chapter_noise",
+"    with dissolve",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "chapterpng a | b",
+"out": [
+"    # chapterpng needs: image | day | title | [backdrop] | [seconds] | [alpha] | [zoom]"
+]
+},
+{
+"line": "главаpng a | b",
+"out": [
+"    # chapterpng needs: image | day | title | [backdrop] | [seconds] | [alpha] | [zoom]"
+]
+},
+{
+"line": "chapterpng img | x | | b | q | 0.8 | 1.1",
+"out": [
+"    window hide",
+"    scene genry_chapter_back",
+"    show genry_chapter_noise",
+"    show expression Text(u\"День 1\", size=96, color=\"#d8d8d8\", text_align=0.5) as genry_chapter_day:",
+"        xcenter 0.455",
+"        ycenter 0.405",
+"        alpha 0.72",
+"    show expression Text(u\"b\", size=28, color=\"#cfd4dc\", text_align=0.5) as genry_chapter_title:",
+"        xcenter 0.455",
+"        ycenter 0.515",
+"        alpha 0.82",
+"    show img as genry_chapter_png:",
+"        xcenter -0.08",
+"        ycenter 0.58",
+"        alpha 0.0",
+"        zoom 1.18",
+"        parallel:",
+"            linear 0.45 alpha 1.1",
+"        parallel:",
+"            linear 0.8 xcenter 0.18",
+"    with dissolve",
+"    $ renpy.pause(0.8, hard=True)",
+"    hide genry_chapter_png",
+"    hide genry_chapter_day",
+"    hide genry_chapter_title",
+"    hide genry_chapter_noise",
+"    with dissolve",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "главаpng img | x | | b | q | 0.8 | 1.1",
+"out": [
+"    window hide",
+"    scene genry_chapter_back",
+"    show genry_chapter_noise",
+"    show expression Text(u\"День 1\", size=96, color=\"#d8d8d8\", text_align=0.5) as genry_chapter_day:",
+"        xcenter 0.455",
+"        ycenter 0.405",
+"        alpha 0.72",
+"    show expression Text(u\"b\", size=28, color=\"#cfd4dc\", text_align=0.5) as genry_chapter_title:",
+"        xcenter 0.455",
+"        ycenter 0.515",
+"        alpha 0.82",
+"    show img as genry_chapter_png:",
+"        xcenter -0.08",
+"        ycenter 0.58",
+"        alpha 0.0",
+"        zoom 1.18",
+"        parallel:",
+"            linear 0.45 alpha 1.1",
+"        parallel:",
+"            linear 0.8 xcenter 0.18",
+"    with dissolve",
+"    $ renpy.pause(0.8, hard=True)",
+"    hide genry_chapter_png",
+"    hide genry_chapter_day",
+"    hide genry_chapter_title",
+"    hide genry_chapter_noise",
+"    with dissolve",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "мониторpng genry_day1 | 1 | Первый день",
+"out": [
+"    window hide",
+"    scene genry_chapter_back",
+"    show genry_chapter_noise",
+"    show expression Text(u\"День 1\", size=96, color=\"#d8d8d8\", text_align=0.5) as genry_chapter_day:",
+"        xcenter 0.455",
+"        ycenter 0.405",
+"        alpha 0.72",
+"    show expression Text(u\"Первый день\", size=28, color=\"#cfd4dc\", text_align=0.5) as genry_chapter_title:",
+"        xcenter 0.455",
+"        ycenter 0.515",
+"        alpha 0.82",
+"    show genry_day1 as genry_chapter_png:",
+"        xcenter -0.08",
+"        ycenter 0.58",
+"        alpha 0.0",
+"        zoom 1.18",
+"        parallel:",
+"            linear 0.45 alpha 0.92",
+"        parallel:",
+"            linear 4.0 xcenter 0.18",
+"    with dissolve",
+"    $ renpy.pause(4.0, hard=True)",
+"    hide genry_chapter_png",
+"    hide genry_chapter_day",
+"    hide genry_chapter_title",
+"    hide genry_chapter_noise",
+"    with dissolve",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "деньpng genry_day1 | 1 | Первый день",
+"out": [
+"    window hide",
+"    scene genry_chapter_back",
+"    show genry_chapter_noise",
+"    show expression Text(u\"День 1\", size=96, color=\"#d8d8d8\", text_align=0.5) as genry_chapter_day:",
+"        xcenter 0.455",
+"        ycenter 0.405",
+"        alpha 0.72",
+"    show expression Text(u\"Первый день\", size=28, color=\"#cfd4dc\", text_align=0.5) as genry_chapter_title:",
+"        xcenter 0.455",
+"        ycenter 0.515",
+"        alpha 0.82",
+"    show genry_day1 as genry_chapter_png:",
+"        xcenter -0.08",
+"        ycenter 0.58",
+"        alpha 0.0",
+"        zoom 1.18",
+"        parallel:",
+"            linear 0.45 alpha 0.92",
+"        parallel:",
+"            linear 4.0 xcenter 0.18",
+"    with dissolve",
+"    $ renpy.pause(4.0, hard=True)",
+"    hide genry_chapter_png",
+"    hide genry_chapter_day",
+"    hide genry_chapter_title",
+"    hide genry_chapter_noise",
+"    with dissolve",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "music everlasting_summer",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 2",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"everlasting_summer\")"
+]
+},
+{
+"line": "музыка everlasting_summer",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 2",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"everlasting_summer\")"
+]
+},
+{
+"line": "music lightness radio fadein 3 loop",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"lightness radio\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 3 loop",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"lightness radio\")"
+]
+},
+{
+"line": "музыка lightness radio fadein 3 loop",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"lightness radio\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 3 loop",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"lightness radio\")"
+]
+},
+{
+"line": "music x fadeout 1 noloop",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"x\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 2 fadeout 1 noloop",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"x\")"
+]
+},
+{
+"line": "музыка x fadeout 1 noloop",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"x\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 2 fadeout 1 noloop",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"x\")"
+]
+},
+{
+"line": "music fadein",
+"out": [
+"    # music command needs a music id"
+]
+},
+{
+"line": "музыка fadein",
+"out": [
+"    # music command needs a music id"
+]
+},
+{
+"line": "music",
+"out": [
+"    # music command needs a music id"
+]
+},
+{
+"line": "музыка",
+"out": [
+"    # music command needs a music id"
+]
+},
+{
+"line": "music a FADEIN 4",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"a\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 4",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"a\")"
+]
+},
+{
+"line": "музыка a FADEIN 4",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"a\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 4",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"a\")"
+]
+},
+{
+"line": "музыкапетля everlasting_summer",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 2",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"everlasting_summer\")"
+]
+},
+{
+"line": "музыкаloop everlasting_summer",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 2",
+"    else:",
+"        stop music fadeout 2",
+"        $ genry_warn_missing_audio(u\"music\", \"everlasting_summer\")"
+]
+},
+{
+"line": "musicfile audio/track.ogg",
+"out": [
+"    play music \"mods/genry_golden/audio/track.ogg\" fadein 2"
+]
+},
+{
+"line": "музыкафайл audio/track.ogg",
+"out": [
+"    play music \"mods/genry_golden/audio/track.ogg\" fadein 2"
+]
+},
+{
+"line": "musicfile audio/x.ogg fadein 1 loop",
+"out": [
+"    play music \"mods/genry_golden/audio/x.ogg\" fadein 1 loop"
+]
+},
+{
+"line": "музыкафайл audio/x.ogg fadein 1 loop",
+"out": [
+"    play music \"mods/genry_golden/audio/x.ogg\" fadein 1 loop"
+]
+},
+{
+"line": "musicfile mods/other/a.ogg",
+"out": [
+"    play music \"mods/other/a.ogg\" fadein 2"
+]
+},
+{
+"line": "музыкафайл mods/other/a.ogg",
+"out": [
+"    play music \"mods/other/a.ogg\" fadein 2"
+]
+},
+{
+"line": "musicfile",
+"out": [
+"    play music \"mods/genry_golden/\" fadein 2"
+]
+},
+{
+"line": "музыкафайл",
+"out": [
+"    play music \"mods/genry_golden/\" fadein 2"
+]
+},
+{
+"line": "musicqueue a | b | c fadein 1 loop",
+"out": [
+"    $ _genry_music_queue_names = [\"a\", \"b\", \"c\"]",
+"    $ _genry_music_queue = [genry_resolve_music(_genry_music_name) for _genry_music_name in _genry_music_queue_names if genry_resolve_music(_genry_music_name)]",
+"    if _genry_music_queue:",
+"        queue music _genry_music_queue fadein 1 loop",
+"    else:",
+"        $ genry_warn_missing_audio(u\"musicqueue\", u\", \".join(_genry_music_queue_names))"
+]
+},
+{
+"line": "очередьмузыки a | b | c fadein 1 loop",
+"out": [
+"    $ _genry_music_queue_names = [\"a\", \"b\", \"c\"]",
+"    $ _genry_music_queue = [genry_resolve_music(_genry_music_name) for _genry_music_name in _genry_music_queue_names if genry_resolve_music(_genry_music_name)]",
+"    if _genry_music_queue:",
+"        queue music _genry_music_queue fadein 1 loop",
+"    else:",
+"        $ genry_warn_missing_audio(u\"musicqueue\", u\", \".join(_genry_music_queue_names))"
+]
+},
+{
+"line": "musicqueue one",
+"out": [
+"    $ _genry_music_queue_names = [\"one\"]",
+"    $ _genry_music_queue = [genry_resolve_music(_genry_music_name) for _genry_music_name in _genry_music_queue_names if genry_resolve_music(_genry_music_name)]",
+"    if _genry_music_queue:",
+"        queue music _genry_music_queue",
+"    else:",
+"        $ genry_warn_missing_audio(u\"musicqueue\", u\", \".join(_genry_music_queue_names))"
+]
+},
+{
+"line": "очередьмузыки one",
+"out": [
+"    $ _genry_music_queue_names = [\"one\"]",
+"    $ _genry_music_queue = [genry_resolve_music(_genry_music_name) for _genry_music_name in _genry_music_queue_names if genry_resolve_music(_genry_music_name)]",
+"    if _genry_music_queue:",
+"        queue music _genry_music_queue",
+"    else:",
+"        $ genry_warn_missing_audio(u\"musicqueue\", u\", \".join(_genry_music_queue_names))"
+]
+},
+{
+"line": "musicqueue",
+"out": [
+"    # queue command needs: item | item | item [fadein 1 loop]"
+]
+},
+{
+"line": "очередьмузыки",
+"out": [
+"    # queue command needs: item | item | item [fadein 1 loop]"
+]
+},
+{
+"line": "музыкаочередь a | b | c fadein 1 loop",
+"out": [
+"    $ _genry_music_queue_names = [\"a\", \"b\", \"c\"]",
+"    $ _genry_music_queue = [genry_resolve_music(_genry_music_name) for _genry_music_name in _genry_music_queue_names if genry_resolve_music(_genry_music_name)]",
+"    if _genry_music_queue:",
+"        queue music _genry_music_queue fadein 1 loop",
+"    else:",
+"        $ genry_warn_missing_audio(u\"musicqueue\", u\", \".join(_genry_music_queue_names))"
+]
+},
+{
+"line": "queuemusic a | b | c fadein 1 loop",
+"out": [
+"    $ _genry_music_queue_names = [\"a\", \"b\", \"c\"]",
+"    $ _genry_music_queue = [genry_resolve_music(_genry_music_name) for _genry_music_name in _genry_music_queue_names if genry_resolve_music(_genry_music_name)]",
+"    if _genry_music_queue:",
+"        queue music _genry_music_queue fadein 1 loop",
+"    else:",
+"        $ genry_warn_missing_audio(u\"musicqueue\", u\", \".join(_genry_music_queue_names))"
+]
+},
+{
+"line": "soundqueue sfx/a.ogg | sound/sfx/b.ogg | c.ogg loop",
+"out": [
+"    queue sound [\"mods/genry_golden/sfx/a.ogg\", \"sound/sfx/b.ogg\", \"mods/genry_golden/c.ogg\"] loop"
+]
+},
+{
+"line": "очередьзвуков sfx/a.ogg | sound/sfx/b.ogg | c.ogg loop",
+"out": [
+"    queue sound [\"mods/genry_golden/sfx/a.ogg\", \"sound/sfx/b.ogg\", \"mods/genry_golden/c.ogg\"] loop"
+]
+},
+{
+"line": "soundqueue",
+"out": [
+"    # queue command needs: item | item | item [fadein 1 loop]"
+]
+},
+{
+"line": "очередьзвуков",
+"out": [
+"    # queue command needs: item | item | item [fadein 1 loop]"
+]
+},
+{
+"line": "soundqueue mods/x.ogg",
+"out": [
+"    queue sound [\"mods/x.ogg\"]"
+]
+},
+{
+"line": "очередьзвуков mods/x.ogg",
+"out": [
+"    queue sound [\"mods/x.ogg\"]"
+]
+},
+{
+"line": "звукочередь sfx/a.ogg | sound/sfx/b.ogg | c.ogg loop",
+"out": [
+"    queue sound [\"mods/genry_golden/sfx/a.ogg\", \"sound/sfx/b.ogg\", \"mods/genry_golden/c.ogg\"] loop"
+]
+},
+{
+"line": "queuesound sfx/a.ogg | sound/sfx/b.ogg | c.ogg loop",
+"out": [
+"    queue sound [\"mods/genry_golden/sfx/a.ogg\", \"sound/sfx/b.ogg\", \"mods/genry_golden/c.ogg\"] loop"
+]
+},
+{
+"line": "sound sfx_achievement",
+"out": [
+"    $ _genry_sound_file = genry_resolve_audio_expr(\"sfx_achievement\")",
+"    if _genry_sound_file:",
+"        play sound _genry_sound_file",
+"    else:",
+"        $ genry_warn_missing_audio(u\"sound\", \"sfx_achievement\")"
+]
+},
+{
+"line": "звук sfx_achievement",
+"out": [
+"    $ _genry_sound_file = genry_resolve_audio_expr(\"sfx_achievement\")",
+"    if _genry_sound_file:",
+"        play sound _genry_sound_file",
+"    else:",
+"        $ genry_warn_missing_audio(u\"sound\", \"sfx_achievement\")"
+]
+},
+{
+"line": "sound \"sound/sfx/door.ogg\"",
+"out": [
+"    play sound \"sound/sfx/door.ogg\""
+]
+},
+{
+"line": "звук \"sound/sfx/door.ogg\"",
+"out": [
+"    play sound \"sound/sfx/door.ogg\""
+]
+},
+{
+"line": "sound u'x.ogg'",
+"out": [
+"    play sound u'x.ogg'"
+]
+},
+{
+"line": "звук u'x.ogg'",
+"out": [
+"    play sound u'x.ogg'"
+]
+},
+{
+"line": "sound",
+"out": [
+"    # sound command needs an id"
+]
+},
+{
+"line": "звук",
+"out": [
+"    # sound command needs an id"
+]
+},
+{
+"line": "voice v_intro",
+"out": [
+"    $ _genry_sound_file = genry_resolve_audio_expr(\"v_intro\")",
+"    if _genry_sound_file:",
+"        play sound _genry_sound_file",
+"    else:",
+"        $ genry_warn_missing_audio(u\"sound\", \"v_intro\")"
+]
+},
+{
+"line": "озвучка v_intro",
+"out": [
+"    $ _genry_sound_file = genry_resolve_audio_expr(\"v_intro\")",
+"    if _genry_sound_file:",
+"        play sound _genry_sound_file",
+"    else:",
+"        $ genry_warn_missing_audio(u\"sound\", \"v_intro\")"
+]
+},
+{
+"line": "voice",
+"out": [
+"    # sound command needs an id"
+]
+},
+{
+"line": "озвучка",
+"out": [
+"    # sound command needs an id"
+]
+},
+{
+"line": "голос v_intro",
+"out": [
+"    $ _genry_sound_file = genry_resolve_audio_expr(\"v_intro\")",
+"    if _genry_sound_file:",
+"        play sound _genry_sound_file",
+"    else:",
+"        $ genry_warn_missing_audio(u\"sound\", \"v_intro\")"
+]
+},
+{
+"line": "soundfile audio/s.ogg",
+"out": [
+"    play sound \"mods/genry_golden/audio/s.ogg\""
+]
+},
+{
+"line": "звукфайл audio/s.ogg",
+"out": [
+"    play sound \"mods/genry_golden/audio/s.ogg\""
+]
+},
+{
+"line": "soundfile",
+"out": [
+"    play sound \"mods/genry_golden/\""
+]
+},
+{
+"line": "звукфайл",
+"out": [
+"    play sound \"mods/genry_golden/\""
+]
+},
+{
+"line": "voicefile audio/v.ogg",
+"out": [
+"    play sound \"mods/genry_golden/audio/v.ogg\""
+]
+},
+{
+"line": "озвучкафайл audio/v.ogg",
+"out": [
+"    play sound \"mods/genry_golden/audio/v.ogg\""
+]
+},
+{
+"line": "голосфайл audio/v.ogg",
+"out": [
+"    play sound \"mods/genry_golden/audio/v.ogg\""
+]
+},
+{
+"line": "voicedsay Алиса | audio/v1.ogg | Привет | мир",
+"out": [
+"    play sound \"mods/genry_golden/audio/v1.ogg\"",
+"    dv \"Привет | мир\""
+]
+},
+{
+"line": "озвученнаяреплика Алиса | audio/v1.ogg | Привет | мир",
+"out": [
+"    play sound \"mods/genry_golden/audio/v1.ogg\"",
+"    dv \"Привет | мир\""
+]
+},
+{
+"line": "voicedsay dv audio/v.ogg Текст тут",
+"out": [
+"    play sound \"mods/genry_golden/audio/v.ogg\"",
+"    dv \"Текст тут\""
+]
+},
+{
+"line": "озвученнаяреплика dv audio/v.ogg Текст тут",
+"out": [
+"    play sound \"mods/genry_golden/audio/v.ogg\"",
+"    dv \"Текст тут\""
+]
+},
+{
+"line": "voicedsay a b",
+"out": [
+"    # voiced line needs: speaker audio/file.ogg | text"
+]
+},
+{
+"line": "озвученнаяреплика a b",
+"out": [
+"    # voiced line needs: speaker audio/file.ogg | text"
+]
+},
+{
+"line": "voicedsay Неизвестный | a.ogg | t",
+"out": [
+"    play sound \"mods/genry_golden/a.ogg\"",
+"    genry \"t\""
+]
+},
+{
+"line": "озвученнаяреплика Неизвестный | a.ogg | t",
+"out": [
+"    play sound \"mods/genry_golden/a.ogg\"",
+"    genry \"t\""
+]
+},
+{
+"line": "голосречь Алиса | audio/v1.ogg | Привет | мир",
+"out": [
+"    play sound \"mods/genry_golden/audio/v1.ogg\"",
+"    dv \"Привет | мир\""
+]
+},
+{
+"line": "punchedsay Алиса | hpunch | Эй!",
+"out": [
+"    dv \"Эй!\" with hpunch"
+]
+},
+{
+"line": "ударреплика Алиса | hpunch | Эй!",
+"out": [
+"    dv \"Эй!\" with hpunch"
+]
+},
+{
+"line": "punchedsay dv vpunch Стой",
+"out": [
+"    dv \"Стой\" with vpunch"
+]
+},
+{
+"line": "ударреплика dv vpunch Стой",
+"out": [
+"    dv \"Стой\" with vpunch"
+]
+},
+{
+"line": "punchedsay me xx Текст",
+"out": [
+"    me \"Текст\" with hpunch"
+]
+},
+{
+"line": "ударреплика me xx Текст",
+"out": [
+"    me \"Текст\" with hpunch"
+]
+},
+{
+"line": "punchedsay a b",
+"out": [
+"    # punched line needs: speaker hpunch/vpunch | text"
+]
+},
+{
+"line": "ударреплика a b",
+"out": [
+"    # punched line needs: speaker hpunch/vpunch | text"
+]
+},
+{
+"line": "крик Алиса | hpunch | Эй!",
+"out": [
+"    dv \"Эй!\" with hpunch"
+]
+},
+{
+"line": "ambience ambience_camp",
+"out": [
+"    play ambience \"mods/genry_golden/ambience_camp\" fadein 2"
+]
+},
+{
+"line": "атмосфера ambience_camp",
+"out": [
+"    play ambience \"mods/genry_golden/ambience_camp\" fadein 2"
+]
+},
+{
+"line": "ambience sound/ambience/x.ogg fadein 1",
+"out": [
+"    play ambience \"sound/ambience/x.ogg\" fadein 1"
+]
+},
+{
+"line": "атмосфера sound/ambience/x.ogg fadein 1",
+"out": [
+"    play ambience \"sound/ambience/x.ogg\" fadein 1"
+]
+},
+{
+"line": "ambience",
+"out": [
+"    # ambience command needs a path"
+]
+},
+{
+"line": "атмосфера",
+"out": [
+"    # ambience command needs a path"
+]
+},
+{
+"line": "ambience mods/a.ogg",
+"out": [
+"    play ambience \"mods/a.ogg\" fadein 2"
+]
+},
+{
+"line": "атмосфера mods/a.ogg",
+"out": [
+"    play ambience \"mods/a.ogg\" fadein 2"
+]
+},
+{
+"line": "windowhide",
+"out": [
+"    window hide"
+]
+},
+{
+"line": "окноскрыть",
+"out": [
+"    window hide"
+]
+},
+{
+"line": "windowhide dissolve",
+"out": [
+"    window hide with dissolve"
+]
+},
+{
+"line": "окноскрыть dissolve",
+"out": [
+"    window hide with dissolve"
+]
+},
+{
+"line": "windowhide none",
+"out": [
+"    window hide"
+]
+},
+{
+"line": "окноскрыть none",
+"out": [
+"    window hide"
+]
+},
+{
+"line": "windowhide xyz",
+"out": [
+"    window hide"
+]
+},
+{
+"line": "окноскрыть xyz",
+"out": [
+"    window hide"
+]
+},
+{
+"line": "скрытьокно",
+"out": [
+"    window hide"
+]
+},
+{
+"line": "windowhide",
+"out": [
+"    window hide"
+]
+},
+{
+"line": "windowshow",
+"out": [
+"    window show"
+]
+},
+{
+"line": "окнопоказать",
+"out": [
+"    window show"
+]
+},
+{
+"line": "windowshow fade",
+"out": [
+"    window show with fade"
+]
+},
+{
+"line": "окнопоказать fade",
+"out": [
+"    window show with fade"
+]
+},
+{
+"line": "показатьокно",
+"out": [
+"    window show"
+]
+},
+{
+"line": "windowshow",
+"out": [
+"    window show"
+]
+},
+{
+"line": "nvlstart",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show dissolve"
+]
+},
+{
+"line": "nvlначать",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show dissolve"
+]
+},
+{
+"line": "nvlstart fade",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show fade"
+]
+},
+{
+"line": "nvlначать fade",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show fade"
+]
+},
+{
+"line": "nvlstart none",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show"
+]
+},
+{
+"line": "nvlначать none",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show"
+]
+},
+{
+"line": "nvlstart xyz",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show dissolve"
+]
+},
+{
+"line": "nvlначать xyz",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show dissolve"
+]
+},
+{
+"line": "режимnvl",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show dissolve"
+]
+},
+{
+"line": "nvlstart",
+"out": [
+"    window hide",
+"    $ set_mode_nvl()",
+"    nvl show dissolve"
+]
+},
+{
+"line": "nvlend",
+"out": [
+"    nvl clear",
+"    nvl hide dissolve",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "nvlконец",
+"out": [
+"    nvl clear",
+"    nvl hide dissolve",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "nvlend fade",
+"out": [
+"    nvl clear",
+"    nvl hide fade",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "nvlконец fade",
+"out": [
+"    nvl clear",
+"    nvl hide fade",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "nvlend none",
+"out": [
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "nvlконец none",
+"out": [
+"    nvl clear",
+"    nvl hide",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "режимadv",
+"out": [
+"    nvl clear",
+"    nvl hide dissolve",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "adv",
+"out": [
+"    nvl clear",
+"    nvl hide dissolve",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "nvlend",
+"out": [
+"    nvl clear",
+"    nvl hide dissolve",
+"    $ set_mode_adv()",
+"    window show"
+]
+},
+{
+"line": "stopmusic",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "стопмузыка",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "stopsound",
+"out": [
+"    stop sound"
+]
+},
+{
+"line": "стопзвук",
+"out": [
+"    stop sound"
+]
+},
+{
+"line": "stopambience",
+"out": [
+"    stop ambience fadeout 2"
+]
+},
+{
+"line": "стопатмосфера",
+"out": [
+"    stop ambience fadeout 2"
+]
+},
+{
+"line": "stopallaudio",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound"
+]
+},
+{
+"line": "стопвсе",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound"
+]
+},
+{
+"line": "stop",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "стоп",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "stop музыка",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "стоп музыка",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "stop звук",
+"out": [
+"    stop sound"
+]
+},
+{
+"line": "стоп звук",
+"out": [
+"    stop sound"
+]
+},
+{
+"line": "stop атмосфера",
+"out": [
+"    stop ambience fadeout 2"
+]
+},
+{
+"line": "стоп атмосфера",
+"out": [
+"    stop ambience fadeout 2"
+]
+},
+{
+"line": "stop видео",
+"out": [
+"    stop movie"
+]
+},
+{
+"line": "стоп видео",
+"out": [
+"    stop movie"
+]
+},
+{
+"line": "stop всё",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    stop movie"
+]
+},
+{
+"line": "стоп всё",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    stop movie"
+]
+},
+{
+"line": "stop все",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    stop movie"
+]
+},
+{
+"line": "стоп все",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    stop movie"
+]
+},
+{
+"line": "stop music",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "стоп music",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "stop стопмузыка",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "стоп стопмузыка",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "stop channelx",
+"out": [
+"    stop channelx"
+]
+},
+{
+"line": "стоп channelx",
+"out": [
+"    stop channelx"
+]
+},
+{
+"line": "stop Музыка громко",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "стоп Музыка громко",
+"out": [
+"    stop music fadeout 2"
+]
+},
+{
+"line": "stop all",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    stop movie"
+]
+},
+{
+"line": "стоп all",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    stop movie"
+]
+},
+{
+"line": "stop video",
+"out": [
+"    stop movie"
+]
+},
+{
+"line": "стоп video",
+"out": [
+"    stop movie"
+]
+},
+{
+"line": "hideall",
+"out": [
+"    hide dv",
+"    hide un",
+"    hide sl",
+"    hide mi",
+"    hide us",
+"    hide mt",
+"    hide el",
+"    hide sh",
+"    hide mz",
+"    hide uv",
+"    hide cs",
+"    hide genry",
+"    hide scar",
+"    with dissolve"
+]
+},
+{
+"line": "скрытьвсех",
+"out": [
+"    hide dv",
+"    hide un",
+"    hide sl",
+"    hide mi",
+"    hide us",
+"    hide mt",
+"    hide el",
+"    hide sh",
+"    hide mz",
+"    hide uv",
+"    hide cs",
+"    hide genry",
+"    hide scar",
+"    with dissolve"
+]
+},
+{
+"line": "убратьвсех",
+"out": [
+"    hide dv",
+"    hide un",
+"    hide sl",
+"    hide mi",
+"    hide us",
+"    hide mt",
+"    hide el",
+"    hide sh",
+"    hide mz",
+"    hide uv",
+"    hide cs",
+"    hide genry",
+"    hide scar",
+"    with dissolve"
+]
+},
+{
+"line": "effect",
+"out": [
+"    with dissolve"
+]
+},
+{
+"line": "эффект",
+"out": [
+"    with dissolve"
+]
+},
+{
+"line": "effect fade",
+"out": [
+"    with fade"
+]
+},
+{
+"line": "эффект fade",
+"out": [
+"    with fade"
+]
+},
+{
+"line": "effect none",
+"out": []
+},
+{
+"line": "эффект none",
+"out": []
+},
+{
+"line": "effect xyz",
+"out": [
+"    # effect command needs one of: dissolve, dissolve2, dspr, fade, fade2, fade3, hpunch, move, moveinleft, moveinright, moveoutleft, moveoutright, none, pixellate, vpunch"
+]
+},
+{
+"line": "эффект xyz",
+"out": [
+"    # effect command needs one of: dissolve, dissolve2, dspr, fade, fade2, fade3, hpunch, move, moveinleft, moveinright, moveoutleft, moveoutright, none, pixellate, vpunch"
+]
+},
+{
+"line": "shake",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch"
+]
+},
+{
+"line": "тряска",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch"
+]
+},
+{
+"line": "shake hpunch",
+"out": [
+"    with hpunch"
+]
+},
+{
+"line": "тряска hpunch",
+"out": [
+"    with hpunch"
+]
+},
+{
+"line": "shake vpunch",
+"out": [
+"    with vpunch"
+]
+},
+{
+"line": "тряска vpunch",
+"out": [
+"    with vpunch"
+]
+},
+{
+"line": "shake 1.0 сильно",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch"
+]
+},
+{
+"line": "тряска 1.0 сильно",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch"
+]
+},
+{
+"line": "shake 0.2 слабо",
+"out": [
+"    with hpunch"
+]
+},
+{
+"line": "тряска 0.2 слабо",
+"out": [
+"    with hpunch"
+]
+},
+{
+"line": "shake vertical",
+"out": [
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch"
+]
+},
+{
+"line": "тряска vertical",
+"out": [
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch"
+]
+},
+{
+"line": "shake 5 strong",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch"
+]
+},
+{
+"line": "тряска 5 strong",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch"
+]
+},
+{
+"line": "shake abc",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch"
+]
+},
+{
+"line": "тряска abc",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch"
+]
+},
+{
+"line": "shake 0.75",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch"
+]
+},
+{
+"line": "тряска 0.75",
+"out": [
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with hpunch",
+"    $ renpy.pause(0.035, hard=True)",
+"    with vpunch"
+]
+},
+{
+"line": "shake HPUNCH",
+"out": [
+"    with hpunch"
+]
+},
+{
+"line": "тряска HPUNCH",
+"out": [
+"    with hpunch"
+]
+},
+{
+"line": "video video/intro.webm",
+"out": [
+"    $ renpy.movie_cutscene(\"mods/genry_golden/video/intro.webm\")"
+]
+},
+{
+"line": "видео video/intro.webm",
+"out": [
+"    $ renpy.movie_cutscene(\"mods/genry_golden/video/intro.webm\")"
+]
+},
+{
+"line": "video",
+"out": [
+"    $ renpy.movie_cutscene(\"mods/genry_golden/\")"
+]
+},
+{
+"line": "видео",
+"out": [
+"    $ renpy.movie_cutscene(\"mods/genry_golden/\")"
+]
+},
+{
+"line": "videobg video/bg.webm dissolve",
+"out": [
+"    scene black",
+"    show expression Movie(play=\"mods/genry_golden/video/bg.webm\") as genry_video_bg",
+"    with dissolve"
+]
+},
+{
+"line": "видеофон video/bg.webm dissolve",
+"out": [
+"    scene black",
+"    show expression Movie(play=\"mods/genry_golden/video/bg.webm\") as genry_video_bg",
+"    with dissolve"
+]
+},
+{
+"line": "videobg",
+"out": [
+"    # videobg command needs a video path"
+]
+},
+{
+"line": "видеофон",
+"out": [
+"    # videobg command needs a video path"
+]
+},
+{
+"line": "videobg fade",
+"out": [
+"    # videobg command needs a video path"
+]
+},
+{
+"line": "видеофон fade",
+"out": [
+"    # videobg command needs a video path"
+]
+},
+{
+"line": "stopvideobg",
+"out": [
+"    hide genry_video_bg"
+]
+},
+{
+"line": "стопвидеофон",
+"out": [
+"    hide genry_video_bg"
+]
+},
+{
+"line": "stopvideobg fade",
+"out": [
+"    hide genry_video_bg",
+"    with fade"
+]
+},
+{
+"line": "стопвидеофон fade",
+"out": [
+"    hide genry_video_bg",
+"    with fade"
+]
+},
+{
+"line": "chapter",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(1, u\"\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "глава",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(1, u\"\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "chapter days",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(1, u\"days\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "глава days",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(1, u\"days\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "chapter days 2",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(2, u\"День 2\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "глава days 2",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(2, u\"День 2\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "chapter days 3 Новый день",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(3, u\"Новый день\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "глава days 3 Новый день",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(3, u\"Новый день\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "день",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(1, u\"\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "монитордня",
+"out": [
+"    window hide",
+"    $ backdrop = \"days\"",
+"    $ new_chapter(1, u\"\")",
+"    scene black",
+"    with dissolve"
+]
+},
+{
+"line": "timeskip",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "скачок",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "timeskip 3 дня",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло 3 дня\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "скачок 3 дня",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло 3 дня\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "timeskip Прошла неделя",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошла неделя\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "скачок Прошла неделя",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошла неделя\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "скачоквремени",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "прошловремя",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "спустя",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "timeskip",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "таймскип",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "таймскипкороткий",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "bkrr_timeskip",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "bkrr_timeskip_short",
+"out": [
+"    window hide",
+"    scene black",
+"    with dissolve",
+"    show expression Text(u\"Прошло немного времени…\", size=64, color=\"#e8eef7\", text_align=0.5) as genry_timeskip:",
+"        xcenter 0.5",
+"        ycenter 0.5",
+"        alpha 0.0",
+"        linear 0.6 alpha 1.0",
+"    with dissolve",
+"    $ renpy.pause(2.0, hard=True)",
+"    hide genry_timeskip",
+"    with dissolve"
+]
+},
+{
+"line": "achievement images/ach.png 5",
+"out": [
+"    $ _genry_achievement_path = \"mods/genry_golden/images/ach.png\"",
+"    $ _genry_achievement_sound = genry_resolve_audio_expr(\"sfx_achievement\") or genry_resolve_audio_expr(\"aunl\")",
+"    if _genry_achievement_sound:",
+"        play sound _genry_achievement_sound",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 1.18",
+"        yalign 0.08",
+"        alpha 0.0",
+"        linear 0.28 xalign 0.98 alpha 1.0",
+"    $ renpy.pause(5, hard=True)",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 0.98",
+"        yalign 0.08",
+"        alpha 1.0",
+"        linear 0.25 xalign 1.18 alpha 0.0",
+"    $ renpy.pause(0.25, hard=True)",
+"    hide genry_achievement_popup onlayer overlay"
+]
+},
+{
+"line": "достижение images/ach.png 5",
+"out": [
+"    $ _genry_achievement_path = \"mods/genry_golden/images/ach.png\"",
+"    $ _genry_achievement_sound = genry_resolve_audio_expr(\"sfx_achievement\") or genry_resolve_audio_expr(\"aunl\")",
+"    if _genry_achievement_sound:",
+"        play sound _genry_achievement_sound",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 1.18",
+"        yalign 0.08",
+"        alpha 0.0",
+"        linear 0.28 xalign 0.98 alpha 1.0",
+"    $ renpy.pause(5, hard=True)",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 0.98",
+"        yalign 0.08",
+"        alpha 1.0",
+"        linear 0.25 xalign 1.18 alpha 0.0",
+"    $ renpy.pause(0.25, hard=True)",
+"    hide genry_achievement_popup onlayer overlay"
+]
+},
+{
+"line": "achievement images/ach.png",
+"out": [
+"    $ _genry_achievement_path = \"mods/genry_golden/images/ach.png\"",
+"    $ _genry_achievement_sound = genry_resolve_audio_expr(\"sfx_achievement\") or genry_resolve_audio_expr(\"aunl\")",
+"    if _genry_achievement_sound:",
+"        play sound _genry_achievement_sound",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 1.18",
+"        yalign 0.08",
+"        alpha 0.0",
+"        linear 0.28 xalign 0.98 alpha 1.0",
+"    $ renpy.pause(3, hard=True)",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 0.98",
+"        yalign 0.08",
+"        alpha 1.0",
+"        linear 0.25 xalign 1.18 alpha 0.0",
+"    $ renpy.pause(0.25, hard=True)",
+"    hide genry_achievement_popup onlayer overlay"
+]
+},
+{
+"line": "достижение images/ach.png",
+"out": [
+"    $ _genry_achievement_path = \"mods/genry_golden/images/ach.png\"",
+"    $ _genry_achievement_sound = genry_resolve_audio_expr(\"sfx_achievement\") or genry_resolve_audio_expr(\"aunl\")",
+"    if _genry_achievement_sound:",
+"        play sound _genry_achievement_sound",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 1.18",
+"        yalign 0.08",
+"        alpha 0.0",
+"        linear 0.28 xalign 0.98 alpha 1.0",
+"    $ renpy.pause(3, hard=True)",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 0.98",
+"        yalign 0.08",
+"        alpha 1.0",
+"        linear 0.25 xalign 1.18 alpha 0.0",
+"    $ renpy.pause(0.25, hard=True)",
+"    hide genry_achievement_popup onlayer overlay"
+]
+},
+{
+"line": "achievement",
+"out": [
+"    # achievement command needs image path"
+]
+},
+{
+"line": "достижение",
+"out": [
+"    # achievement command needs image path"
+]
+},
+{
+"line": "map ext_house_of_mt_day: dorm_scene @dv, ext_square_day -> square",
+"out": [
+"    $ disable_all_zones()",
+"    $ set_zone(\"ext_house_of_mt_day\", \"dorm_scene\")",
+"    $ set_chibi(\"ext_house_of_mt_day\", \"dv\")",
+"    $ set_zone(\"ext_square_day\", \"square\")",
+"    $ show_map()"
+]
+},
+{
+"line": "карта ext_house_of_mt_day: dorm_scene @dv, ext_square_day -> square",
+"out": [
+"    $ disable_all_zones()",
+"    $ set_zone(\"ext_house_of_mt_day\", \"dorm_scene\")",
+"    $ set_chibi(\"ext_house_of_mt_day\", \"dv\")",
+"    $ set_zone(\"ext_square_day\", \"square\")",
+"    $ show_map()"
+]
+},
+{
+"line": "map a:b chibi un normal, bad",
+"out": [
+"    $ disable_all_zones()",
+"    $ set_zone(\"a\", \"b\")",
+"    $ set_chibi(\"a\", \"un\")",
+"    $ show_map()"
+]
+},
+{
+"line": "карта a:b chibi un normal, bad",
+"out": [
+"    $ disable_all_zones()",
+"    $ set_zone(\"a\", \"b\")",
+"    $ set_chibi(\"a\", \"un\")",
+"    $ show_map()"
+]
+},
+{
+"line": "map",
+"out": [
+"    $ disable_all_zones()",
+"    $ show_map()"
+]
+},
+{
+"line": "карта",
+"out": [
+"    $ disable_all_zones()",
+"    $ show_map()"
+]
+},
+{
+"line": "map z: My Scene",
+"out": [
+"    $ disable_all_zones()",
+"    $ set_zone(\"z\", \"my_scene\")",
+"    $ show_map()"
+]
+},
+{
+"line": "карта z: My Scene",
+"out": [
+"    $ disable_all_zones()",
+"    $ set_zone(\"z\", \"my_scene\")",
+"    $ show_map()"
+]
+},
+{
+"line": "zone house dorm",
+"out": [
+"    $ set_zone(\"house\", \"dorm\")"
+]
+},
+{
+"line": "зонавкл house dorm",
+"out": [
+"    $ set_zone(\"house\", \"dorm\")"
+]
+},
+{
+"line": "zone x",
+"out": [
+"    # zone command needs: zone_label target_label"
+]
+},
+{
+"line": "зонавкл x",
+"out": [
+"    # zone command needs: zone_label target_label"
+]
+},
+{
+"line": "chibi house dv",
+"out": [
+"    $ set_chibi(\"house\", \"dv\")"
+]
+},
+{
+"line": "чибик house dv",
+"out": [
+"    $ set_chibi(\"house\", \"dv\")"
+]
+},
+{
+"line": "chibi x",
+"out": [
+"    # chibi command needs: zone chibi"
+]
+},
+{
+"line": "чибик x",
+"out": [
+"    # chibi command needs: zone chibi"
+]
+},
+{
+"line": "disablezone",
+"out": [
+"    $ disable_current_zone()"
+]
+},
+{
+"line": "зонавыкл",
+"out": [
+"    $ disable_current_zone()"
+]
+},
+{
+"line": "disablezone house",
+"out": [
+"    $ reset_zone(\"house\")"
+]
+},
+{
+"line": "зонавыкл house",
+"out": [
+"    $ reset_zone(\"house\")"
+]
+},
+{
+"line": "resetzone",
+"out": [
+"    $ reset_current_zone()"
+]
+},
+{
+"line": "зонасброс",
+"out": [
+"    $ reset_current_zone()"
+]
+},
+{
+"line": "resetzone house",
+"out": [
+"    $ reset_zone(\"house\")"
+]
+},
+{
+"line": "зонасброс house",
+"out": [
+"    $ reset_zone(\"house\")"
+]
+},
+{
+"line": "setvar love 5",
+"out": [
+"    $ love = 5"
+]
+},
+{
+"line": "установить love 5",
+"out": [
+"    $ love = 5"
+]
+},
+{
+"line": "setvar x",
+"out": [
+"    # setvar command needs: name value"
+]
+},
+{
+"line": "установить x",
+"out": [
+"    # setvar command needs: name value"
+]
+},
+{
+"line": "setvar Любовь 3",
+"out": [
+"    $ value = 3"
+]
+},
+{
+"line": "установить Любовь 3",
+"out": [
+"    $ value = 3"
+]
+},
+{
+"line": "addvar love 1",
+"out": [
+"    $ love += 1"
+]
+},
+{
+"line": "прибавить love 1",
+"out": [
+"    $ love += 1"
+]
+},
+{
+"line": "addvar x",
+"out": [
+"    # addvar command needs: name value"
+]
+},
+{
+"line": "прибавить x",
+"out": [
+"    # addvar command needs: name value"
+]
+},
+{
+"line": "ifjump love >= 3 -> good_end",
+"out": [
+"    if love >= 3:",
+"        jump good_end"
+]
+},
+{
+"line": "если love >= 3 -> good_end",
+"out": [
+"    if love >= 3:",
+"        jump good_end"
+]
+},
+{
+"line": "ifjump bad",
+"out": [
+"    # if command needs: condition -> label"
+]
+},
+{
+"line": "если bad",
+"out": [
+"    # if command needs: condition -> label"
+]
+},
+{
+"line": "jump good_end",
+"out": [
+"    jump good_end"
+]
+},
+{
+"line": "переход good_end",
+"out": [
+"    jump good_end"
+]
+},
+{
+"line": "jump Хорошая Концовка",
+"out": [
+"    jump label"
+]
+},
+{
+"line": "переход Хорошая Концовка",
+"out": [
+"    jump label"
+]
+},
+{
+"line": "jump",
+"out": [
+"    jump label"
+]
+},
+{
+"line": "переход",
+"out": [
+"    jump label"
+]
+},
+{
+"line": "callscene side_scene",
+"out": [
+"    call side_scene"
+]
+},
+{
+"line": "вызов side_scene",
+"out": [
+"    call side_scene"
+]
+},
+{
+"line": "callscene",
+"out": [
+"    call label"
+]
+},
+{
+"line": "вызов",
+"out": [
+"    call label"
+]
+},
+{
+"line": "вызвать side_scene",
+"out": [
+"    call side_scene"
+]
+},
+{
+"line": "вызватьсцену side_scene",
+"out": [
+"    call side_scene"
+]
+},
+{
+"line": "подсцена side_scene",
+"out": [
+"    call side_scene"
+]
+},
+{
+"line": "return",
+"out": [
+"    return"
+]
+},
+{
+"line": "конец",
+"out": [
+"    return"
+]
+},
+{
+"line": "конецсцены",
+"out": [
+"    return"
+]
+},
+{
+"line": "конец_сцены",
+"out": [
+"    return"
+]
+},
+{
+"line": "завершитьсцену",
+"out": [
+"    return"
+]
+},
+{
+"line": "финиш",
+"out": [
+"    return"
+]
+},
+{
+"line": "endgame",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    return"
+]
+},
+{
+"line": "конецигры",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    return"
+]
+},
+{
+"line": "конец_игры",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    return"
+]
+},
+{
+"line": "завершитьигру",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    return"
+]
+},
+{
+"line": "финалигры",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    return"
+]
+},
+{
+"line": "theend",
+"out": [
+"    stop music fadeout 2",
+"    stop ambience fadeout 2",
+"    stop sound",
+"    return"
+]
+},
+{
+"line": "pause",
+"out": [
+"    $ renpy.pause(1.0, hard=True)"
+]
+},
+{
+"line": "пауза",
+"out": [
+"    $ renpy.pause(1.0, hard=True)"
+]
+},
+{
+"line": "pause 2.5",
+"out": [
+"    $ renpy.pause(2.5, hard=True)"
+]
+},
+{
+"line": "пауза 2.5",
+"out": [
+"    $ renpy.pause(2.5, hard=True)"
+]
+},
+{
+"line": "pause abc",
+"out": [
+"    $ renpy.pause(abc, hard=True)"
+]
+},
+{
+"line": "пауза abc",
+"out": [
+"    $ renpy.pause(abc, hard=True)"
+]
+},
+{
+"line": "renpy $ x = 1",
+"out": [
+"    $ x = 1"
+]
+},
+{
+"line": "unlockgallery cg01",
+"out": [
+"    $ persistent.genry_genry_golden_cg01 = True"
+]
+},
+{
+"line": "галерея_разблокировать cg01",
+"out": [
+"    $ persistent.genry_genry_golden_cg01 = True"
+]
+},
+{
+"line": "unlockgallery",
+"out": [
+"    $ persistent.genry_genry_golden_cg01 = True"
+]
+},
+{
+"line": "галерея_разблокировать",
+"out": [
+"    $ persistent.genry_genry_golden_cg01 = True"
+]
+},
+{
+"line": "unlockgallery Мой CG",
+"out": [
+"    $ persistent.genry_genry_golden_cg = True"
+]
+},
+{
+"line": "галерея_разблокировать Мой CG",
+"out": [
+"    $ persistent.genry_genry_golden_cg = True"
+]
+},
+{
+"line": "разблокироватьгалерею cg01",
+"out": [
+"    $ persistent.genry_genry_golden_cg01 = True"
+]
+},
+{
+"line": "разблокироватьcg cg01",
+"out": [
+"    $ persistent.genry_genry_golden_cg01 = True"
+]
+},
+{
+"line": "itemget key | Ключ от дома",
+"out": [
+"    $ persistent.genry_genry_golden_item_key = True",
+"    show screen genry_notify_popup(u\"Инвентарь\", u\"Предмет: Ключ от дома\", icon=\"mods/genry_golden/#143247\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "предмет key | Ключ от дома",
+"out": [
+"    $ persistent.genry_genry_golden_item_key = True",
+"    show screen genry_notify_popup(u\"Инвентарь\", u\"Предмет: Ключ от дома\", icon=\"mods/genry_golden/#143247\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "itemget apple",
+"out": [
+"    $ persistent.genry_genry_golden_item_apple = True",
+"    show screen genry_notify_popup(u\"Инвентарь\", u\"Предмет: apple\", icon=\"mods/genry_golden/#143247\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "предмет apple",
+"out": [
+"    $ persistent.genry_genry_golden_item_apple = True",
+"    show screen genry_notify_popup(u\"Инвентарь\", u\"Предмет: apple\", icon=\"mods/genry_golden/#143247\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "itemget",
+"out": [
+"    # itemget needs: key | caption | [icon]"
+]
+},
+{
+"line": "предмет",
+"out": [
+"    # itemget needs: key | caption | [icon]"
+]
+},
+{
+"line": "получитьпредмет key | Ключ от дома",
+"out": [
+"    $ persistent.genry_genry_golden_item_key = True",
+"    show screen genry_notify_popup(u\"Инвентарь\", u\"Предмет: Ключ от дома\", icon=\"mods/genry_golden/#143247\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "инвентарьпредмет key | Ключ от дома",
+"out": [
+"    $ persistent.genry_genry_golden_item_key = True",
+"    show screen genry_notify_popup(u\"Инвентарь\", u\"Предмет: Ключ от дома\", icon=\"mods/genry_golden/#143247\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "item key | Ключ от дома",
+"out": [
+"    $ persistent.genry_genry_golden_item_key = True",
+"    show screen genry_notify_popup(u\"Инвентарь\", u\"Предмет: Ключ от дома\", icon=\"mods/genry_golden/#143247\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "getitem key | Ключ от дома",
+"out": [
+"    $ persistent.genry_genry_golden_item_key = True",
+"    show screen genry_notify_popup(u\"Инвентарь\", u\"Предмет: Ключ от дома\", icon=\"mods/genry_golden/#143247\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "ifitem key -> has_key",
+"out": [
+"    if getattr(persistent, \"genry_genry_golden_item_key\", False):",
+"        jump has_key"
+]
+},
+{
+"line": "еслипредмет key -> has_key",
+"out": [
+"    if getattr(persistent, \"genry_genry_golden_item_key\", False):",
+"        jump has_key"
+]
+},
+{
+"line": "ifitem bad",
+"out": [
+"    # ifitem command needs: key -> label"
+]
+},
+{
+"line": "еслипредмет bad",
+"out": [
+"    # ifitem command needs: key -> label"
+]
+},
+{
+"line": "ifitem  -> x",
+"out": [
+"    # ifitem command needs: key -> label"
+]
+},
+{
+"line": "еслипредмет  -> x",
+"out": [
+"    # ifitem command needs: key -> label"
+]
+},
+{
+"line": "ifitem key -> has_key",
+"out": [
+"    if getattr(persistent, \"genry_genry_golden_item_key\", False):",
+"        jump has_key"
+]
+},
+{
+"line": "replayunlock scene1 | Первая сцена",
+"out": [
+"    $ persistent.genry_genry_golden_replay_scene1 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: Первая сцена\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "реплей scene1 | Первая сцена",
+"out": [
+"    $ persistent.genry_genry_golden_replay_scene1 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: Первая сцена\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "replayunlock s2",
+"out": [
+"    $ persistent.genry_genry_golden_replay_s2 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: s2\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "реплей s2",
+"out": [
+"    $ persistent.genry_genry_golden_replay_s2 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: s2\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "replayunlock",
+"out": [
+"    # replayunlock needs: key | caption"
+]
+},
+{
+"line": "реплей",
+"out": [
+"    # replayunlock needs: key | caption"
+]
+},
+{
+"line": "реплей_разблокировать scene1 | Первая сцена",
+"out": [
+"    $ persistent.genry_genry_golden_replay_scene1 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: Первая сцена\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "открытьреплей scene1 | Первая сцена",
+"out": [
+"    $ persistent.genry_genry_golden_replay_scene1 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: Первая сцена\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "сцена_разблокировать scene1 | Первая сцена",
+"out": [
+"    $ persistent.genry_genry_golden_replay_scene1 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: Первая сцена\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "replayunlock scene1 | Первая сцена",
+"out": [
+"    $ persistent.genry_genry_golden_replay_scene1 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: Первая сцена\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "unlockreplay scene1 | Первая сцена",
+"out": [
+"    $ persistent.genry_genry_golden_replay_scene1 = True",
+"    show screen genry_notify_popup(u\"Реплей\", u\"Сцена открыта: Первая сцена\", icon=\"mods/genry_golden/#17324b\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "persistentvar seen_end True",
+"out": [
+"    $ persistent.genry_genry_golden_seen_end = True"
+]
+},
+{
+"line": "постоянная seen_end True",
+"out": [
+"    $ persistent.genry_genry_golden_seen_end = True"
+]
+},
+{
+"line": "persistentvar x",
+"out": [
+"    # persistentvar command needs: name value"
+]
+},
+{
+"line": "постоянная x",
+"out": [
+"    # persistentvar command needs: name value"
+]
+},
+{
+"line": "постоянная_переменная seen_end True",
+"out": [
+"    $ persistent.genry_genry_golden_seen_end = True"
+]
+},
+{
+"line": "persistentadd lp_dv 1",
+"out": [
+"    $ persistent.genry_genry_golden_lp_dv = getattr(persistent, \"genry_genry_golden_lp_dv\", 0) + 1"
+]
+},
+{
+"line": "постоянноеочко lp_dv 1",
+"out": [
+"    $ persistent.genry_genry_golden_lp_dv = getattr(persistent, \"genry_genry_golden_lp_dv\", 0) + 1"
+]
+},
+{
+"line": "persistentadd x",
+"out": [
+"    # persistentadd command needs: name value"
+]
+},
+{
+"line": "постоянноеочко x",
+"out": [
+"    # persistentadd command needs: name value"
+]
+},
+{
+"line": "постоянныеочки lp_dv 1",
+"out": [
+"    $ persistent.genry_genry_golden_lp_dv = getattr(persistent, \"genry_genry_golden_lp_dv\", 0) + 1"
+]
+},
+{
+"line": "weather снег",
+"out": [
+"    show genry_weather_snow"
+]
+},
+{
+"line": "погода снег",
+"out": [
+"    show genry_weather_snow"
+]
+},
+{
+"line": "weather дождь dissolve",
+"out": [
+"    show genry_weather_rain with dissolve"
+]
+},
+{
+"line": "погода дождь dissolve",
+"out": [
+"    show genry_weather_rain with dissolve"
+]
+},
+{
+"line": "weather стоп",
+"out": [
+"    hide genry_weather_snow",
+"    hide genry_weather_rain",
+"    hide genry_weather_leaf",
+"    hide genry_weather_heart",
+"    hide genry_weather_spark",
+"    hide genry_weather_dust"
+]
+},
+{
+"line": "погода стоп",
+"out": [
+"    hide genry_weather_snow",
+"    hide genry_weather_rain",
+"    hide genry_weather_leaf",
+"    hide genry_weather_heart",
+"    hide genry_weather_spark",
+"    hide genry_weather_dust"
+]
+},
+{
+"line": "weather стоп fade",
+"out": [
+"    hide genry_weather_snow",
+"    hide genry_weather_rain",
+"    hide genry_weather_leaf",
+"    hide genry_weather_heart",
+"    hide genry_weather_spark",
+"    hide genry_weather_dust",
+"    with fade"
+]
+},
+{
+"line": "погода стоп fade",
+"out": [
+"    hide genry_weather_snow",
+"    hide genry_weather_rain",
+"    hide genry_weather_leaf",
+"    hide genry_weather_heart",
+"    hide genry_weather_spark",
+"    hide genry_weather_dust",
+"    with fade"
+]
+},
+{
+"line": "weather unknown",
+"out": [
+"    # weather: неизвестный тип 'unknown'. Доступно: снег, дождь, листья, сердца, искры, пыль, стоп"
+]
+},
+{
+"line": "погода unknown",
+"out": [
+"    # weather: неизвестный тип 'unknown'. Доступно: снег, дождь, листья, сердца, искры, пыль, стоп"
+]
+},
+{
+"line": "weather",
+"out": [
+"    # weather command needs: snow|rain|leaf|heart|spark|dust  или  стоп"
+]
+},
+{
+"line": "погода",
+"out": [
+"    # weather command needs: snow|rain|leaf|heart|spark|dust  или  стоп"
+]
+},
+{
+"line": "weather none",
+"out": [
+"    hide genry_weather_snow",
+"    hide genry_weather_rain",
+"    hide genry_weather_leaf",
+"    hide genry_weather_heart",
+"    hide genry_weather_spark",
+"    hide genry_weather_dust"
+]
+},
+{
+"line": "погода none",
+"out": [
+"    hide genry_weather_snow",
+"    hide genry_weather_rain",
+"    hide genry_weather_leaf",
+"    hide genry_weather_heart",
+"    hide genry_weather_spark",
+"    hide genry_weather_dust"
+]
+},
+{
+"line": "weather Листья",
+"out": [
+"    show genry_weather_leaf"
+]
+},
+{
+"line": "погода Листья",
+"out": [
+"    show genry_weather_leaf"
+]
+},
+{
+"line": "частицы снег",
+"out": [
+"    show genry_weather_snow"
+]
+},
+{
+"line": "осадки снег",
+"out": [
+"    show genry_weather_snow"
+]
+},
+{
+"line": "notify Текст",
+"out": [
+"    show screen genry_notify_popup(u\"Genry\", u\"Текст\", icon=None, panel_color=\"#111827\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "уведомление Текст",
+"out": [
+"    show screen genry_notify_popup(u\"Genry\", u\"Текст\", icon=None, panel_color=\"#111827\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "notify Текст | Заголовок | images/ic.png | #223344 | слева | 4",
+"out": [
+"    show screen genry_notify_popup(u\"Заголовок\", u\"Текст\", icon=\"mods/genry_golden/images/ic.png\", panel_color=\"#223344\", side=\"left\")",
+"    $ renpy.pause(4, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "уведомление Текст | Заголовок | images/ic.png | #223344 | слева | 4",
+"out": [
+"    show screen genry_notify_popup(u\"Заголовок\", u\"Текст\", icon=\"mods/genry_golden/images/ic.png\", panel_color=\"#223344\", side=\"left\")",
+"    $ renpy.pause(4, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "notify a | | | | сверху | x",
+"out": [
+"    show screen genry_notify_popup(u\"сверху\", u\"a\", icon=\"mods/genry_golden/x\", panel_color=\"#111827\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "уведомление a | | | | сверху | x",
+"out": [
+"    show screen genry_notify_popup(u\"сверху\", u\"a\", icon=\"mods/genry_golden/x\", panel_color=\"#111827\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "notify",
+"out": [
+"    show screen genry_notify_popup(u\"Genry\", u\"...\", icon=None, panel_color=\"#111827\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "уведомление",
+"out": [
+"    show screen genry_notify_popup(u\"Genry\", u\"...\", icon=None, panel_color=\"#111827\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "тост Текст",
+"out": [
+"    show screen genry_notify_popup(u\"Genry\", u\"Текст\", icon=None, panel_color=\"#111827\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "всплывашка Текст",
+"out": [
+"    show screen genry_notify_popup(u\"Genry\", u\"Текст\", icon=None, panel_color=\"#111827\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "unlockachievement first | Первое",
+"out": [
+"    $ persistent.genry_genry_golden_first = True",
+"    show screen genry_notify_popup(u\"Достижение\", u\"Достижение: Первое\", icon=\"mods/genry_golden/#2b173d\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "ачивка first | Первое",
+"out": [
+"    $ persistent.genry_genry_golden_first = True",
+"    show screen genry_notify_popup(u\"Достижение\", u\"Достижение: Первое\", icon=\"mods/genry_golden/#2b173d\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "unlockachievement second | Второе | images/a.png | 2",
+"out": [
+"    $ persistent.genry_genry_golden_second = True",
+"    $ _genry_achievement_path = \"mods/genry_golden/images/a.png\"",
+"    $ _genry_achievement_sound = genry_resolve_audio_expr(\"sfx_achievement\") or genry_resolve_audio_expr(\"aunl\")",
+"    if _genry_achievement_sound:",
+"        play sound _genry_achievement_sound",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 1.18",
+"        yalign 0.08",
+"        alpha 0.0",
+"        linear 0.28 xalign 0.98 alpha 1.0",
+"    $ renpy.pause(2, hard=True)",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 0.98",
+"        yalign 0.08",
+"        alpha 1.0",
+"        linear 0.25 xalign 1.18 alpha 0.0",
+"    $ renpy.pause(0.25, hard=True)",
+"    hide genry_achievement_popup onlayer overlay"
+]
+},
+{
+"line": "ачивка second | Второе | images/a.png | 2",
+"out": [
+"    $ persistent.genry_genry_golden_second = True",
+"    $ _genry_achievement_path = \"mods/genry_golden/images/a.png\"",
+"    $ _genry_achievement_sound = genry_resolve_audio_expr(\"sfx_achievement\") or genry_resolve_audio_expr(\"aunl\")",
+"    if _genry_achievement_sound:",
+"        play sound _genry_achievement_sound",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 1.18",
+"        yalign 0.08",
+"        alpha 0.0",
+"        linear 0.28 xalign 0.98 alpha 1.0",
+"    $ renpy.pause(2, hard=True)",
+"    show expression Image(_genry_achievement_path) as genry_achievement_popup onlayer overlay:",
+"        xalign 0.98",
+"        yalign 0.08",
+"        alpha 1.0",
+"        linear 0.25 xalign 1.18 alpha 0.0",
+"    $ renpy.pause(0.25, hard=True)",
+"    hide genry_achievement_popup onlayer overlay"
+]
+},
+{
+"line": "unlockachievement",
+"out": [
+"    # unlockachievement needs: name | caption | [icon] | [seconds]"
+]
+},
+{
+"line": "ачивка",
+"out": [
+"    # unlockachievement needs: name | caption | [icon] | [seconds]"
+]
+},
+{
+"line": "unlockachievement x | | |",
+"out": [
+"    $ persistent.genry_genry_golden_x = True",
+"    show screen genry_notify_popup(u\"Достижение\", u\"Достижение: x\", icon=\"mods/genry_golden/#2b173d\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "ачивка x | | |",
+"out": [
+"    $ persistent.genry_genry_golden_x = True",
+"    show screen genry_notify_popup(u\"Достижение\", u\"Достижение: x\", icon=\"mods/genry_golden/#2b173d\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "достижениеоткрыть first | Первое",
+"out": [
+"    $ persistent.genry_genry_golden_first = True",
+"    show screen genry_notify_popup(u\"Достижение\", u\"Достижение: Первое\", icon=\"mods/genry_golden/#2b173d\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "открытьдостижение first | Первое",
+"out": [
+"    $ persistent.genry_genry_golden_first = True",
+"    show screen genry_notify_popup(u\"Достижение\", u\"Достижение: Первое\", icon=\"mods/genry_golden/#2b173d\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "получитьдостижение first | Первое",
+"out": [
+"    $ persistent.genry_genry_golden_first = True",
+"    show screen genry_notify_popup(u\"Достижение\", u\"Достижение: Первое\", icon=\"mods/genry_golden/#2b173d\", panel_color=\"справа\", side=\"right\")",
+"    $ renpy.pause(3.0, hard=True)",
+"    hide screen genry_notify_popup",
+"    $ renpy.pause(0.25, hard=True)"
+]
+},
+{
+"line": "musicplayer Лето | audio/summer.ogg | Гроза | audio/storm.ogg",
+"out": [
+"    call screen genry_music_player([(u\"Лето\", \"mods/genry_golden/audio/summer.ogg\"), (u\"Гроза\", \"mods/genry_golden/audio/storm.ogg\")])"
+]
+},
+{
+"line": "музплеер Лето | audio/summer.ogg | Гроза | audio/storm.ogg",
+"out": [
+"    call screen genry_music_player([(u\"Лето\", \"mods/genry_golden/audio/summer.ogg\"), (u\"Гроза\", \"mods/genry_golden/audio/storm.ogg\")])"
+]
+},
+{
+"line": "musicplayer only",
+"out": [
+"    # musicplayer needs: Название | audio/file.ogg | Название2 | audio/file2.ogg"
+]
+},
+{
+"line": "музплеер only",
+"out": [
+"    # musicplayer needs: Название | audio/file.ogg | Название2 | audio/file2.ogg"
+]
+},
+{
+"line": "musicplayer",
+"out": [
+"    # musicplayer needs: Название | audio/file.ogg | Название2 | audio/file2.ogg"
+]
+},
+{
+"line": "музплеер",
+"out": [
+"    # musicplayer needs: Название | audio/file.ogg | Название2 | audio/file2.ogg"
+]
+},
+{
+"line": "musicplayer a | b | c",
+"out": [
+"    call screen genry_music_player([(u\"a\", \"mods/genry_golden/b\")])"
+]
+},
+{
+"line": "музплеер a | b | c",
+"out": [
+"    call screen genry_music_player([(u\"a\", \"mods/genry_golden/b\")])"
+]
+},
+{
+"line": "музыкальныйплеер Лето | audio/summer.ogg | Гроза | audio/storm.ogg",
+"out": [
+"    call screen genry_music_player([(u\"Лето\", \"mods/genry_golden/audio/summer.ogg\"), (u\"Гроза\", \"mods/genry_golden/audio/storm.ogg\")])"
+]
+},
+{
+"line": "плеермузыки Лето | audio/summer.ogg | Гроза | audio/storm.ogg",
+"out": [
+"    call screen genry_music_player([(u\"Лето\", \"mods/genry_golden/audio/summer.ogg\"), (u\"Гроза\", \"mods/genry_golden/audio/storm.ogg\")])"
+]
+},
+{
+"line": "phonestart Алиса",
+"out": [
+"    window hide",
+"    $ _genry_phone = []",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone_contact = u\"Алиса\"",
+"    show screen genry_phone(_genry_phone, _genry_phone_contact)"
+]
+},
+{
+"line": "телефонначать Алиса",
+"out": [
+"    window hide",
+"    $ _genry_phone = []",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone_contact = u\"Алиса\"",
+"    show screen genry_phone(_genry_phone, _genry_phone_contact)"
+]
+},
+{
+"line": "phonestart",
+"out": [
+"    window hide",
+"    $ _genry_phone = []",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone_contact = u\"СМС\"",
+"    show screen genry_phone(_genry_phone, _genry_phone_contact)"
+]
+},
+{
+"line": "телефонначать",
+"out": [
+"    window hide",
+"    $ _genry_phone = []",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone_contact = u\"СМС\"",
+"    show screen genry_phone(_genry_phone, _genry_phone_contact)"
+]
+},
+{
+"line": "чатначать Алиса",
+"out": [
+"    window hide",
+"    $ _genry_phone = []",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone_contact = u\"Алиса\"",
+"    show screen genry_phone(_genry_phone, _genry_phone_contact)"
+]
+},
+{
+"line": "открытьтелефон Алиса",
+"out": [
+"    window hide",
+"    $ _genry_phone = []",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone_contact = u\"Алиса\"",
+"    show screen genry_phone(_genry_phone, _genry_phone_contact)"
+]
+},
+{
+"line": "sms Алиса: Привет",
+"out": [
+"    $ _genry_phone_typing = u\"Алиса\"",
+"    $ renpy.pause(1.2)",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone.append((\"them\", u\"Алиса\", u\"Привет\", u\"14:26\", u\"\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "смс Алиса: Привет",
+"out": [
+"    $ _genry_phone_typing = u\"Алиса\"",
+"    $ renpy.pause(1.2)",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone.append((\"them\", u\"Алиса\", u\"Привет\", u\"14:26\", u\"\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "sms я: Иду",
+"out": [
+"    $ _genry_phone.append((\"me\", u\"Я\", u\"Иду\", u\"14:26\", u\"✓✓\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "смс я: Иду",
+"out": [
+"    $ _genry_phone.append((\"me\", u\"Я\", u\"Иду\", u\"14:26\", u\"✓✓\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "sms без двоеточия",
+"out": [
+"    $ _genry_phone_typing = u\"???\"",
+"    $ renpy.pause(1.2)",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone.append((\"them\", u\"???\", u\"без двоеточия\", u\"14:26\", u\"\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "смс без двоеточия",
+"out": [
+"    $ _genry_phone_typing = u\"???\"",
+"    $ renpy.pause(1.2)",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone.append((\"them\", u\"???\", u\"без двоеточия\", u\"14:26\", u\"\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "sms +: ok",
+"out": [
+"    $ _genry_phone.append((\"me\", u\"Я\", u\"ok\", u\"14:26\", u\"✓✓\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "смс +: ok",
+"out": [
+"    $ _genry_phone.append((\"me\", u\"Я\", u\"ok\", u\"14:26\", u\"✓✓\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "sms : пусто",
+"out": [
+"    $ _genry_phone_typing = u\"???\"",
+"    $ renpy.pause(1.2)",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone.append((\"them\", u\"???\", u\"пусто\", u\"14:26\", u\"\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "смс : пусто",
+"out": [
+"    $ _genry_phone_typing = u\"???\"",
+"    $ renpy.pause(1.2)",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone.append((\"them\", u\"???\", u\"пусто\", u\"14:26\", u\"\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "sms ME: hi",
+"out": [
+"    $ _genry_phone.append((\"me\", u\"Я\", u\"hi\", u\"14:26\", u\"✓✓\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "смс ME: hi",
+"out": [
+"    $ _genry_phone.append((\"me\", u\"Я\", u\"hi\", u\"14:26\", u\"✓✓\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "сообщение Алиса: Привет",
+"out": [
+"    $ _genry_phone_typing = u\"Алиса\"",
+"    $ renpy.pause(1.2)",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone.append((\"them\", u\"Алиса\", u\"Привет\", u\"14:26\", u\"\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "чат Алиса: Привет",
+"out": [
+"    $ _genry_phone_typing = u\"Алиса\"",
+"    $ renpy.pause(1.2)",
+"    $ _genry_phone_typing = \"\"",
+"    $ _genry_phone.append((\"them\", u\"Алиса\", u\"Привет\", u\"14:26\", u\"\"))",
+"    $ renpy.pause(0.6)"
+]
+},
+{
+"line": "phoneend",
+"out": [
+"    hide screen genry_phone",
+"    window show"
+]
+},
+{
+"line": "телефонконец",
+"out": [
+"    hide screen genry_phone",
+"    window show"
+]
+},
+{
+"line": "чатконец",
+"out": [
+"    hide screen genry_phone",
+"    window show"
+]
+},
+{
+"line": "закрытьтелефон",
+"out": [
+"    hide screen genry_phone",
+"    window show"
+]
+},
+{
+"line": "floatingthought Мысль | 0.3 | 0.2 | 2",
+"out": [
+"    show expression Text(\"Мысль\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.3, 0.2, 2.0)"
+]
+},
+{
+"line": "мысль Мысль | 0.3 | 0.2 | 2",
+"out": [
+"    show expression Text(\"Мысль\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.3, 0.2, 2.0)"
+]
+},
+{
+"line": "floatingthought Просто",
+"out": [
+"    show expression Text(\"Просто\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.5, 0.18, 3.0)"
+]
+},
+{
+"line": "мысль Просто",
+"out": [
+"    show expression Text(\"Просто\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.5, 0.18, 3.0)"
+]
+},
+{
+"line": "floatingthought",
+"out": [
+"    show expression Text(\"Мысль.\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.5, 0.18, 3.0)"
+]
+},
+{
+"line": "мысль",
+"out": [
+"    show expression Text(\"Мысль.\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.5, 0.18, 3.0)"
+]
+},
+{
+"line": "floatingthought x | a | b | c",
+"out": [
+"    show expression Text(\"x\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.5, 0.18, 3.0)"
+]
+},
+{
+"line": "мысль x | a | b | c",
+"out": [
+"    show expression Text(\"x\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.5, 0.18, 3.0)"
+]
+},
+{
+"line": "floatingthought t | 1e-7 | 12345678901234567 | 0.1",
+"out": [
+"    show expression Text(\"t\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(1e-07, 1.2345678901234568e+16, 0.1)"
+]
+},
+{
+"line": "мысль t | 1e-7 | 12345678901234567 | 0.1",
+"out": [
+"    show expression Text(\"t\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(1e-07, 1.2345678901234568e+16, 0.1)"
+]
+},
+{
+"line": "мысльповерх Мысль | 0.3 | 0.2 | 2",
+"out": [
+"    show expression Text(\"Мысль\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.3, 0.2, 2.0)"
+]
+},
+{
+"line": "мысльнаэкране Мысль | 0.3 | 0.2 | 2",
+"out": [
+"    show expression Text(\"Мысль\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.3, 0.2, 2.0)"
+]
+},
+{
+"line": "всплывающаямысль Мысль | 0.3 | 0.2 | 2",
+"out": [
+"    show expression Text(\"Мысль\", style=\"genry_thought\") as genry_thought_text at genry_thought_float(0.3, 0.2, 2.0)"
+]
+},
+{
+"line": "hidethought",
+"out": [
+"    hide genry_thought_text"
+]
+},
+{
+"line": "скрытьмысль",
+"out": [
+"    hide genry_thought_text"
+]
+},
+{
+"line": "hidethought dissolve",
+"out": [
+"    hide genry_thought_text with dissolve"
+]
+},
+{
+"line": "скрытьмысль dissolve",
+"out": [
+"    hide genry_thought_text with dissolve"
+]
+},
+{
+"line": "hidethought xyz",
+"out": [
+"    hide genry_thought_text"
+]
+},
+{
+"line": "скрытьмысль xyz",
+"out": [
+"    hide genry_thought_text"
+]
+},
+{
+"line": "убратьмысль",
+"out": [
+"    hide genry_thought_text"
+]
+},
+{
+"line": "colorfilter сепия",
+"out": [
+"    show layer master at genry_filter_sepia"
+]
+},
+{
+"line": "фильтр сепия",
+"out": [
+"    show layer master at genry_filter_sepia"
+]
+},
+{
+"line": "colorfilter ночь fade",
+"out": [
+"    show layer master at genry_filter_night",
+"    with fade"
+]
+},
+{
+"line": "фильтр ночь fade",
+"out": [
+"    show layer master at genry_filter_night",
+"    with fade"
+]
+},
+{
+"line": "colorfilter нет",
+"out": [
+"    show layer master at genry_filter_none"
+]
+},
+{
+"line": "фильтр нет",
+"out": [
+"    show layer master at genry_filter_none"
+]
+},
+{
+"line": "colorfilter",
+"out": [
+"    show layer master at genry_filter_none"
+]
+},
+{
+"line": "фильтр",
+"out": [
+"    show layer master at genry_filter_none"
+]
+},
+{
+"line": "colorfilter abc",
+"out": [
+"    # фильтр: неизвестно 'abc'. Доступно: сепия, чб, ночь, тепло, холод, сон, выцвет, хоррор, нет"
+]
+},
+{
+"line": "фильтр abc",
+"out": [
+"    # фильтр: неизвестно 'abc'. Доступно: сепия, чб, ночь, тепло, холод, сон, выцвет, хоррор, нет"
+]
+},
+{
+"line": "colorfilter none dissolve",
+"out": [
+"    show layer master at genry_filter_none",
+"    with dissolve"
+]
+},
+{
+"line": "фильтр none dissolve",
+"out": [
+"    show layer master at genry_filter_none",
+"    with dissolve"
+]
+},
+{
+"line": "colorfilter ЧБ",
+"out": [
+"    show layer master at genry_filter_gray"
+]
+},
+{
+"line": "фильтр ЧБ",
+"out": [
+"    show layer master at genry_filter_gray"
+]
+},
+{
+"line": "цветофильтр сепия",
+"out": [
+"    show layer master at genry_filter_sepia"
+]
+},
+{
+"line": "мудфильтр сепия",
+"out": [
+"    show layer master at genry_filter_sepia"
+]
+},
+{
+"line": "настроение сепия",
+"out": [
+"    show layer master at genry_filter_sepia"
+]
+},
+{
+"line": "ifpersistent lp_dv >= 1 -> good",
+"out": [
+"    if persistent.genry_genry_golden_lp_dv >= 1:",
+"        jump good"
+]
+},
+{
+"line": "еслипостоянная lp_dv >= 1 -> good",
+"out": [
+"    if persistent.genry_genry_golden_lp_dv >= 1:",
+"        jump good"
+]
+},
+{
+"line": "ifpersistent flag -> x",
+"out": [
+"    if persistent.genry_genry_golden_flag:",
+"        jump x"
+]
+},
+{
+"line": "еслипостоянная flag -> x",
+"out": [
+"    if persistent.genry_genry_golden_flag:",
+"        jump x"
+]
+},
+{
+"line": "ifpersistent bad",
+"out": [
+"    # ifpersistent command needs: name >= value -> label"
+]
+},
+{
+"line": "еслипостоянная bad",
+"out": [
+"    # ifpersistent command needs: name >= value -> label"
+]
+},
+{
+"line": "ifpersistent  -> y",
+"out": [
+"    # ifpersistent command needs: name >= value -> label"
+]
+},
+{
+"line": "еслипостоянная  -> y",
+"out": [
+"    # ifpersistent command needs: name >= value -> label"
+]
+},
+{
+"line": "еслиочко lp_dv >= 1 -> good",
+"out": [
+"    if persistent.genry_genry_golden_lp_dv >= 1:",
+"        jump good"
+]
+},
+{
+"line": "еслиочки lp_dv >= 1 -> good",
+"out": [
+"    if persistent.genry_genry_golden_lp_dv >= 1:",
+"        jump good"
+]
+},
+{
+"line": "еслиперсистент lp_dv >= 1 -> good",
+"out": [
+"    if persistent.genry_genry_golden_lp_dv >= 1:",
+"        jump good"
+]
+},
+{
+"line": "say Привет \"мир\" \\ слэш",
+"out": [
+"    \"Привет \\\"мир\\\" \\\\ слэш\""
+]
+},
+{
+"line": "текст Привет \"мир\" \\ слэш",
+"out": [
+"    \"Привет \\\"мир\\\" \\\\ слэш\""
+]
+},
+{
+"line": "say",
+"out": [
+"    \"\""
+]
+},
+{
+"line": "текст",
+"out": [
+"    \"\""
+]
+},
+{
+"line": "реплика Привет \"мир\" \\ слэш",
+"out": [
+"    \"Привет \\\"мир\\\" \\\\ слэш\""
+]
+},
+{
+"line": "screenmenu Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 1",
+"    else:",
+"        $ genry_warn_missing_audio(u\"screenmenu music\", \"everlasting_summer\")",
+"    call screen genry_screen_menu(title=u\"Меню лагеря\", items=[(u\"Пойти\", \"go_scene\"), (u\"Остаться\", \"stay\")], bg_image=\"bg ext_square_day\", logo_image=\"mods/genry_golden/images/logo.png\", char_image=\"dv smile pioneer\", char_x=0.84, char_y=1.0, panel_x=0.50, panel_color=\"#000000\", accent=\"#ffffff\", panel_alpha=0.9, button_color=\"#121212\", button_hover=\"#343434\", text_color=\"#333333\", title_size=44, menu_width=600, subtitle=u\"Подзаг\", hint=u\"Подсказка\", footer=u\"Низ\", dim_alpha=0.5) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "экранменю Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 1",
+"    else:",
+"        $ genry_warn_missing_audio(u\"screenmenu music\", \"everlasting_summer\")",
+"    call screen genry_screen_menu(title=u\"Меню лагеря\", items=[(u\"Пойти\", \"go_scene\"), (u\"Остаться\", \"stay\")], bg_image=\"bg ext_square_day\", logo_image=\"mods/genry_golden/images/logo.png\", char_image=\"dv smile pioneer\", char_x=0.84, char_y=1.0, panel_x=0.50, panel_color=\"#000000\", accent=\"#ffffff\", panel_alpha=0.9, button_color=\"#121212\", button_hover=\"#343434\", text_color=\"#333333\", title_size=44, menu_width=600, subtitle=u\"Подзаг\", hint=u\"Подсказка\", footer=u\"Низ\", dim_alpha=0.5) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "screenmenu Просто",
+"out": [
+"    call screen genry_screen_menu(title=u\"Просто\", items=[(u\"Продолжить\", \"\")], bg_image=None, logo_image=None, char_image=None, char_x=0.82, char_y=1.0, panel_x=0.78, panel_color=\"#111827\", accent=\"#7dd3fc\", panel_alpha=0.88, button_color=\"#182131\", button_hover=\"#2b5c8f\", text_color=\"#eef6ff\", title_size=38, menu_width=470, subtitle=u\"\", hint=u\"\", footer=u\"\", dim_alpha=0.45) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "экранменю Просто",
+"out": [
+"    call screen genry_screen_menu(title=u\"Просто\", items=[(u\"Продолжить\", \"\")], bg_image=None, logo_image=None, char_image=None, char_x=0.82, char_y=1.0, panel_x=0.78, panel_color=\"#111827\", accent=\"#7dd3fc\", panel_alpha=0.88, button_color=\"#182131\", button_hover=\"#2b5c8f\", text_color=\"#eef6ff\", title_size=38, menu_width=470, subtitle=u\"\", hint=u\"\", footer=u\"\", dim_alpha=0.45) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "screenmenu",
+"out": [
+"    # screenmenu needs: title | bg ext_square_day | music my_daily_life | Button -> label"
+]
+},
+{
+"line": "экранменю",
+"out": [
+"    # screenmenu needs: title | bg ext_square_day | music my_daily_life | Button -> label"
+]
+},
+{
+"line": "screenmenu T | music audio/m.ogg | персонаж un smile x 0.4 | стиль blood | лого logo_img | dim 5 | width 10",
+"out": [
+"    play music \"mods/genry_golden/audio/m.ogg\" fadein 1",
+"    call screen genry_screen_menu(title=u\"T\", items=[(u\"Продолжить\", \"\")], bg_image=None, logo_image=\"logo_img\", char_image=\"un smile\", char_x=0.4, char_y=1.0, panel_x=0.78, panel_color=\"#170608\", accent=\"#fb7185\", panel_alpha=0.90, button_color=\"#2b1114\", button_hover=\"#7f1d1d\", text_color=\"#fff1f2\", title_size=38, menu_width=280.0, subtitle=u\"\", hint=u\"\", footer=u\"\", dim_alpha=0.95) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "экранменю T | music audio/m.ogg | персонаж un smile x 0.4 | стиль blood | лого logo_img | dim 5 | width 10",
+"out": [
+"    play music \"mods/genry_golden/audio/m.ogg\" fadein 1",
+"    call screen genry_screen_menu(title=u\"T\", items=[(u\"Продолжить\", \"\")], bg_image=None, logo_image=\"logo_img\", char_image=\"un smile\", char_x=0.4, char_y=1.0, panel_x=0.78, panel_color=\"#170608\", accent=\"#fb7185\", panel_alpha=0.90, button_color=\"#2b1114\", button_hover=\"#7f1d1d\", text_color=\"#fff1f2\", title_size=38, menu_width=280.0, subtitle=u\"\", hint=u\"\", footer=u\"\", dim_alpha=0.95) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "screenmenu T | фон cg d1 | sprite a fright | panel 0.3 | Кнопка -> Сцена Два | -> x | y ->",
+"out": [
+"    call screen genry_screen_menu(title=u\"T\", items=[(u\"y\", \"label\")], bg_image=\"cg d1\", logo_image=None, char_image=\"a\", char_x=0.98, char_y=1.0, panel_x=0.3, panel_color=\"#111827\", accent=\"#7dd3fc\", panel_alpha=0.88, button_color=\"#182131\", button_hover=\"#2b5c8f\", text_color=\"#eef6ff\", title_size=38, menu_width=470, subtitle=u\"\", hint=u\"\", footer=u\"\", dim_alpha=0.45) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "экранменю T | фон cg d1 | sprite a fright | panel 0.3 | Кнопка -> Сцена Два | -> x | y ->",
+"out": [
+"    call screen genry_screen_menu(title=u\"T\", items=[(u\"y\", \"label\")], bg_image=\"cg d1\", logo_image=None, char_image=\"a\", char_x=0.98, char_y=1.0, panel_x=0.3, panel_color=\"#111827\", accent=\"#7dd3fc\", panel_alpha=0.88, button_color=\"#182131\", button_hover=\"#2b5c8f\", text_color=\"#eef6ff\", title_size=38, menu_width=470, subtitle=u\"\", hint=u\"\", footer=u\"\", dim_alpha=0.45) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "менюэкран Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 1",
+"    else:",
+"        $ genry_warn_missing_audio(u\"screenmenu music\", \"everlasting_summer\")",
+"    call screen genry_screen_menu(title=u\"Меню лагеря\", items=[(u\"Пойти\", \"go_scene\"), (u\"Остаться\", \"stay\")], bg_image=\"bg ext_square_day\", logo_image=\"mods/genry_golden/images/logo.png\", char_image=\"dv smile pioneer\", char_x=0.84, char_y=1.0, panel_x=0.50, panel_color=\"#000000\", accent=\"#ffffff\", panel_alpha=0.9, button_color=\"#121212\", button_hover=\"#343434\", text_color=\"#333333\", title_size=44, menu_width=600, subtitle=u\"Подзаг\", hint=u\"Подсказка\", footer=u\"Низ\", dim_alpha=0.5) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "хабэкран Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 1",
+"    else:",
+"        $ genry_warn_missing_audio(u\"screenmenu music\", \"everlasting_summer\")",
+"    call screen genry_screen_menu(title=u\"Меню лагеря\", items=[(u\"Пойти\", \"go_scene\"), (u\"Остаться\", \"stay\")], bg_image=\"bg ext_square_day\", logo_image=\"mods/genry_golden/images/logo.png\", char_image=\"dv smile pioneer\", char_x=0.84, char_y=1.0, panel_x=0.50, panel_color=\"#000000\", accent=\"#ffffff\", panel_alpha=0.9, button_color=\"#121212\", button_hover=\"#343434\", text_color=\"#333333\", title_size=44, menu_width=600, subtitle=u\"Подзаг\", hint=u\"Подсказка\", footer=u\"Низ\", dim_alpha=0.5) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "screenmenu Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay",
+"out": [
+"    $ _genry_music_file = genry_resolve_music(\"everlasting_summer\")",
+"    if _genry_music_file:",
+"        play music _genry_music_file fadein 1",
+"    else:",
+"        $ genry_warn_missing_audio(u\"screenmenu music\", \"everlasting_summer\")",
+"    call screen genry_screen_menu(title=u\"Меню лагеря\", items=[(u\"Пойти\", \"go_scene\"), (u\"Остаться\", \"stay\")], bg_image=\"bg ext_square_day\", logo_image=\"mods/genry_golden/images/logo.png\", char_image=\"dv smile pioneer\", char_x=0.84, char_y=1.0, panel_x=0.50, panel_color=\"#000000\", accent=\"#ffffff\", panel_alpha=0.9, button_color=\"#121212\", button_hover=\"#343434\", text_color=\"#333333\", title_size=44, menu_width=600, subtitle=u\"Подзаг\", hint=u\"Подсказка\", footer=u\"Низ\", dim_alpha=0.5) with dissolve",
+"    $ _genry_screen_target = _return",
+"    if _genry_screen_target:",
+"        jump expression _genry_screen_target"
+]
+},
+{
+"line": "label Scene One",
+"out": [
+"",
+"label scene_one:"
+]
+},
+{
+"line": "лейбл Scene One",
+"out": [
+"",
+"label scene_one:"
+]
+},
+{
+"line": "label start",
+"out": [
+"",
+"label genry_golden:"
+]
+},
+{
+"line": "лейбл start",
+"out": [
+"",
+"label genry_golden:"
+]
+},
+{
+"line": "label",
+"out": [
+"",
+"label label:"
+]
+},
+{
+"line": "лейбл",
+"out": [
+"",
+"label label:"
+]
+},
+{
+"line": "сцена Scene One",
+"out": [
+"",
+"label scene_one:"
+]
+},
+{
+"line": "character gg Главный #ff0000",
+"out": [
+"    # Unknown command kept as comment: character gg Главный #ff0000"
+]
+},
+{
+"line": "персонаж gg Главный #ff0000",
+"out": [
+"    # Unknown command kept as comment: персонаж gg Главный #ff0000"
+]
+},
+{
+"line": "variable love 0",
+"out": [
+"    # Unknown command kept as comment: variable love 0"
+]
+},
+{
+"line": "переменная love 0",
+"out": [
+"    # Unknown command kept as comment: переменная love 0"
+]
+},
+{
+"line": "choice",
+"out": [
+"    # Unknown command kept as comment: choice"
+]
+},
+{
+"line": "выбор",
+"out": [
+"    # Unknown command kept as comment: выбор"
+]
+},
+{
+"line": "меню",
+"out": [
+"    # Unknown command kept as comment: меню"
+]
+},
+{
+"line": "endchoice",
+"out": [
+"    # Unknown command kept as comment: endchoice"
+]
+},
+{
+"line": "конецвыбора",
+"out": [
+"    # Unknown command kept as comment: конецвыбора"
+]
+},
+{
+"line": "конецвыбор",
+"out": [
+"    # Unknown command kept as comment: конецвыбор"
+]
+},
+{
+"line": "конецменю",
+"out": [
+"    # Unknown command kept as comment: конецменю"
+]
+},
+{
+"line": "Алиса: Привет",
+"out": [
+"    dv \"Привет\""
+]
+},
+{
+"line": "Шрам: да",
+"out": [
+"    scar \"да\""
+]
+},
+{
+"line": "unknown guy: text",
+"out": [
+"    unknown_guy \"text\""
+]
+},
+{
+"line": "http://x: y",
+"out": [
+"    # Unknown command kept as comment: http://x: y"
+]
+},
+{
+"line": "https://a.b/c",
+"out": [
+"    # Unknown command kept as comment: https://a.b/c"
+]
+},
+{
+"line": "фон: x",
+"out": [
+"    genry \"x\""
+]
+},
+{
+"line": "  Генри:   отступ  ",
+"out": [
+"    genry \"отступ\""
+]
+},
+{
+"line": ": My Label",
+"out": [
+"",
+"label my_label:"
+]
+},
+{
+"line": ":start",
+"out": [
+"",
+"label genry_golden:"
+]
+},
+{
+"line": ":",
+"out": [
+"",
+"label label:"
+]
+},
+{
+"line": "# comment",
+"out": []
+},
+{
+"line": "",
+"out": []
+},
+{
+"line": "   ",
+"out": []
+},
+{
+"line": "pioneer2 test",
+"out": [
+"    # Unknown command kept as comment: pioneer test"
+]
+},
+{
+"line": "показать dv smile pioneer2 center",
+"out": [
+"    show dv smile pioneer at center, genry_sprite_time_tint"
+]
+},
+{
+"line": "НЕИЗВЕСТНО что-то",
+"out": [
+"    # Unknown command kept as comment: НЕИЗВЕСТНО что-то"
+]
+},
+{
+"line": "Показать dv smile pioneer",
+"out": [
+"    show dv smile pioneer at genry_sprite_time_tint"
+]
+},
+{
+"line": "ФОН ext_road_day",
+"out": [
+"    scene bg ext_road_day"
+]
+},
+{
+"line": "Семён: я",
+"out": [
+"    me \"я\""
+]
+},
+{
+"line": "виола: ой",
+"out": [
+"    cs \"ой\""
+]
+},
+{
+"line": "Ольга Дмитриевна: утро",
+"out": [
+"    mt \"утро\""
+]
+}
+]

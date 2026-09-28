@@ -1,0 +1,10 @@
+@mod_id genry_golden
+@mod_name Golden
+выбор
+- Да -> yes_scene
+- Нет -> no scene
+
+# c
+конецвыбора
+: yes_scene
+текст да

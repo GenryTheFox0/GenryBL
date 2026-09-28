@@ -1,0 +1,11 @@
+@mod_id genry_golden
+@mod_name Golden
+закрытьглаза
+переход far
+: near
+фон x fade
+: far
+фон y dissolve
+показать dv fade
+открытьглаза
+фон z fade

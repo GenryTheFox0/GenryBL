@@ -1,0 +1,10 @@
+@mod_id genry_golden
+@mod_name Golden
+выбор
+- Да -> da
+- Нет -> net
+конецвыбора
+: da
+текст a
+: net
+текст b

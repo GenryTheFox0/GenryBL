@@ -1,0 +1,5 @@
+@mod_id mymod
+: mymod
+текст
+: other
+текст

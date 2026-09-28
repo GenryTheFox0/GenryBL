@@ -1,0 +1,4 @@
+un|normal|outfit:ai_mischevous	-75	268
+un|normal|outfit:ai_pout	-645	242
+un|normal|outfit:ai_smile4	-1023	339
+us|normal|outfit:yawn	-525	227

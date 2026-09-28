@@ -1,0 +1,75 @@
+// GenryBL V1 - «кино-режим»: the mod plays inside the constructor the way the game runs it.
+// The player walks the real route - scenes, «переход», «вызвать», choices, «если» on the mod's
+// points, phone calls, the camp map, the mod's own main menu - and stops where the game waits:
+// a line of dialogue, a choice, a note, a title card, a pause. Every stop carries the frame
+// (sceneAt over the lines really walked, so the picture is the one of THIS route), the music
+// and ambience that play, the sounds / voice of the moment and the popups (notify, «запомнит»,
+// points, items, achievements) that showed up on the way.
+#pragma once
+#include "Scene.h"
+
+#include <QHash>
+#include <QSet>
+#include <QString>
+#include <QStringList>
+#include <QVector>
+
+namespace gb {
+
+class EsAssets;
+
+struct CinemaStop {
+    enum Kind { Say, Choice, Note, Card, Timed, Video, End };
+    Kind kind = End;
+    int line = 0;                 // the story line (1-based) the player is at
+    SceneState scene;             // what the player sees
+    QStringList options;          // Choice: captions
+    QVector<bool> optionOk;       // false: that option leads nowhere in this story
+    double seconds = 0;           // Card / Timed: auto-advance; Choice: the timer of a timed choice (0 = none)
+    QString music, ambience;      // what plays now: "es:<id>" | "file:audio/x.ogg" | "" (silence)
+    QStringList sounds;           // sfx / voice starting with this stop: "es:<id>" | "file:audio/x.ogg"
+    QStringList popups;           // "title|text" that appeared since the last stop
+    QString video;                // Video: "es:video/x.ogv" | "file:video/x.webm"
+    QString moment;               // shake / flash / pixels / blink since the last stop
+    QString note;                 // End: why it ended; else a hint (a missing scene…)
+};
+
+class Cinema {
+public:
+    void load(const QString& storyText, const EsAssets* es);
+    CinemaStop start(int line);             // from this story line (<= the first scene: the mod's very start)
+    CinemaStop next(int option = -1);       // after a click / the option picked (-1 on a Choice = its timer ran out)
+    int steps() const { return m_steps; }
+
+private:
+    struct Target { QString scene; bool timeout = false; };
+    CinemaStop run();
+    CinemaStop stop(CinemaStop::Kind k, int idx);
+    bool jumpTo(const QString& scene, QString* note);
+    void absorb(const QString& s);            // variables, items, music… of a line walked without stopping
+    double eval(const QString& expr) const;
+    QString label(const QString& scene) const;
+
+    const EsAssets* m_es = nullptr;
+    QString m_modId;
+    QStringList m_lines, m_prefix, m_path;
+    QVector<int> m_srcOf;
+    QHash<QString, int> m_labels;             // Ren'Py label -> index of its «: scene» line
+    int m_pc = 0, m_steps = 0;
+    QString m_scene;
+    QVector<QPair<int, QString>> m_calls;     // return address, scene
+    QHash<QString, double> m_vars;            // «установить / прибавить» (persistent ones as "p:<name>")
+    QSet<QString> m_items;
+    QString m_music, m_ambience;
+    QStringList m_sounds, m_popups;
+    QString m_moment;
+    // the pending choice
+    QVector<QString> m_targets;               // per option: scene ("" = go on after the block)
+    QString m_timeoutTarget;
+    bool m_timeoutSet = false;
+    int m_resume = -1;                        // where the story goes on after a choice
+    bool m_ended = false;
+    bool m_fromMenu = false;                  // the mod's main menu is up: its music stops when a route starts
+};
+
+} // namespace gb

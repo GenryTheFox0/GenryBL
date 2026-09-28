@@ -1,0 +1,5 @@
+@mod_id genry_golden
+@mod_name Golden
+: start
+текст
+переход start

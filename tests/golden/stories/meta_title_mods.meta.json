@@ -1,0 +1,9 @@
+{
+ "mod_id": "genry_easy_mod",
+ "mod_name": "Простой мод Генри",
+ "author": "GenryTheFox",
+ "mod_title_font": "mods/other/f.ttf",
+ "mod_title_color": "red",
+ "mod_title_size": "4000",
+ "playable": true
+}

@@ -1,0 +1,908 @@
+@mod_id genry_golden
+@mod_name Golden
+: everything
+bg ext_camp_entrance_day
+фон ext_camp_entrance_day
+bg ext_camp_entrance_day dissolve
+фон ext_camp_entrance_day dissolve
+bg black fade
+фон black fade
+bg White
+фон White
+bg int_dining_hall_day none
+фон int_dining_hall_day none
+bg
+фон
+showbg ext_square_day dissolve
+сменитьфон ext_square_day dissolve
+showbg black
+сменитьфон black
+showbg
+сменитьфон
+cg d1_food_normal dissolve
+цг d1_food_normal dissolve
+cg d3_un_dance
+цг d3_un_dance
+cg
+цг
+арт d1_food_normal dissolve
+scene bg ext_road_day
+scene
+show dv smile pioneer
+показать dv smile pioneer
+show dv smile pioneer center
+показать dv smile pioneer center
+show dv smile pioneer at left dissolve
+показать dv smile pioneer at left dissolve
+show un normal dress right none
+показать un normal dress right none
+show genry_custom
+показать genry_custom
+show black
+показать black
+show blink
+показать blink
+show prologue_dream
+показать prologue_dream
+show
+показать
+show sl smile pioneer far fleft moveinleft
+показать sl smile pioneer far fleft moveinleft
+show genry_x at center
+показать genry_x at center
+hide dv
+убрать dv
+hide dv dissolve
+убрать dv dissolve
+hide un none
+убрать un none
+hide
+убрать
+walk dv smile pioneer left right 2.5
+идти dv smile pioneer left right 2.5
+walk dv smile pioneer badpos worse abc
+идти dv smile pioneer badpos worse abc
+walk un normal pioneer fleft fright
+идти un normal pioneer fleft fright
+walk a b c
+идти a b c
+walk x left right 2
+идти x left right 2
+подойти dv smile pioneer left right 2.5
+пройти dv smile pioneer left right 2.5
+bigshow dv smile pioneer
+крупно dv smile pioneer
+bigshow dv smile pioneer left 1.4 dissolve
+крупно dv smile pioneer left 1.4 dissolve
+bigshow dv scared pioneer center cleft 3.0 0.45 0.58
+крупно dv scared pioneer center cleft 3.0 0.45 0.58
+bigshow dv scared pioneer center cleft 0 0.45 0.58
+крупно dv scared pioneer center cleft 0 0.45 0.58
+bigshow center 1.5
+крупно center 1.5
+bigshow
+крупно
+bigshow genry_a fright 2
+крупно genry_a fright 2
+показатькрупно dv smile pioneer
+mirror dv smile pioneer
+зеркало dv smile pioneer
+mirror un shy pioneer left 0.9 fade
+зеркало un shy pioneer left 0.9 fade
+mirror
+зеркало
+mirror 1.2
+зеркало 1.2
+mirror sl normal pioneer none
+зеркало sl normal pioneer none
+отзеркалить dv smile pioneer
+отзеркалитьперсонажа dv smile pioneer
+mirrorbig dv smile pioneer right
+зеркалобольшой dv smile pioneer right
+mirrorbig blink
+зеркалобольшой blink
+отзеркалитькрупно dv smile pioneer right
+conflictfocus dv angry pioneer | un scared pioneer
+фокус dv angry pioneer | un scared pioneer
+conflictfocus dv angry pioneer | un scared pioneer | right | left | 1.3 | 0.8 | fade
+фокус dv angry pioneer | un scared pioneer | right | left | 1.3 | 0.8 | fade
+conflictfocus one
+фокус one
+conflictfocus a | b | bad | worse | x | y | zz
+фокус a | b | bad | worse | x | y | zz
+фокусконфликта dv angry pioneer | un scared pioneer
+fullheight dv smile pioneer | right | 1.3 | auto | 0.9 | fade
+полныйрост dv smile pioneer | right | 1.3 | auto | 0.9 | fade
+fullheight dv smile pioneer right 1.3 mirror 0.8 dissolve
+полныйрост dv smile pioneer right 1.3 mirror 0.8 dissolve
+fullheight sl normal pioneer
+полныйрост sl normal pioneer
+fullheight un smile pioneer | cright | x | normal
+полныйрост un smile pioneer | cright | x | normal
+fullheight
+полныйрост
+fullheight mi smile pioneer | left | 1.1 | yes
+полныйрост mi smile pioneer | left | 1.1 | yes
+fullheight us grin sport flip
+полныйрост us grin sport flip
+fullheight genry_a 0.7
+полныйрост genry_a 0.7
+полныйростфокус dv smile pioneer | right | 1.3 | auto | 0.9 | fade
+фокусречи dv smile pioneer | right | 1.3 | auto | 0.9 | fade
+говориткрупно dv smile pioneer | right | 1.3 | auto | 0.9 | fade
+crowdshow dv smile pioneer | un smile pioneer | sl smile pioneer
+массовка dv smile pioneer | un smile pioneer | sl smile pioneer
+crowdshow a|b|c|d|e|f|g
+массовка a|b|c|d|e|f|g
+crowdshow a|b|c|d|e|f|g|h|i|j|k|l
+массовка a|b|c|d|e|f|g|h|i|j|k|l
+crowdshow
+массовка
+crowdshow a|b|c|d|e
+массовка a|b|c|d|e
+показатьмного dv smile pioneer | un smile pioneer | sl smile pioneer
+enterleft dv smile pioneer center 1.5
+входслева dv smile pioneer center 1.5
+enterleft dv smile pioneer left 1.5 1.2
+входслева dv smile pioneer left 1.5 1.2
+enterleft a b
+входслева a b
+enterleft x zz 2
+входслева x zz 2
+enterright un normal pioneer right 2
+входсправа un normal pioneer right 2
+enterright a
+входсправа a
+zoomshow cg d1_food 3 1.4 0.4 0.6
+кинозум cg d1_food 3 1.4 0.4 0.6
+zoomshow dv a b
+кинозум dv a b
+zoomshow img abc 1.2 x y
+кинозум img abc 1.2 x y
+зум cg d1_food 3 1.4 0.4 0.6
+dim
+затемнить
+dim 0.7
+затемнить 0.7
+dim abc
+затемнить abc
+undim
+свет
+убратьзатемнение
+exitleft dv smile pioneer 1.2
+выходслева dv smile pioneer 1.2
+exitleft dv smile pioneer 1.2 0.9
+выходслева dv smile pioneer 1.2 0.9
+exitleft x
+выходслева x
+exitright un 2
+выходсправа un 2
+exitright a b c
+выходсправа a b c
+pulse dv smile pioneer
+пульс dv smile pioneer
+pulse dv smile pioneer left 0.2 1.1
+пульс dv smile pioneer left 0.2 1.1
+pulse dv 0.3
+пульс dv 0.3
+pulse
+пульс
+акцент dv smile pioneer
+timeofday день
+время день
+timeofday вечер
+время вечер
+timeofday ночь
+время ночь
+timeofday пролог
+время пролог
+timeofday Night
+время Night
+timeofday утро
+время утро
+timeofday закат
+время закат
+timeofday abc
+время abc
+timeofday
+время
+времясуток день
+спрайтвремя день
+времяспрайтов день
+цветспрайтов день
+eyesclose
+закрытьглаза
+eyesclose 1.5
+закрытьглаза 1.5
+eyesclose 0.3
+закрытьглаза 0.3
+eyesclose abc
+закрытьглаза abc
+глазазакрыть
+eyesopen
+открытьглаза
+eyesopen 1.5
+открытьглаза 1.5
+eyesopen 0.3
+открытьглаза 0.3
+глазаоткрыть
+eyesblink
+моргнуть
+eyesblink 0.2 0.4
+моргнуть 0.2 0.4
+eyesblink 1 2
+моргнуть 1 2
+eyesblink x
+моргнуть x
+eyesblink 0.5
+моргнуть 0.5
+моргание
+sleepyeyes
+сонныеглаза
+stopsleepyeyes
+стопморгание
+ghostmove un normal pioneer left right 3 0.4 1.1
+призрак un normal pioneer left right 3 0.4 1.1
+ghostmove x a b 1 2 3
+призрак x a b 1 2 3
+ghostmove short
+призрак short
+ghostmove dv q w e r t y
+призрак dv q w e r t y
+прозрачныйперсонаж un normal pioneer left right 3 0.4 1.1
+flash
+вспышка
+flash 0.3
+вспышка 0.3
+flash z
+вспышка z
+flash
+вспышкапереход
+titlecard Глава 1
+титр Глава 1
+titlecard
+титр
+карточка Глава 1
+creditsroll Конец | 20 | 40 | fade
+титрыпрокрутка Конец | 20 | 40 | fade
+creditsroll "Спасибо\nза игру"
+титрыпрокрутка "Спасибо\nза игру"
+creditsroll
+титрыпрокрутка
+creditsroll Текст | abc
+титрыпрокрутка Текст | abc
+creditsroll a | 5 | 30 | nope
+титрыпрокрутка a | 5 | 30 | nope
+прокруткакредитов Конец | 20 | 40 | fade
+роллтитры Конец | 20 | 40 | fade
+creditsroll Конец | 20 | 40 | fade
+note Текст заметки
+заметка Текст заметки
+note "В кавычках"
+заметка "В кавычках"
+note
+заметка
+курсив Текст заметки
+monologue Думаю
+монолог Думаю
+monologue
+монолог
+внутренниймонолог Думаю
+diary Запись дня
+дневник Запись дня
+memorynote Помню это
+воспоминание Помню это
+memorynote 'одинарные'
+воспоминание 'одинарные'
+bigtext КРУПНО
+большойтекст КРУПНО
+экрантекста КРУПНО
+notedim
+заметказатемнение
+notedim 0.8
+заметказатемнение 0.8
+notedim 2
+заметказатемнение 2
+notedim -1
+заметказатемнение -1
+notedim x
+заметказатемнение x
+notebg bg ext_road_day dissolve
+заметкафон bg ext_road_day dissolve
+notebg cg d1 fade
+заметкафон cg d1 fade
+notebg black
+заметкафон black
+notebg white none
+заметкафон white none
+notebg bg black
+заметкафон bg black
+notebg something else dissolve
+заметкафон something else dissolve
+notebg
+заметкафон
+notenvl
+заметкаnvl
+noteadv
+заметкаadv
+closenote
+закрытьзаметку
+staticfx
+помехи
+staticfx 0.5
+помехи 0.5
+staticfx 1
+помехи 1
+staticfx 0.9 fade
+помехи 0.9 fade
+staticfx dissolve
+помехи dissolve
+staticfx none
+помехи none
+staticfx 2
+помехи 2
+noisefx
+шум
+noisefx 0.4 dissolve
+шум 0.4 dissolve
+шумпереход
+glitchfx
+глитч
+glitchfx 0.6
+глитч 0.6
+glitch
+vhsfx
+vhs
+vhsfx 1.0 fade
+vhs 1.0 fade
+vhsшум
+memoryfx
+эффектпамяти
+memoryfx 0.3
+эффектпамяти 0.3
+dreamfx
+сонныйэффект
+dreamfx 0.8 fade
+сонныйэффект 0.8 fade
+dreamfx none
+сонныйэффект none
+сонныйпереход
+pixelfx
+пиксели
+pixelfx 0.3
+пиксели 0.3
+пиксельпереход
+clearfx
+выключитьпомехи
+убратьпомехи
+стоппомехи
+dream
+сон
+dream fade
+сон fade
+dream none
+сон none
+dream xyz
+сон xyz
+сонныйфильтр
+stopdream
+стопсон
+stopdream fade
+стопсон fade
+stopdream none
+стопсон none
+убратьсон
+chapterpng genry_day1 | 1 | Первый день
+главаpng genry_day1 | 1 | Первый день
+chapterpng img | 2 | Title | back | 5 | 0.5 | 1.0 | -0.2 | 0.3 | 0.6
+главаpng img | 2 | Title | back | 5 | 0.5 | 1.0 | -0.2 | 0.3 | 0.6
+chapterpng a | b
+главаpng a | b
+chapterpng img | x | | b | q | 0.8 | 1.1
+главаpng img | x | | b | q | 0.8 | 1.1
+мониторpng genry_day1 | 1 | Первый день
+деньpng genry_day1 | 1 | Первый день
+music everlasting_summer
+музыка everlasting_summer
+music lightness radio fadein 3 loop
+музыка lightness radio fadein 3 loop
+music x fadeout 1 noloop
+музыка x fadeout 1 noloop
+music fadein
+музыка fadein
+music
+музыка
+music a FADEIN 4
+музыка a FADEIN 4
+музыкапетля everlasting_summer
+музыкаloop everlasting_summer
+musicfile audio/track.ogg
+музыкафайл audio/track.ogg
+musicfile audio/x.ogg fadein 1 loop
+музыкафайл audio/x.ogg fadein 1 loop
+musicfile mods/other/a.ogg
+музыкафайл mods/other/a.ogg
+musicfile
+музыкафайл
+musicqueue a | b | c fadein 1 loop
+очередьмузыки a | b | c fadein 1 loop
+musicqueue one
+очередьмузыки one
+musicqueue
+очередьмузыки
+музыкаочередь a | b | c fadein 1 loop
+queuemusic a | b | c fadein 1 loop
+soundqueue sfx/a.ogg | sound/sfx/b.ogg | c.ogg loop
+очередьзвуков sfx/a.ogg | sound/sfx/b.ogg | c.ogg loop
+soundqueue
+очередьзвуков
+soundqueue mods/x.ogg
+очередьзвуков mods/x.ogg
+звукочередь sfx/a.ogg | sound/sfx/b.ogg | c.ogg loop
+queuesound sfx/a.ogg | sound/sfx/b.ogg | c.ogg loop
+sound sfx_achievement
+звук sfx_achievement
+sound "sound/sfx/door.ogg"
+звук "sound/sfx/door.ogg"
+sound u'x.ogg'
+звук u'x.ogg'
+sound
+звук
+voice v_intro
+озвучка v_intro
+voice
+озвучка
+голос v_intro
+soundfile audio/s.ogg
+звукфайл audio/s.ogg
+soundfile
+звукфайл
+voicefile audio/v.ogg
+озвучкафайл audio/v.ogg
+голосфайл audio/v.ogg
+voicedsay Алиса | audio/v1.ogg | Привет | мир
+озвученнаяреплика Алиса | audio/v1.ogg | Привет | мир
+voicedsay dv audio/v.ogg Текст тут
+озвученнаяреплика dv audio/v.ogg Текст тут
+voicedsay a b
+озвученнаяреплика a b
+voicedsay Неизвестный | a.ogg | t
+озвученнаяреплика Неизвестный | a.ogg | t
+голосречь Алиса | audio/v1.ogg | Привет | мир
+punchedsay Алиса | hpunch | Эй!
+ударреплика Алиса | hpunch | Эй!
+punchedsay dv vpunch Стой
+ударреплика dv vpunch Стой
+punchedsay me xx Текст
+ударреплика me xx Текст
+punchedsay a b
+ударреплика a b
+крик Алиса | hpunch | Эй!
+ambience ambience_camp
+атмосфера ambience_camp
+ambience sound/ambience/x.ogg fadein 1
+атмосфера sound/ambience/x.ogg fadein 1
+ambience
+атмосфера
+ambience mods/a.ogg
+атмосфера mods/a.ogg
+windowhide
+окноскрыть
+windowhide dissolve
+окноскрыть dissolve
+windowhide none
+окноскрыть none
+windowhide xyz
+окноскрыть xyz
+скрытьокно
+windowhide
+windowshow
+окнопоказать
+windowshow fade
+окнопоказать fade
+показатьокно
+windowshow
+nvlstart
+nvlначать
+nvlstart fade
+nvlначать fade
+nvlstart none
+nvlначать none
+nvlstart xyz
+nvlначать xyz
+режимnvl
+nvlstart
+nvlend
+nvlконец
+nvlend fade
+nvlконец fade
+nvlend none
+nvlконец none
+режимadv
+adv
+nvlend
+stopmusic
+стопмузыка
+stopsound
+стопзвук
+stopambience
+стопатмосфера
+stopallaudio
+стопвсе
+stop
+стоп
+stop музыка
+стоп музыка
+stop звук
+стоп звук
+stop атмосфера
+стоп атмосфера
+stop видео
+стоп видео
+stop всё
+стоп всё
+stop все
+стоп все
+stop music
+стоп music
+stop стопмузыка
+стоп стопмузыка
+stop channelx
+стоп channelx
+stop Музыка громко
+стоп Музыка громко
+stop all
+стоп all
+stop video
+стоп video
+hideall
+скрытьвсех
+убратьвсех
+effect
+эффект
+effect fade
+эффект fade
+effect none
+эффект none
+effect xyz
+эффект xyz
+shake
+тряска
+shake hpunch
+тряска hpunch
+shake vpunch
+тряска vpunch
+shake 1.0 сильно
+тряска 1.0 сильно
+shake 0.2 слабо
+тряска 0.2 слабо
+shake vertical
+тряска vertical
+shake 5 strong
+тряска 5 strong
+shake abc
+тряска abc
+shake 0.75
+тряска 0.75
+shake HPUNCH
+тряска HPUNCH
+video video/intro.webm
+видео video/intro.webm
+video
+видео
+videobg video/bg.webm dissolve
+видеофон video/bg.webm dissolve
+videobg
+видеофон
+videobg fade
+видеофон fade
+stopvideobg
+стопвидеофон
+stopvideobg fade
+стопвидеофон fade
+chapter
+глава
+chapter days
+глава days
+chapter days 2
+глава days 2
+chapter days 3 Новый день
+глава days 3 Новый день
+день
+монитордня
+timeskip
+скачок
+timeskip 3 дня
+скачок 3 дня
+timeskip Прошла неделя
+скачок Прошла неделя
+скачоквремени
+прошловремя
+спустя
+timeskip
+таймскип
+таймскипкороткий
+bkrr_timeskip
+bkrr_timeskip_short
+achievement images/ach.png 5
+достижение images/ach.png 5
+achievement images/ach.png
+достижение images/ach.png
+achievement
+достижение
+map ext_house_of_mt_day: dorm_scene @dv, ext_square_day -> square
+карта ext_house_of_mt_day: dorm_scene @dv, ext_square_day -> square
+map a:b chibi un normal, bad
+карта a:b chibi un normal, bad
+map
+карта
+map z: My Scene
+карта z: My Scene
+zone house dorm
+зонавкл house dorm
+zone x
+зонавкл x
+chibi house dv
+чибик house dv
+chibi x
+чибик x
+disablezone
+зонавыкл
+disablezone house
+зонавыкл house
+resetzone
+зонасброс
+resetzone house
+зонасброс house
+setvar love 5
+установить love 5
+setvar x
+установить x
+setvar Любовь 3
+установить Любовь 3
+addvar love 1
+прибавить love 1
+addvar x
+прибавить x
+ifjump love >= 3 -> good_end
+если love >= 3 -> good_end
+ifjump bad
+если bad
+jump good_end
+переход good_end
+jump Хорошая Концовка
+переход Хорошая Концовка
+jump
+переход
+callscene side_scene
+вызов side_scene
+callscene
+вызов
+вызвать side_scene
+вызватьсцену side_scene
+подсцена side_scene
+return
+конец
+конецсцены
+конец_сцены
+завершитьсцену
+финиш
+endgame
+конецигры
+конец_игры
+завершитьигру
+финалигры
+theend
+pause
+пауза
+pause 2.5
+пауза 2.5
+pause abc
+пауза abc
+renpy $ x = 1
+unlockgallery cg01
+галерея_разблокировать cg01
+unlockgallery
+галерея_разблокировать
+unlockgallery Мой CG
+галерея_разблокировать Мой CG
+разблокироватьгалерею cg01
+разблокироватьcg cg01
+itemget key | Ключ от дома
+предмет key | Ключ от дома
+itemget apple
+предмет apple
+itemget
+предмет
+получитьпредмет key | Ключ от дома
+инвентарьпредмет key | Ключ от дома
+item key | Ключ от дома
+getitem key | Ключ от дома
+ifitem key -> has_key
+еслипредмет key -> has_key
+ifitem bad
+еслипредмет bad
+ifitem  -> x
+еслипредмет  -> x
+ifitem key -> has_key
+replayunlock scene1 | Первая сцена
+реплей scene1 | Первая сцена
+replayunlock s2
+реплей s2
+replayunlock
+реплей
+реплей_разблокировать scene1 | Первая сцена
+открытьреплей scene1 | Первая сцена
+сцена_разблокировать scene1 | Первая сцена
+replayunlock scene1 | Первая сцена
+unlockreplay scene1 | Первая сцена
+persistentvar seen_end True
+постоянная seen_end True
+persistentvar x
+постоянная x
+постоянная_переменная seen_end True
+persistentadd lp_dv 1
+постоянноеочко lp_dv 1
+persistentadd x
+постоянноеочко x
+постоянныеочки lp_dv 1
+weather снег
+погода снег
+weather дождь dissolve
+погода дождь dissolve
+weather стоп
+погода стоп
+weather стоп fade
+погода стоп fade
+weather unknown
+погода unknown
+weather
+погода
+weather none
+погода none
+weather Листья
+погода Листья
+частицы снег
+осадки снег
+notify Текст
+уведомление Текст
+notify Текст | Заголовок | images/ic.png | #223344 | слева | 4
+уведомление Текст | Заголовок | images/ic.png | #223344 | слева | 4
+notify a | | | | сверху | x
+уведомление a | | | | сверху | x
+notify
+уведомление
+тост Текст
+всплывашка Текст
+unlockachievement first | Первое
+ачивка first | Первое
+unlockachievement second | Второе | images/a.png | 2
+ачивка second | Второе | images/a.png | 2
+unlockachievement
+ачивка
+unlockachievement x | | |
+ачивка x | | |
+достижениеоткрыть first | Первое
+открытьдостижение first | Первое
+получитьдостижение first | Первое
+musicplayer Лето | audio/summer.ogg | Гроза | audio/storm.ogg
+музплеер Лето | audio/summer.ogg | Гроза | audio/storm.ogg
+musicplayer only
+музплеер only
+musicplayer
+музплеер
+musicplayer a | b | c
+музплеер a | b | c
+музыкальныйплеер Лето | audio/summer.ogg | Гроза | audio/storm.ogg
+плеермузыки Лето | audio/summer.ogg | Гроза | audio/storm.ogg
+phonestart Алиса
+телефонначать Алиса
+phonestart
+телефонначать
+чатначать Алиса
+открытьтелефон Алиса
+sms Алиса: Привет
+смс Алиса: Привет
+sms я: Иду
+смс я: Иду
+sms без двоеточия
+смс без двоеточия
+sms +: ok
+смс +: ok
+sms : пусто
+смс : пусто
+sms ME: hi
+смс ME: hi
+сообщение Алиса: Привет
+чат Алиса: Привет
+phoneend
+телефонконец
+чатконец
+закрытьтелефон
+floatingthought Мысль | 0.3 | 0.2 | 2
+мысль Мысль | 0.3 | 0.2 | 2
+floatingthought Просто
+мысль Просто
+floatingthought
+мысль
+floatingthought x | a | b | c
+мысль x | a | b | c
+floatingthought t | 1e-7 | 12345678901234567 | 0.1
+мысль t | 1e-7 | 12345678901234567 | 0.1
+мысльповерх Мысль | 0.3 | 0.2 | 2
+мысльнаэкране Мысль | 0.3 | 0.2 | 2
+всплывающаямысль Мысль | 0.3 | 0.2 | 2
+hidethought
+скрытьмысль
+hidethought dissolve
+скрытьмысль dissolve
+hidethought xyz
+скрытьмысль xyz
+убратьмысль
+colorfilter сепия
+фильтр сепия
+colorfilter ночь fade
+фильтр ночь fade
+colorfilter нет
+фильтр нет
+colorfilter
+фильтр
+colorfilter abc
+фильтр abc
+colorfilter none dissolve
+фильтр none dissolve
+colorfilter ЧБ
+фильтр ЧБ
+цветофильтр сепия
+мудфильтр сепия
+настроение сепия
+ifpersistent lp_dv >= 1 -> good
+еслипостоянная lp_dv >= 1 -> good
+ifpersistent flag -> x
+еслипостоянная flag -> x
+ifpersistent bad
+еслипостоянная bad
+ifpersistent  -> y
+еслипостоянная  -> y
+еслиочко lp_dv >= 1 -> good
+еслиочки lp_dv >= 1 -> good
+еслиперсистент lp_dv >= 1 -> good
+say Привет "мир" \ слэш
+текст Привет "мир" \ слэш
+say
+текст
+реплика Привет "мир" \ слэш
+screenmenu Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay
+экранменю Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay
+screenmenu Просто
+экранменю Просто
+screenmenu
+экранменю
+screenmenu T | music audio/m.ogg | персонаж un smile x 0.4 | стиль blood | лого logo_img | dim 5 | width 10
+экранменю T | music audio/m.ogg | персонаж un smile x 0.4 | стиль blood | лого logo_img | dim 5 | width 10
+screenmenu T | фон cg d1 | sprite a fright | panel 0.3 | Кнопка -> Сцена Два | -> x | y ->
+экранменю T | фон cg d1 | sprite a fright | panel 0.3 | Кнопка -> Сцена Два | -> x | y ->
+менюэкран Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay
+хабэкран Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay
+screenmenu Меню лагеря | style neon | bg ext_square_day | music everlasting_summer | logo images/logo.png | sprite dv smile pioneer right | subtitle Подзаг | hint Подсказка | footer Низ | side left | dim 0.5 | alpha 0.7 | width 600 | title_size 44 | button #111111 #222222 #333333 | panel center #000000 #ffffff 0.9 #121212 #343434 | Пойти -> go_scene | Остаться -> stay
+Алиса: Привет
+Шрам: да
+unknown guy: text
+http://x: y
+https://a.b/c
+фон: x
+  Генри:   отступ  
+: My Label
+:start
+:
+# comment
+
+   
+pioneer2 test
+показать dv smile pioneer2 center
+НЕИЗВЕСТНО что-то
+Показать dv smile pioneer
+ФОН ext_road_day
+Семён: я
+виола: ой
+Ольга Дмитриевна: утро

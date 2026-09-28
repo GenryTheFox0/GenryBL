@@ -1,0 +1,7 @@
+@mod_id genry_golden
+@mod_name Golden
+открытьглаза
+
+переход x
+: x
+текст

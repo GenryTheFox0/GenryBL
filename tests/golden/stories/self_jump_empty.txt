@@ -1,0 +1,7 @@
+@mod_id genry_golden
+@mod_name Golden
+: a
+текст
+переход a
+: b
+текст

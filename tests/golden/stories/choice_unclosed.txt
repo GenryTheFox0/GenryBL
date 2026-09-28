@@ -1,0 +1,6 @@
+@mod_id genry_golden
+@mod_name Golden
+текст
+выбор
+- A -> a
+- B -> b

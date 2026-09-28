@@ -1,0 +1,4 @@
+@mod_title_font mods/other/f.ttf
+@mod_title_color red
+@mod_title_size 4000
+текст

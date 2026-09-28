@@ -1,0 +1,4 @@
+@mod_id genry_golden
+@mod_name Golden
+скачок 3 дня
+фон semen_room

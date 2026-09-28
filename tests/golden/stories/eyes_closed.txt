@@ -1,0 +1,11 @@
+@mod_id genry_golden
+@mod_name Golden
+закрытьглаза
+фон ext_road_day dissolve
+показать dv smile pioneer fade
+показать un normal pioneer with dissolve
+переход next
+: next
+фон ext_square_day fade
+открытьглаза
+текст ok

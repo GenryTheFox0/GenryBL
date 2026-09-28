@@ -1,0 +1,54 @@
+@mod_id @@ID@@
+@mod_name @@NAME@@
+@author GenryTheFox
+
+: start
+время день
+фон ext_camp_entrance_day fade
+музыка everlasting_summer
+показать sl smile pioneer right dissolve
+Славя: Привет! Ты, должно быть, новенький?
+показать dv grin pioneer left dissolve
+Алиса: Ещё один пионер на нашу голову.
+Славя: Не обращай внимания. Хочешь, покажу лагерь?
+
+выбор
+- Пойти со Славей -> square
+- Остаться с Алисой -> alisa
+конецвыбора
+
+: square
+фон ext_square_day fade
+показать sl smile pioneer center dissolve
+погода листья
+Славя: Это площадь. Вечером здесь собираются все.
+прибавить trust 1
+переход evening
+
+: alisa
+показать dv smile pioneer center dissolve
+Алиса: Ну ладно, пошли. Только не отставай!
+телефонначать Славя
+смс Славя: Вы где? Я вас потеряла!
+смс я: С Алисой, скоро будем
+телефонконец
+переход evening
+
+: evening
+скачок пара часов
+время вечер
+фон ext_square_sunset fade
+погода стоп
+показать un shy pioneer center dissolve
+Лена: Ты... тоже пришёл посмотреть на закат?
+уведомление Лена запомнит этот вечер | Лагерь | | #143247 | справа | 3
+если trust >= 1 -> good_end
+конецигры
+
+: good_end
+закрытьглаза
+фон ext_square_night
+время ночь
+открытьглаза
+Лена: Спокойной ночи.
+конецигры

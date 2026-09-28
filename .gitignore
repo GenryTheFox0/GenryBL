@@ -1,0 +1,19 @@
+# build output and the deployed app (root only: src/app is source)
+/build/
+/build_*/
+/app/
+# the user's projects, runtime state, test runs
+/tests/out/
+/projects/
+/work/
+*.log
+__pycache__/
+# big binaries that ship inside the program but not inside the repo (make_release.py copies them)
+/third_party/
+/data/tools/
+/data/patch/
+# release output
+/dist/
+# local build / helper scripts stay on the maintainer's PC
+*.cmd
+*.bat
