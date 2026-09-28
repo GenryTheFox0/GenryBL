@@ -1624,6 +1624,13 @@ void Engine::exportMod(const QString& id, const QString& text, const QString& ki
     }));
 }
 
+void Engine::restartApp()
+{
+    stopGame();
+    if (QProcess::startDetached(QCoreApplication::applicationFilePath(), {}, QCoreApplication::applicationDirPath()))
+        QTimer::singleShot(300, qApp, &QCoreApplication::quit);
+}
+
 void Engine::revealFile(const QString& path) const
 {
 #ifdef Q_OS_WIN

@@ -7,8 +7,9 @@ ApplicationWindow {
     id: win
     width: 1600
     height: 900
-    minimumWidth: 1180
-    minimumHeight: 700
+    // a 1920x1080 laptop at 150 % Windows zoom leaves ~1280x688 for a window: the old 1180x700 minimum stuck out
+    minimumWidth: 1000
+    minimumHeight: 600
     visible: true
     color: Theme.bg
     // a developer build says so in the title (the public one does not)
@@ -24,8 +25,21 @@ ApplicationWindow {
             x = -4000; y = -4000; width = Engine.mode !== "" ? 1280 : 1600; height = Engine.mode !== "" ? 720 : 900
             if (shotSize) { const wh = shotSize.split("x"); width = parseInt(wh[0]); height = parseInt(wh[1]) }
         }
+        if (!shotPage && Engine.mode === "") applyWindowSize(Engine.setting("windowSize", ""))
         if (!Engine.ready) return
         win.start()
+    }
+    // «Окно» (Инструменты): "" = auto (1600x900, the whole screen when that does not fit), "WxH", "full"
+    function applyWindowSize(v) {
+        const aw = Screen.desktopAvailableWidth, ah = Screen.desktopAvailableHeight
+        let w = 1600, h = 900
+        if (v && v !== "full") { const wh = v.split("x"); w = parseInt(wh[0]); h = parseInt(wh[1]) }
+        if (v === "full" || w > aw || h > ah - 32) { win.visibility = Window.Maximized; return }
+        if (win.visibility === Window.Maximized || win.visibility === Window.FullScreen) win.visibility = Window.Windowed
+        win.width = w
+        win.height = h
+        win.x = Screen.virtualX + Math.round((aw - w) / 2)
+        win.y = Screen.virtualY + Math.max(0, Math.round((ah - h) / 2))
     }
     function start() {
         if (!Engine.ageOk && (!shotPage || shotPage === "age")) ageGate.open()

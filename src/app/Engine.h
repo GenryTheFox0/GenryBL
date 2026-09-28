@@ -226,6 +226,7 @@ public:
     Q_INVOKABLE QString font() const { return m_renderer.fontFamily(); }
     Q_INVOKABLE QVariant setting(const QString& key, const QVariant& def = QVariant()) const;
     Q_INVOKABLE void setSetting(const QString& key, const QVariant& value);
+    Q_INVOKABLE void restartApp();                   // «Масштаб интерфейса» takes effect at start
 
     QImage providerImage(const QString& id, const QSize& requested);
 

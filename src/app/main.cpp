@@ -15,7 +15,15 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QSettings>
 #include <QTimer>
+
+#ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 static QFile* g_log = nullptr;
 
@@ -31,11 +39,42 @@ static void logHandler(QtMsgType type, const QMessageLogContext& ctx, const QStr
     g_log->flush();
 }
 
+// «Масштаб интерфейса» (Инструменты): Qt's own scale factor over whatever Windows gives - read from work/settings.ini
+// before the application exists (Qt takes it only at start). A 1920x1080 laptop at 150 % is a 1280 px wide window:
+// 80 % gives it the room of a 1600 px one. Nothing set = as Windows says (the default).
+static void applyUiScale(int argc, char** argv)
+{
+    for (int i = 1; i + 1 < argc; ++i)          // GenryBL.exe --ui-scale 0.8: for this start only (a shortcut, the self-check)
+        if (qstrcmp(argv[i], "--ui-scale") == 0) {
+            bool ok = false;
+            const double f = QByteArray(argv[i + 1]).toDouble(&ok);
+            if (ok && f >= 0.5 && f <= 2.0) { qputenv("QT_SCALE_FACTOR", QByteArray(argv[i + 1])); return; }
+        }
+#ifdef Q_OS_WIN
+    wchar_t buf[4096];
+    const DWORD n = GetModuleFileNameW(nullptr, buf, 4096);
+    QDir d = QFileInfo(QString::fromWCharArray(buf, int(n))).absoluteDir();
+#else
+    QDir d = QDir::current();
+#endif
+    for (int i = 0; i < 5; ++i) {               // the same walk up as Engine's root: the folder with data/
+        if (QFileInfo::exists(d.filePath(QStringLiteral("data/es_catalog.json")))) {
+            const QSettings s(d.filePath(QStringLiteral("work/settings.ini")), QSettings::IniFormat);
+            bool ok = false;
+            const double f = s.value(QStringLiteral("uiScale")).toString().toDouble(&ok);
+            if (ok && f >= 0.5 && f <= 2.0) qputenv("QT_SCALE_FACTOR", QByteArray::number(f, 'g', 3));
+            return;
+        }
+        if (!d.cdUp()) return;
+    }
+}
+
 int main(int argc, char** argv)
 {
     // how GenryBL draws and where its Qt plugins are is its own business: a Qt setting inherited from whoever started it
     // (a Qt tool, a game a mod launched it from) must not break the window ("no Qt platform plugin could be initialized")
-    for (const char* v : {"QT_QPA_PLATFORM", "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH"}) qunsetenv(v);
+    for (const char* v : {"QT_QPA_PLATFORM", "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH", "QT_SCALE_FACTOR"}) qunsetenv(v);
+    applyUiScale(argc, argv);
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral("GenryBL"));
