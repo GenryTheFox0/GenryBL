@@ -51,7 +51,7 @@ def main():
         dst = os.path.join(ITEM, 'mods', MOD)
         if os.path.isdir(dst):
             shutil.rmtree(dst)
-        shutil.copytree(game_mod, dst)
+        shutil.copytree(game_mod, dst, ignore=shutil.ignore_patterns('.genrybl_owner'))   # this PC's own mark: not for people
         shutil.copy2(setup, os.path.join(dst, 'GenryBL_Setup.exe'))
         with open(os.path.join(dst, 'GenryBL_version.txt'), 'w', encoding='utf-8', newline='\n') as f:
             f.write(version() + '\n')
