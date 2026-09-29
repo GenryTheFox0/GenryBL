@@ -136,9 +136,29 @@ Item {
                     text: "Создать"
                     accent: true
                     font.pixelSize: 22
-                    onClicked: { const id = Engine.createProject(nameField.text); nameField.text = ""; launcher.dialog = ""; launcher.open(id) }
+                    onClicked: { const id = Engine.createProject(nameField.text, exampleBox.on); nameField.text = ""; launcher.dialog = ""; launcher.open(id) }
                 }
                 PillButton { x: 760; y: 82; height: 50; width: 100; text: "Отмена"; onClicked: launcher.dialog = "" }
+                // a clean page by default; the sample story only for those who want to see how it is done
+                Row {
+                    id: exampleBox
+                    property bool on: false
+                    x: 20; y: 146
+                    spacing: 10
+                    Rectangle {
+                        width: 26; height: 26; radius: 5
+                        color: exampleBox.on ? "#7fb845" : "#fffdf4"
+                        border.color: "#b9a57a"; border.width: 2
+                        Text { anchors.centerIn: parent; visible: exampleBox.on; text: "✓"; color: "white"; font.pixelSize: 18; font.bold: true }
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "С примером внутри (Славя, Алиса, выбор) — иначе чистый лист"
+                        color: "#5a3e1e"; font.family: Theme.ui; font.pixelSize: 20
+                    }
+                    TapHandler { onTapped: exampleBox.on = !exampleBox.on }
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                }
                 onVisibleChanged: if (visible) nameField.forceActiveFocus()
             }
 

@@ -152,10 +152,11 @@ def main():
     data = os.path.join(STAGE, 'data')
     # «Удалённые» / «поправить лицо» of the wardrobe ship with it (collected from every copy on this PC)
     subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'harvest_wardrobe_lists.py')])
-    for f in ('es_catalog.json', 'forms.json', 'genrybl.ico', 'starter_story.txt', 'wardrobe_hidden.txt', 'wardrobe_faces.txt'):
+    for f in ('es_catalog.json', 'forms.json', 'genrybl.ico', 'starter_story.txt', 'starter_blank.txt', 'wardrobe_hidden.txt', 'wardrobe_faces.txt'):
         os.makedirs(data, exist_ok=True)
         shutil.copy2(os.path.join(ROOT, 'data', f), data)
     copy_tree(os.path.join(ROOT, 'data', 'mod_assets'), os.path.join(data, 'mod_assets'))
+    copy_tree(os.path.join(ROOT, 'data', 'es_doc'), os.path.join(data, 'es_doc'))       # es-doc: Russian names + community sounds (GPL-3.0)
     if not WORKSHOP:
         copy_tree(os.path.join(ROOT, 'data', 'patch'), os.path.join(data, 'patch'))     # the 18+ patch inside (bundle_patch.py)
     copy_tree(os.path.join(ROOT, 'third_party', 'ffmpeg'), os.path.join(data, 'tools'))

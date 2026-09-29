@@ -14,7 +14,10 @@ namespace gb {
 struct ModMeta {
     QString modId = QStringLiteral("genry_easy_mod");
     QString modName = QString::fromUtf8("Простой мод Генри");
-    QString author = QStringLiteral("GenryTheFox");
+    QString author;                                  // @author; empty = no «автор:» line on the mod menu
+    QString heroName;                                // @hero_name: the hero instead of «Семён» (the player may retype it)
+    QString heroAsk;                                 // @hero_ask: "menu" (a button «Имя» on the mod menu) | "start" | ""
+    bool heroShe = false;                            // @hero_gender она: the hero is a girl («[проснулся/проснулась]»)
     QString titleFont;
     QString titleColor;
     QString titleSize;
@@ -46,6 +49,7 @@ struct CompileState {
     QString timeOfDay;                        // V1: day / sunset / night the story set last («время» or a «фон»)
     bool timeSynced = false;                  // V1: this scene has set the sprites' time already
     bool timeExplicit = false;                // V1: that time came from «время», not from a picture
+    QString bgImage;                          // V1: the place on screen now ("ext_square_day"), "" = a CG / black / none
 };
 
 // `image <name> = "<path>"` for the mod's own pictures (paths relative to game/).
@@ -59,6 +63,15 @@ bool hasPlayableBody(const QStringList& body, const CompileOptions& opt = {});
 QStringList compileLine(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt = {});
 // «менюмода»: a button's kind by its target or caption (Дни -> главы, Фотографии -> галерея, Выселиться -> выход…)
 QString menuButtonKind(const QString& word);
+// «менюмода <стиль>»: panel | es | 7dl | notebook | diary | board | monitor | noir | live | cinema | map
+QString menuStyleKey(const QString& word);
+// «менюмода свой»: its parts, one line each - «кнопки слева|справа|по центру|снизу», «вид текст|таблички|бл|неон»,
+// «цвет #hex», «частицы пыль|листья|светлячки|дождь|снег|сердца|по часам|нет», «появление выезд|проявление|снизу|печать»
+struct MenuParts { QString layout, look, accent, fx, enter; };
+bool menuPartLine(const QString& lowerWord, const QString& rest, MenuParts* parts);   // true: the line was one of them
+// «менюмода карта»: the camp place of each button by its kind (menuButtonKind: «галерея» - library, «выход» - the gates,
+// a scene - the square, the beach…)
+QStringList menuMapPlaces(const QStringList& kinds);
 // Returns the .rpy text; on a malformed choice block returns {} and sets *error ("ValueError: ...").
 QString compileStory(const ModMeta& meta, const QStringList& body, const CompileOptions& opt = {},
                      const QVector<CustomImage>& images = {}, QString* error = nullptr);
@@ -98,6 +111,21 @@ struct V1Opts {
 QString v1OptKey(const QString& key);
 V1Opts parseV1Opts(const QString& rest, const QHash<QString, QString>& switches = {});
 QString rememberWhere(const QString& where);        // слева/справа/центр/снизу -> tl/tr/tc/bc
+// «ачивка ключ | Название [| картинка-попапа] [| описание=…] [| раздел=Славя] [| нужно=a, b] [| картинка=cg …] [| скрытое]
+// [| платина]» (Достижения 2.0): the same line opens it; «платина» never opens by a line - it comes when the rest are there
+struct AchSpec {
+    QString key, title, icon, desc, section, image;
+    QStringList needs;                               // keys as written
+    bool hidden = false;                             // «???» and the closed eye until it comes
+    bool plat = false;
+};
+AchSpec parseAchievement(const QString& rest);
+// «фонарик [вкл|выкл|1.4] [| цвет=#012]»; ok=false - the line is a sentence («Фонарик погас.»), not the command
+struct FlashSpec { bool ok = false, off = false; double zoom = 1.5; QString color = QStringLiteral("#050810"); };
+FlashSpec parseFlashlight(const QString& rest);
+// «кодовыйзамок 1905 | Год основания лагеря? | верно -> сейф | неверно -> тупик | попыток=3»
+struct CodeLockSpec { QString code, hint, okTarget, badTarget; int tries = 0; };
+CodeLockSpec parseCodeLock(const QString& rest);
 
 // CG names the Steam build declares but only the 18+ workshop patch (1118110148) has files for
 const QStringList& hentaiPatchCgs();
@@ -109,5 +137,31 @@ QString choiceImage(const QString& raw, QString* kind, const QSet<QString>& cust
 QString choiceStyleOf(const QString& word);          // + "timed": «выбор на время 8» (Telltale)
 QString choiceSeconds(const QString& style);         // "8.0" (2..60, default 10)
 bool isTimeoutWord(const QString& s);                // «время вышло -> сцена» inside a timed choice
+
+// V1 «Выбор 2.0». The header: «выбор [вид] [по кругу] [наугад]» - «по кругу»: questions, a chosen option goes away and
+// the menu comes back until «[выход]» or nothing is left; «наугад»: the game picks one of the options itself.
+struct ChoiceHead {
+    QString style;                                   // choiceStyleOf: es | buttons | images | phone | timed
+    QString secs;                                    // choiceSeconds
+    bool loop = false;
+    bool random = false;
+};
+ChoiceHead parseChoiceHead(const QString& rest);
+// One option: «- Текст [-> сцена] [| картинка] [если …] [нужно … | подсказка] [выход] [всегда]». Lines under it (up to the
+// next option or «конецвыбора») are what happens when it is chosen; then the story goes on after the choice.
+struct ChoiceItemSpec {
+    QString caption, target, image;
+    QString cond;                                    // [если славя 3]: hidden until it is true
+    QString need, hint;                              // [нужно славя 3 | Славя должна тебе верить]: shown locked until true
+    bool exit = false;                               // [выход]: ends a «по кругу» menu
+    bool always = false;                             // [всегда]: stays in a «по кругу» menu after being chosen
+};
+bool isChoiceItemLine(const QString& stripped);
+ChoiceItemSpec parseChoiceItem(const QString& stripped);
+// the options' effects out of their brackets, as the story's own commands for the lines under the option:
+// [+1 Славя] -> «прибавить Славя 1», [запомнит Алиса] -> «запомнит Алиса», [флаг помог] -> «установить помог True»
+QStringList choiceItemEffects(const QString& stripped, QString* cleaned);
+// the names a condition reads («славя 3 и не ссора» -> славя, ссора; «предмет ключ» reads no variable)
+QStringList choiceConditionVars(const QString& cond);
 
 } // namespace gb

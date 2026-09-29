@@ -97,7 +97,7 @@ Item {
         clip: true
         cellWidth: Math.floor((width - 6) / 2)
         cellHeight: cellWidth * 9 / 16 + 28
-        model: (bb.adult ? bb.adultModel : bb.cg ? Engine.cgs : Engine.backgrounds).filter(b => !search.text || b.id.indexOf(search.text.toLowerCase()) >= 0)
+        model: (bb.adult ? bb.adultModel : bb.cg ? Engine.cgs : Engine.backgrounds).filter(b => !search.text || (b.id + " " + (b.title || "")).toLowerCase().indexOf(search.text.toLowerCase()) >= 0)
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
         cacheBuffer: 600
@@ -145,9 +145,9 @@ Item {
                 Text {
                     anchors.bottom: parent.bottom; anchors.bottomMargin: 5
                     x: 8; width: parent.width - 16
-                    text: bb.adult && !modelData.have ? modelData.id + " · нужен патч" : modelData.id + (modelData.custom ? " ★" : "")
+                    text: bb.adult && !modelData.have ? modelData.id + " · нужен патч" : (modelData.title || modelData.id) + (modelData.custom ? " ★" : "")
                     color: area.containsMouse ? Theme.text : Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 12
+                    font.family: modelData.title ? Theme.ui : Theme.mono; font.pixelSize: 12
                     elide: Text.ElideRight
                 }
                 MouseArea {

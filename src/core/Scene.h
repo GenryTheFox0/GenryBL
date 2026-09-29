@@ -2,6 +2,8 @@
 // command semantics as the compiler (and ES's own transforms), so the one preview
 // renderer can draw the frame the game will draw.
 #pragma once
+#include "Compiler.h"
+
 #include <QHash>
 #include <QString>
 #include <QStringList>
@@ -49,6 +51,8 @@ struct SceneState {
     QStringList choices;
     QString choiceStyle;                          // "es" game menu | "buttons" dark | "images" 7DL strips
     QStringList choiceImages, choiceKinds;        // per option: Ren'Py image name ("" = none), "sprite" | "bg"
+    QStringList choiceHints;                      // per option: "" = open, else locked («[нужно …]») with this hint
+    bool choiceAsked = false;                     // the question stays in the dialogue box under the menu (ES menu, buttons)
     int choiceHover = 0;                          // the strip drawn lit (-1 = none)
     QString menuTitle;                            // screen menu
     bool screenMenu = false;
@@ -77,10 +81,25 @@ struct SceneState {
     bool showInventory = false, inventoryButton = false;
     bool modMenuOpen = false;                     // cursor inside «менюмода … конецменюмода»
     QString modMenuTitle, modMenuLogo;
+    QString modMenuStyle = QStringLiteral("panel");   // menuStyleKey of «менюмода <стиль>»
+    QStringList modMenuHeroes;                    // «герои» of a 7ДЛ menu
+    QStringList modMenuKinds;                     // menuButtonKind of every button («карта»: where it stands)
+    QString modMenuAuthor;                        // @author / «автор …»; empty = no line
+    MenuParts modMenuParts;                       // «менюмода свой»: кнопки / вид / цвет / частицы / появление
+    QString playerName;                           // «имяигрока … | Имя»: the name the preview shows for Семён / [имя]
+    bool playerShe = false;                       // @hero_gender она: «[проснулся/проснулась]» -> проснулась
+    int textPages = 1;                            // the boxes the current line is shown in (splitForBox)
+    int textPage = 1;                             // which of them is on screen (the cinema turns them)
+    QStringList textBoxes;                        // all of them
     QStringList modMenuButtons;
     bool showGallery = false, showAchievements = false;
     QStringList galleryCgs;                       // "cg x" of the mod
-    QStringList achievements;                     // "caption|1" (got) / "caption|0"
+    QStringList achievements;                     // "caption|got|h|picture": got 1/0, h = hidden until it comes
+    QString achievementPlate;                     // transient: ES's achievement plate with this title slides in
+    QString codeLock;                             // transient: «кодовыйзамок» - "hint|digits|tries" on ES's o_rly plate
+    bool flashlight = false;                      // «фонарик»: the dark with a light (the preview puts it in the middle)
+    double flashZoom = 1.5;
+    QString flashColor = QStringLiteral("#050810");
     // phone
     bool phoneOpen = false;
     QString phoneContact, phoneTyping;

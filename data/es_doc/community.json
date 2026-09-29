@@ -1,0 +1,80 @@
+{
+ "source": "es-doc-assets (github.com/sovue/es-doc-assets), GPL-3.0; авторы указаны в captions",
+ "sounds": [
+  {
+   "file": "community/sound/sfx/debris.ogg",
+   "kind": "sfx",
+   "title": "Падение обломков",
+   "captions": [
+    "Из модификации Главный Атрибут Пионера"
+   ]
+  },
+  {
+   "file": "community/sound/sfx/door_kick.ogg",
+   "kind": "sfx",
+   "title": "Выбивание двери",
+   "captions": [
+    "Из модификации Главный Атрибут Пионера"
+   ]
+  },
+  {
+   "file": "community/sound/sfx/gate_squeak.ogg",
+   "kind": "sfx",
+   "title": "Скрип ворот лагеря",
+   "captions": [
+    "Из модификации Главный Атрибут Пионера"
+   ]
+  },
+  {
+   "file": "community/sound/ambience/cave.ogg",
+   "kind": "ambience",
+   "title": "Ветер в пещере",
+   "captions": [
+    "Из модификации Distorted Souls"
+   ]
+  },
+  {
+   "file": "community/sound/ambience/drone.ogg",
+   "kind": "ambience",
+   "title": "Зловещий гул",
+   "captions": [
+    "Из модификации Distorted Souls"
+   ]
+  },
+  {
+   "file": "community/sound/ambience/oldBuildingWind.ogg",
+   "kind": "ambience",
+   "title": "Старый лагерь внутри",
+   "captions": [
+    "Из модификации Distorted Souls"
+   ]
+  },
+  {
+   "file": "community/sound/music/disoul.ogg",
+   "kind": "music",
+   "title": "140 kilograms of sex — Distorted Souls",
+   "captions": [
+    "Главная тема модификации Distorted Souls",
+    "Перед использованием спросите разрешение у автора"
+   ]
+  },
+  {
+   "file": "community/sound/music/incelthread.ogg",
+   "kind": "music",
+   "title": "140 kilograms of sex — Incelthread",
+   "captions": [
+    "Главная тема игры Incelthread",
+    "Перед использованием спросите разрешение у автора"
+   ]
+  },
+  {
+   "file": "community/sound/music/progress.ogg",
+   "kind": "music",
+   "title": "140 kilograms of sex — Progress",
+   "captions": [
+    "Главная тема этого сайта",
+    "Перед использованием спросите разрешение у автора"
+   ]
+  }
+ ]
+}

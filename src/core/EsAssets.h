@@ -49,6 +49,10 @@ struct EsMapZone {
     int cx, cy;                 // V1: where the heroine's face stands - beside the place's name, not on it
 };
 const QVector<EsMapZone>& esMapZones();
+// tracks the game has as files but not in music_list (es-doc names them: the Zhenya route's songs, Kostry, Miku's lesson):
+// word -> game path. V1 «музыка free_love» plays the file itself.
+const QVector<QPair<QString, QString>>& esExtraMusic();
+QString esExtraMusicPath(const QString& word);
 QStringList esChibiIds();                                   // "sl", "dv", ... (ES store.map_chibi)
 // The Steam build ships no map_icon_nXX.png (a stock «set_chibi» shows a missing file), so V1
 // brings its own round faces: data/mod_assets/chibi/<file>.png -> <mod>/images/genry_chibi/
@@ -92,7 +96,7 @@ public:
 
     QHash<QString, EsSprite> sprites;       // "dv smile pioneer" / "... close" / "... far"
     QHash<QString, EsImage> images;         // "bg ext_road_day", "cg d1_food_normal", "prologue_dream", ...
-    QMap<QString, QString> music;           // music_list id -> path
+    QMap<QString, QString> music;           // music_list id -> path (+ esExtraMusic() the game has as files)
     QMap<QString, QString> sounds;          // sfx_* -> path
     QMap<QString, QString> ambience;        // ambience_* -> path
     QHash<QString, EsCharacter> characters;

@@ -215,10 +215,29 @@ void Renderer::setAssets(const EsAssets* es, const QString& dataDir)
 void Renderer::setCustomImages(const QHash<QString, QString>& nameToFile)
 {
     QMutexLocker lock(&m_mx);
-    if (m_custom == nameToFile) return;
+    // the same name may be a new picture now (re-imported «bg лес»): the project's files are read again
+    for (const QString& f : std::as_const(m_custom)) m_files.remove(f);
+    for (const QString& f : nameToFile) m_files.remove(f);
     m_custom = nameToFile;
     m_sprites.clear();
     m_bgs.clear();
+    m_cacheBytes = 0;
+    for (const QImage& i : std::as_const(m_files)) m_cacheBytes += i.sizeInBytes();
+}
+
+void Renderer::remember(QHash<QString, QImage>& cache, const QString& key, const QImage& img) const
+{
+    static constexpr qint64 kLimit = qint64(1200) * 1024 * 1024;
+    if (m_cacheBytes + img.sizeInBytes() > kLimit) {
+        m_files.clear();
+        m_sprites.clear();
+        m_bgs.clear();
+        m_cacheBytes = 0;
+    }
+    const auto old = cache.constFind(key);
+    if (old != cache.constEnd()) m_cacheBytes -= old->sizeInBytes();
+    cache.insert(key, img);
+    m_cacheBytes += img.sizeInBytes();
 }
 
 void Renderer::dropSpriteCache()
@@ -245,7 +264,7 @@ QImage Renderer::load(const QString& gamePath) const
     if (img.isNull() && QFile::exists(gamePath)) img = QImage(gamePath);
     if (!img.isNull()) img = img.convertToFormat(QImage::Format_ARGB32_Premultiplied);
     QMutexLocker lock(&m_mx);
-    m_files.insert(gamePath, img);
+    remember(m_files, gamePath, img);
     return img;
 }
 
@@ -301,7 +320,7 @@ QImage Renderer::sprite(const QString& image, const QString& spriteTime) const
         }
     }
     QMutexLocker lock(&m_mx);
-    m_sprites.insert(key, out);
+    remember(m_sprites, key, out);
     return out;
 }
 
@@ -387,7 +406,7 @@ QImage Renderer::background(const QString& name) const
         if (!file.isEmpty()) out = cover(load(file), W, H);
     }
     QMutexLocker lock(&m_mx);
-    m_bgs.insert(name, out);
+    remember(m_bgs, name, out);
     return out;
 }
 
@@ -506,7 +525,24 @@ QImage Renderer::render(const SceneState& s, bool hud) const
 
     // ---- cards
     if (!s.cardKind.isEmpty()) {
-        if (s.cardKind == QLatin1String("chapter")) {
+        if (s.cardKind == QLatin1String("askname")) {
+            // kV1Hero genry_ask_name: ES's own paper plate (yesno_prompt), header font, #64483c; yalign like Ren'Py
+            const QImage plate = load(QStringLiteral("images/gui/o_rly/base.png"));
+            if (!plate.isNull()) p.drawImage(canvas.rect(), plate);
+            else p.fillRect(canvas.rect(), QColor(0, 0, 0, 0xa8));
+            auto line = [&](const QString& text, int size, qreal yalign, const QColor& color) {
+                QFont f(m_header);
+                f.setPixelSize(size);
+                const QFontMetricsF fm(f);
+                p.setFont(f);
+                p.setPen(color);
+                const qreal h = fm.height();
+                p.drawText(QRectF(0, yalign * (H - h), W, h), Qt::AlignCenter, text);
+            };
+            line(s.cardText, 34, 0.413, QColor(0x64, 0x48, 0x3c));
+            line(s.cardSub + QStringLiteral("|"), 52, 0.487, QColor(0x3f, 0x2a, 0x1d));
+            line(QString::fromUtf8("Готово"), 60, 0.66, QColor(0x64, 0x48, 0x3c));
+        } else if (s.cardKind == QLatin1String("chapter")) {
             const QImage back = load(QStringLiteral("images/anim/backdrop/back.jpg"));
             if (!back.isNull()) p.drawImage(canvas.rect(), back);
             else p.fillRect(canvas.rect(), Qt::black);
@@ -554,6 +590,25 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         }
     }
 
+    // ---- «фонарик»: the dark over the place and the heroines (master layer), a soft circle of light - in the middle here,
+    // under the mouse in the game; the dialogue box stays over it
+    if (s.flashlight) {
+        const QPointF c(W / 2.0, H * 0.45);
+        const qreal r1 = 330 * s.flashZoom;
+        QColor dark(s.flashColor);
+        if (!dark.isValid()) dark = QColor(0x05, 0x08, 0x10);
+        QRadialGradient g(c, r1);
+        QColor clear = dark;
+        clear.setAlpha(0);
+        QColor full = dark;
+        full.setAlpha(245);
+        g.setColorAt(0.0, clear);
+        g.setColorAt(150.0 / 330.0, clear);
+        g.setColorAt(1.0, full);
+        g.setSpread(QGradient::PadSpread);
+        p.fillRect(canvas.rect(), g);
+    }
+
     // ---- NVL note (ES nvl screen: choice_box frame, padding 175/150)
     if (!s.nvlText.isEmpty() && m_es) {
         const QString tod = s.timeOfDay == QLatin1String("prologue") ? QStringLiteral("prologue") : s.timeOfDay;
@@ -567,7 +622,8 @@ QImage Renderer::render(const SceneState& s, bool hud) const
     }
 
     // ---- say window (ES screen say, small font mode)
-    const bool saying = !s.text.isEmpty() && !s.windowHidden && s.cardKind.isEmpty() && s.nvlText.isEmpty() && !s.phoneOpen && s.choices.isEmpty() && !s.modMenuOpen &&
+    const bool saying = !s.text.isEmpty() && !s.windowHidden && s.cardKind.isEmpty() && s.nvlText.isEmpty() && !s.phoneOpen &&
+                        (s.choices.isEmpty() || s.choiceAsked) && !s.modMenuOpen && s.codeLock.isEmpty() &&
                         !s.phoneHome && !s.feedOpen && s.phoneCall.isEmpty();
     if (saying && m_es) {
         const QString tod = s.timeOfDay == QLatin1String("prologue") ? QStringLiteral("prologue") : s.timeOfDay;
@@ -592,6 +648,13 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         for (const QString& l : s.hideSayText ? QStringList() : wrap(plain(s.text), base, 1541)) {
             shadowText(p, QPointF(194, y), l, what);
             y += fm.height() + 2;
+        }
+        if (s.textPages > 1 && !s.hideSayText) {
+            QFont pf(m_family);
+            pf.setPixelSize(20);
+            p.setFont(pf);
+            p.setPen(QColor(0xff, 0xdd, 0x7d, 0xb0));
+            p.drawText(QRectF(1400, 1032, 330, 26), Qt::AlignRight | Qt::AlignVCenter, QString::fromUtf8("%1/%2 ▸").arg(s.textPage).arg(s.textPages));
         }
     }
 
@@ -631,7 +694,16 @@ QImage Renderer::render(const SceneState& s, bool hud) const
                     if (kind == QLatin1String("sprite")) p.fillRect(strip, QColor(0x11, 0x18, 0x14));
                     p.drawImage(QPointF(strip.center().x() + 1 - pic.width() / 2.0, 0), pic);
                 }
+                const bool locked = !s.choiceHints.value(i).isEmpty();
+                if (locked) p.fillRect(strip, QColor(0, 0, 0, 0xa8));
                 p.fillRect(QRect(strip.left(), H - 250, sw, 250), QColor(0, 0, 0, 0xa0));
+                if (locked) {
+                    QFont hf(m_family);
+                    hf.setPixelSize(24);
+                    p.setFont(hf);
+                    p.setPen(QColor(0xd8, 0xd8, 0xd8));
+                    p.drawText(QRectF(strip.left() + 30, H * 0.95 - 32, sw - 60, 34), Qt::AlignHCenter | Qt::AlignTop, s.choiceHints[i]);
+                }
                 // caption: size 44 white, 3px dark outline, centred, wrapped to the strip
                 QStringList rows;
                 QString cur;
@@ -641,13 +713,13 @@ QImage Renderer::render(const SceneState& s, bool hud) const
                     else cur = tryLine;
                 }
                 if (!cur.isEmpty()) rows << cur;
-                qreal y = H * 0.95 - rows.size() * cm.height();
+                qreal y = H * 0.95 - rows.size() * cm.height() - (locked ? 34 : 0);
                 for (const QString& row : rows) {
                     QPainterPath path;
                     path.addText(QPointF(strip.center().x() - cm.horizontalAdvance(row) / 2, y + cm.ascent()), cap, row);
                     p.setRenderHint(QPainter::Antialiasing);
                     p.strokePath(path, QPen(QColor(0, 0, 0, 0xcc), 6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-                    p.fillPath(path, Qt::white);
+                    p.fillPath(path, locked ? QColor(0x9a, 0x9a, 0x9a) : QColor(Qt::white));
                     y += cm.height();
                 }
                 p.restore();
@@ -674,17 +746,24 @@ QImage Renderer::render(const SceneState& s, bool hud) const
                 y += bh + 10;
             }
         } else if (s.choiceStyle == QLatin1String("buttons")) {
-            // genry_choice: the old constructor's dark buttons
-            p.fillRect(canvas.rect(), QColor(0, 0, 0, 0x99));
+            // genry_choice_btn: the old constructor's dark buttons (the question's box stays bright under them)
+            p.fillRect(s.choiceAsked ? QRectF(0, 0, W, 905) : QRectF(canvas.rect()), QColor(0, 0, 0, 0x99));
             const qreal bw = 680, bh = fm.height() + 36, gap = 16;
             const qreal total = s.choices.size() * bh + (s.choices.size() - 1) * gap;
-            qreal y = (H - total) / 2;
-            p.setFont(f);
-            for (const QString& c : s.choices) {
+            qreal y = H * 0.45 - total / 2;
+            for (int i = 0; i < s.choices.size(); ++i) {
+                const bool locked = !s.choiceHints.value(i).isEmpty();
                 const QRectF r((W - bw) / 2, y, bw, bh);
-                p.fillRect(r, QColor(0x16, 0x24, 0x3a));
-                p.setPen(QColor(0xee, 0xf6, 0xff));
-                p.drawText(r, Qt::AlignCenter, c);
+                p.fillRect(r, locked ? QColor(0x1a, 0x1d, 0x22) : i == s.choiceHover ? QColor(0x2a, 0x4f, 0x86) : QColor(0x16, 0x24, 0x3a));
+                p.setPen(locked ? QColor(0x7d, 0x87, 0x94) : QColor(0xee, 0xf6, 0xff));
+                p.setFont(f);
+                p.drawText(locked ? r.adjusted(0, 0, 0, -18) : r, Qt::AlignCenter, s.choices[i]);
+                if (locked) {
+                    QFont hf2(m_family);
+                    hf2.setPixelSize(20);
+                    p.setFont(hf2);
+                    p.drawText(r.adjusted(0, 30, 0, 0), Qt::AlignCenter, s.choiceHints[i]);
+                }
                 y += bh + gap;
             }
         } else {
@@ -700,15 +779,26 @@ QImage Renderer::render(const SceneState& s, bool hud) const
             hf.setPixelSize(37);
             const QFontMetricsF hm(hf);
             const qreal rowH = hm.height() + 12;
-            const qreal boxH = 50 + 50 + s.choices.size() * rowH;
+            QFont hintF(m_header);
+            hintF.setPixelSize(22);
+            const qreal hintH = QFontMetricsF(hintF).height();
+            qreal boxH = 50 + 50 + s.choices.size() * rowH;
+            for (const QString& h : s.choiceHints) if (!h.isEmpty()) boxH += hintH;
             const QRectF box(0, (H - boxH) / 2, W, boxH);
             frame9(p, load(QStringLiteral("images/gui/choice/%1/choice_box.png").arg(tod)), box, 50);
-            p.setFont(hf);
             qreal y = box.top() + 50;
             for (int i = 0; i < s.choices.size(); ++i) {
-                p.setPen(i == s.choiceHover ? colors[tod].second : colors[tod].first);
+                const bool locked = !s.choiceHints.value(i).isEmpty();
+                p.setFont(hf);
+                p.setPen(locked ? QColor(0x8c, 0x8c, 0x8c) : i == s.choiceHover ? colors[tod].second : colors[tod].first);
                 p.drawText(QRectF(75, y, W - 150, rowH), Qt::AlignCenter, s.choices[i]);
                 y += rowH;
+                if (locked) {             // genry_choice_es: the lock's hint under the grey option
+                    p.setFont(hintF);
+                    p.setPen(QColor(0x9a, 0x9a, 0x9a));
+                    p.drawText(QRectF(75, y - 8, W - 150, hintH), Qt::AlignCenter, s.choiceHints[i]);
+                    y += hintH;
+                }
             }
         }
     }
@@ -1195,9 +1285,15 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         p.setFont(f);
         for (int i = 0; i < s.choices.size(); ++i) {
             const QRectF r(x, y, widths[i], bh);
-            p.fillRect(r, i == s.choiceHover ? QColor(0x26, 0x20, 0x18, 0xe8) : QColor(0, 0, 0, 0xb8));
-            p.setPen(i == s.choiceHover ? QColor(0xff, 0xd2, 0x7d) : QColor(0xff, 0xff, 0xff));
-            p.drawText(r, Qt::AlignCenter, s.choices[i]);
+            const bool locked = !s.choiceHints.value(i).isEmpty();
+            p.fillRect(r, locked ? QColor(0, 0, 0, 0x70) : i == s.choiceHover ? QColor(0x26, 0x20, 0x18, 0xe8) : QColor(0, 0, 0, 0xb8));
+            p.setPen(locked ? QColor(0x8a, 0x8a, 0x8a) : i == s.choiceHover ? QColor(0xff, 0xd2, 0x7d) : QColor(0xff, 0xff, 0xff));
+            p.setFont(f);
+            p.drawText(locked ? r.adjusted(0, 0, 0, -16) : r, Qt::AlignCenter, s.choices[i]);
+            if (locked) {
+                p.setFont(font(20));
+                p.drawText(r.adjusted(0, 26, 0, 0), Qt::AlignCenter, s.choiceHints[i]);
+            }
             x += widths[i] + 26;
         }
         const QFont tf = font(22);
@@ -1205,41 +1301,322 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         p.setPen(QColor(0xff, 0xff, 0xff, 0xb0));
         p.drawText(QRectF(0, y - 70, W, 30), Qt::AlignHCenter, U("%1 сек").arg(s.choiceSeconds.section(QLatin1Char('.'), 0, 0)));
     }
-    // the mod's main menu (a dark column on the left, big buttons)
+    // the mod's main menu: every style the way menuScreenLines (Compiler.cpp) builds it for the game
     if (s.modMenuOpen) {
-        // the mod's main menu: dark column with a soft edge, corbel title (wraps at 500), author,
-        // buttons; the first one drawn hovered (gold dash + 18px step)
-        p.fillRect(QRectF(0, 0, 540, H), QColor(0x0b, 0x0f, 0x0c, 0xd8));
-        for (int k = 0; k < 10; ++k) p.fillRect(QRectF(540 + 16 * k, 0, 16, H), QColor(0x0b, 0x0f, 0x0c, int(0xd8 * (10 - k) / 11.0)));
-        QFont tf(m_header), bf(m_header);
-        tf.setPixelSize(64);
-        bf.setPixelSize(46);
-        const QFont af = font(22);
-        const QFontMetricsF tm(tf), bm(bf), am(af);
+        const QString st = s.modMenuStyle;
         const QString title = s.modMenuTitle.isEmpty() ? U("Мой мод") : s.modMenuTitle;
-        const QStringList titleRows = wrap(title, tf, 500);
         const QStringList buttons = s.modMenuButtons.isEmpty() ? QStringList{U("Начать"), U("Выход")} : s.modMenuButtons;
-        const qreal h = titleRows.size() * tm.height() + 8 + am.height() + 8 + 36 + buttons.size() * (bm.height() + 8);
-        qreal y = (H - h) / 2;
-        const QImage logo = s.modMenuLogo.isEmpty() ? QImage() : background(QFileInfo(s.modMenuLogo).completeBaseName().toLower());
-        if (!logo.isNull()) {
-            const QImage sc = logo.scaled(460, 220, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            p.drawImage(QPointF(90, y - sc.height() - 10), sc);
-        }
-        for (const QString& row : titleRows) {
-            outlineText(p, QPointF(90, y + tm.ascent()), row, tf, QColor(0xff, 0xd2, 0x7d), QColor(0, 0, 0, 0x88), 1.5);
-            y += tm.height();
-        }
-        y += 8;
-        outlineText(p, QPointF(90, y + am.ascent()), U("автор: GenryTheFox"), af, QColor(0xa9, 0xb9, 0xa4), Qt::black, 0);
-        y += am.height() + 8 + 36;
-        for (int i = 0; i < buttons.size(); ++i) {
-            const bool hot = i == 0;
-            const qreal x = 90 + (hot ? 18 : 0);
-            if (hot) outlineText(p, QPointF(x, y + bm.ascent()), U("—"), bf, QColor(0xff, 0xd2, 0x7d), Qt::black, 0);
-            outlineText(p, QPointF(x + bm.horizontalAdvance(U("—")) + 12, y + bm.ascent()), buttons[i], bf,
-                        hot ? QColor(0xff, 0xd2, 0x7d) : QColor(0xee, 0xf6, 0xff), Qt::black, 0);
-            y += bm.height() + 8;
+        const bool hasAuthor = !s.modMenuAuthor.isEmpty();
+        const QString author = U("автор: ") + s.modMenuAuthor;
+        auto fontOf = [&](const QString& family, int px, bool italic = false) {
+            QFont f(family);
+            f.setPixelSize(px);
+            f.setItalic(italic);
+            return f;
+        };
+        // a column of centred lines: the first button drawn hovered
+        auto centred = [&](qreal cx, qreal y, const QStringList& rows, const QFont& f, const QColor& c, const QColor& hot, qreal gap) {
+            const QFontMetricsF fm(f);
+            for (int i = 0; i < rows.size(); ++i) {
+                const qreal w = fm.horizontalAdvance(rows[i]);
+                outlineText(p, QPointF(cx - w / 2, y + fm.ascent()), rows[i], f, i == 0 ? hot : c, Qt::transparent, 0);
+                y += fm.height() + gap;
+            }
+            return y;
+        };
+        auto softColumn = [&](int width, const QColor& c, int step) {
+            p.fillRect(QRectF(0, 0, width, H), c);
+            for (int k = 0; k < 10; ++k) {
+                QColor e = c;
+                e.setAlpha(int(c.alpha() * (10 - k) / 11.0));
+                p.fillRect(QRectF(width + step * k, 0, step, H), e);
+            }
+        };
+        auto panel = [&]() {
+            // the dark column with a soft edge, corbel title (wraps at 500), author, the first button hovered
+            softColumn(540, QColor(0x0b, 0x0f, 0x0c, 0xd8), 16);
+            QFont tf(m_header), bf(m_header);
+            tf.setPixelSize(64);
+            bf.setPixelSize(46);
+            const QFont af = font(22);
+            const QFontMetricsF tm(tf), bm(bf), am(af);
+            const QStringList titleRows = wrap(title, tf, 500);
+            const qreal h = titleRows.size() * tm.height() + 8 + (hasAuthor ? am.height() + 8 : 0) + 36 + buttons.size() * (bm.height() + 8);
+            qreal y = (H - h) / 2;
+            const QImage logo = s.modMenuLogo.isEmpty() ? QImage() : background(QFileInfo(s.modMenuLogo).completeBaseName().toLower());
+            if (!logo.isNull()) {
+                const QImage sc = logo.scaled(460, 220, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                p.drawImage(QPointF(90, y - sc.height() - 10), sc);
+            }
+            for (const QString& row : titleRows) {
+                outlineText(p, QPointF(90, y + tm.ascent()), row, tf, QColor(0xff, 0xd2, 0x7d), QColor(0, 0, 0, 0x88), 1.5);
+                y += tm.height();
+            }
+            y += 8;
+            if (hasAuthor) {
+                outlineText(p, QPointF(90, y + am.ascent()), author, af, QColor(0xa9, 0xb9, 0xa4), Qt::black, 0);
+                y += am.height() + 8;
+            }
+            y += 36;
+            for (int i = 0; i < buttons.size(); ++i) {
+                const bool hot = i == 0;
+                const qreal x = 90 + (hot ? 18 : 0);
+                if (hot) outlineText(p, QPointF(x, y + bm.ascent()), U("—"), bf, QColor(0xff, 0xd2, 0x7d), Qt::black, 0);
+                outlineText(p, QPointF(x + bm.horizontalAdvance(U("—")) + 12, y + bm.ascent()), buttons[i], bf,
+                            hot ? QColor(0xff, 0xd2, 0x7d) : QColor(0xee, 0xf6, 0xff), Qt::black, 0);
+                y += bm.height() + 8;
+            }
+        };
+        if (st == QLatin1String("es")) {
+            // ES's own title board + the owl; the mod's name on a dark strip at the bottom
+            const QImage board = load(QStringLiteral("images/gui/title_menu/mainmenu_ground.jpg"));
+            if (!board.isNull()) p.drawImage(canvas.rect(), board);
+            const QImage owl = load(QStringLiteral("images/gui/title_menu/owl_idle.png"));
+            if (!owl.isNull()) p.drawImage(QPointF(135, 606), owl);
+            const QFont tf = fontOf(m_header, 40);
+            const qreal tw = QFontMetricsF(tf).horizontalAdvance(title);
+            const QRectF strip(W / 2.0 - tw / 2 - 30, H * 0.985 - QFontMetricsF(tf).height() - 20, tw + 60, QFontMetricsF(tf).height() + 20);
+            p.fillRect(strip, QColor(0, 0, 0, 0xa0));
+            outlineText(p, QPointF(strip.left() + 30, strip.top() + 10 + QFontMetricsF(tf).ascent()), title, tf, QColor(0xff, 0xd2, 0x7d), Qt::transparent, 0);
+        } else if (st == QLatin1String("7dl")) {
+            // 7ДЛ: a heroine big on the right, a softer column on the left, white title, buttons glowing under the cursor
+            p.fillRect(canvas.rect(), QColor(0, 0, 0, 0x38));
+            if (!s.modMenuHeroes.isEmpty()) {
+                const QImage h = sprite(s.modMenuHeroes.first(), s.spriteTime);
+                if (!h.isNull()) p.drawImage(QPointF(W * 0.8 - h.width() * 0.8, H - h.height()), h);
+            }
+            softColumn(560, QColor(0x0b, 0x0f, 0x0c, 0xb0), 16);
+            const QFont tf = fontOf(m_header, 70), bf = fontOf(m_header, 42);
+            qreal y = H * 0.55 - (QFontMetricsF(tf).height() + 34 + buttons.size() * (QFontMetricsF(bf).height() + 6)) / 2;
+            outlineText(p, QPointF(150, y + QFontMetricsF(tf).ascent()), title, tf, Qt::white, QColor(0xff, 0xd2, 0x7d, 0x40), 3);
+            y += QFontMetricsF(tf).height() + 34;
+            for (int i = 0; i < buttons.size(); ++i) {
+                outlineText(p, QPointF(150, y + QFontMetricsF(bf).ascent()), buttons[i], bf, i == 0 ? QColor(0xff, 0xd2, 0x7d) : QColor(0xe8, 0xe8, 0xe8),
+                            i == 0 ? QColor(0xff, 0xd2, 0x7d, 0x66) : Qt::transparent, i == 0 ? 2 : 0);
+                y += QFontMetricsF(bf).height() + 6;
+            }
+        } else if (st == QLatin1String("custom")) {
+            // «свой»: the same parts the game builds (menuScreenLines «custom»); the first button drawn hovered
+            const MenuParts& mp = s.modMenuParts;
+            const QString lay = mp.layout.isEmpty() ? QStringLiteral("left") : mp.layout;
+            const QString look = mp.look.isEmpty() ? QStringLiteral("text") : mp.look;
+            const QColor accent = pyIsHexColor(mp.accent) ? QColor(mp.accent) : QColor(0xff, 0xd2, 0x7d);
+            const QColor shade(0x0b, 0x0f, 0x0c, 0xc8);
+            if (lay == QLatin1String("left")) {
+                softColumn(560, shade, 16);
+            } else if (lay == QLatin1String("right")) {
+                p.fillRect(QRectF(W - 560, 0, 560, H), shade);
+                for (int k = 0; k < 10; ++k) {
+                    QColor e = shade;
+                    e.setAlpha(int(shade.alpha() * (10 - k) / 11.0));
+                    p.fillRect(QRectF(W - 560 - 16 * (k + 1), 0, 16, H), e);
+                }
+            } else if (lay == QLatin1String("center")) {
+                p.fillRect(canvas.rect(), QColor(0, 0, 0, 0x78));
+            } else {
+                QColor b(0x0b, 0x0f, 0x0c, 0xd0);
+                p.fillRect(QRectF(0, H - 260, W, 260), b);
+                for (int k = 0; k < 8; ++k) {
+                    QColor e = b;
+                    e.setAlpha(int(b.alpha() * (8 - k) / 9.0));
+                    p.fillRect(QRectF(0, H - 260 - 16 * (k + 1), W, 16), e);
+                }
+            }
+            if (!s.modMenuHeroes.isEmpty()) {
+                const qreal xa = lay == QLatin1String("right") ? 0.2 : lay == QLatin1String("center") ? 0.0 : 0.8;
+                const QImage h = sprite(s.modMenuHeroes.first(), s.spriteTime);
+                if (!h.isNull()) p.drawImage(QPointF((W - h.width()) * xa, H - h.height()), h);
+                if (lay == QLatin1String("center") && s.modMenuHeroes.size() > 1) {
+                    const QImage h2 = sprite(s.modMenuHeroes[1], s.spriteTime);
+                    if (!h2.isNull()) p.drawImage(QPointF((W - h2.width()) * 1.0, H - h2.height()), h2);
+                }
+            }
+            static const QHash<QString, QPair<QColor, QColor>> esColors{
+                {QStringLiteral("day"), {QColor(0x46, 0x61, 0x23), QColor(0x9d, 0xcd, 0x55)}}, {QStringLiteral("night"), {QColor(0x14, 0x56, 0x44), QColor(0x3c, 0xcf, 0xa2)}},
+                {QStringLiteral("sunset"), {QColor(0x69, 0x65, 0x2f), QColor(0xdc, 0xd1, 0x68)}}, {QStringLiteral("prologue"), {QColor(0x49, 0x64, 0x63), QColor(0x98, 0xd8, 0xda)}}};
+            const QString tod = esColors.contains(s.timeOfDay) ? s.timeOfDay : QStringLiteral("day");
+            const bool es = look == QLatin1String("es"), plates = look == QLatin1String("plates"), neon = look == QLatin1String("neon");
+            const bool bottom = lay == QLatin1String("bottom");
+            const QFont tf = fontOf(m_header, es ? 60 : 70), af = font(22);
+            const QFont bf = fontOf(m_header, es ? 44 : plates ? 40 : neon ? 48 : 46);
+            const QFontMetricsF tm(tf), bm(bf), am(af);
+            // one line at (x, y) aligned to the layout: 0 left edge, 1 right edge, 2 the centre
+            auto line = [&](const QString& t, const QFont& f, qreal x, qreal y, const QColor& c, const QColor& glow, qreal glowW, int al) {
+                const qreal w = QFontMetricsF(f).horizontalAdvance(t);
+                const qreal lx = al == 0 ? x : al == 1 ? x - w : x - w / 2;
+                outlineText(p, QPointF(lx, y + QFontMetricsF(f).ascent()), t, f, c, glow, glowW);
+            };
+            const int align = lay == QLatin1String("right") ? 1 : (lay == QLatin1String("center") || bottom) ? 2 : 0;
+            const qreal ax = lay == QLatin1String("right") ? 1810 : (lay == QLatin1String("center") || bottom) ? W / 2.0 : 110;
+            const QColor titleC = es ? esColors[tod].second : QColor(Qt::white);
+            const QColor titleGlow = es ? QColor(Qt::transparent) : QColor(accent.red(), accent.green(), accent.blue(), 0x55);
+            const qreal btnH = plates ? bm.height() + 28 : bm.height();
+            const qreal gap = bottom ? 44 : plates ? 14 : 8;
+            if (bottom) {
+                line(title, tf, ax, 150, titleC, titleGlow, es ? 0 : 3, 2);
+                if (hasAuthor) line(author, af, ax, 150 + tm.height() + 4, es ? esColors[tod].first : QColor(0xc8, 0xc8, 0xc8), Qt::transparent, 0, 2);
+            }
+            auto widthOf = [&](const QString& b) { return plates ? qMax(420.0, bm.horizontalAdvance(b) + 68) : bm.horizontalAdvance(b); };
+            qreal blockW = 0;
+            for (const QString& b : buttons) blockW = bottom ? blockW + widthOf(b) + (blockW > 0 ? gap : 0) : qMax(blockW, widthOf(b));
+            const qreal blockH = bottom ? btnH : buttons.size() * btnH + (buttons.size() - 1) * gap;
+            const qreal headH = bottom ? 0 : tm.height() + (hasAuthor ? am.height() + 6 : 0) + 30;
+            if (!bottom) blockW = qMax(blockW, tm.horizontalAdvance(title));
+            const qreal top = bottom ? H * 0.93 - blockH / 2 : H * (lay == QLatin1String("center") ? 0.55 : 0.5) - (headH + blockH) / 2;
+            if (es) {                                // ES's choice box of the menu's hour around the block
+                const qreal left = align == 0 ? 90 : align == 1 ? 1810 - blockW - 140 : W / 2.0 - blockW / 2 - 70;
+                frame9(p, load(QStringLiteral("images/gui/choice/%1/choice_box.png").arg(tod)), QRectF(left, top - 40, blockW + 140, headH + blockH + 80), 50);
+            }
+            const qreal x0 = es ? (align == 0 ? 160 : align == 1 ? 1810 - 70 : W / 2.0) : ax;
+            qreal y = top;
+            if (!bottom) {
+                line(title, tf, x0, y, titleC, titleGlow, es ? 0 : 3, align);
+                y += tm.height();
+                if (hasAuthor) {
+                    line(author, af, x0, y + 6, es ? esColors[tod].first : QColor(0xc8, 0xc8, 0xc8), Qt::transparent, 0, align);
+                    y += am.height() + 6;
+                }
+                y += 30;
+            }
+            qreal bx = W / 2.0 - blockW / 2;
+            for (int i = 0; i < buttons.size(); ++i) {
+                const bool hot = i == 0;
+                const qreal bw = widthOf(buttons[i]);
+                if (plates) {
+                    const qreal px = bottom ? bx : align == 0 ? x0 : align == 1 ? x0 - bw : x0 - bw / 2;
+                    p.fillRect(QRectF(px, y, bw, btnH), hot ? QColor(accent.red(), accent.green(), accent.blue(), 0x55) : QColor(0, 0, 0, 0xa8));
+                    outlineText(p, QPointF(px + 34, y + 14 + bm.ascent()), buttons[i], bf, hot ? accent : QColor(Qt::white), Qt::transparent, 0);
+                } else {
+                    const QColor c = es ? (hot ? esColors[tod].second : esColors[tod].first) : hot ? accent : QColor(0xee, 0xf6, 0xff);
+                    const QColor glow = neon ? QColor(accent.red(), accent.green(), accent.blue(), hot ? 0xaa : 0x55) : es ? QColor(Qt::transparent) : QColor(0, 0, 0, 0x88);
+                    const qreal gw = neon ? (hot ? 7 : 3) : es ? 0 : 2;
+                    if (bottom) line(buttons[i], bf, bx, y, c, glow, gw, 0);
+                    else line(buttons[i], bf, x0, y, c, glow, gw, align);
+                }
+                if (bottom) bx += bw + gap;
+                else y += btnH + gap;
+            }
+        } else if (st == QLatin1String("notebook")) {
+            const QImage bg = load(QStringLiteral("images/gui/settings/preferences_bg.jpg"));
+            if (!bg.isNull()) p.drawImage(canvas.rect(), bg);
+            qreal y = 260;
+            y = centred(960, y, wrap(title, fontOf(m_header, 62), 820), fontOf(m_header, 62), QColor(0x64, 0x48, 0x3c), QColor(0x64, 0x48, 0x3c), 0);
+            if (hasAuthor) y = centred(960, y + 6, {author}, font(24), QColor(0x8f, 0x7a, 0x68), QColor(0x8f, 0x7a, 0x68), 0);
+            centred(960, y + 26, buttons, fontOf(m_header, 46), QColor(0x64, 0x48, 0x3c), QColor(0xb3, 0x00, 0x1b), 10);
+        } else if (st == QLatin1String("diary")) {
+            const QImage bg = load(QStringLiteral("images/gui/settings/history_bg.jpg"));
+            if (!bg.isNull()) p.drawImage(canvas.rect(), bg);
+            const QFont tf = fontOf(m_header, 60, true), bf = fontOf(m_header, 44, true);
+            const QColor ink(0x2d, 0x3f, 0x66);
+            qreal y = 190;
+            outlineText(p, QPointF(520, y + QFontMetricsF(tf).ascent()), title, tf, ink, Qt::transparent, 0);
+            y += QFontMetricsF(tf).height() + 8;
+            if (hasAuthor) {
+                outlineText(p, QPointF(520, y + QFontMetricsF(font(24)).ascent()), author, font(24), QColor(0x5d, 0x6b, 0x86), Qt::transparent, 0);
+                y += QFontMetricsF(font(24)).height() + 8;
+            }
+            y += 24;
+            for (int i = 0; i < buttons.size(); ++i) {
+                outlineText(p, QPointF(520, y + QFontMetricsF(bf).ascent()), QString::number(i + 1) + QStringLiteral(". ") + buttons[i], bf,
+                            i == 0 ? QColor(0xb3, 0x00, 0x1b) : ink, Qt::transparent, 0);
+                y += QFontMetricsF(bf).height() + 8;
+            }
+        } else if (st == QLatin1String("board")) {
+            QString tod = s.timeOfDay;
+            if (tod != QLatin1String("sunset") && tod != QLatin1String("night") && tod != QLatin1String("prologue")) tod = QStringLiteral("day");
+            const QImage board = load(QStringLiteral("images/gui/ingame_menu/%1/ingame_menu.png").arg(tod));
+            if (!board.isNull()) p.drawImage(QPointF((W - board.width()) / 2.0, (H - board.height()) / 2.0), board);
+            const QFont tf = fontOf(m_header, 44), bf = fontOf(m_header, buttons.size() > 6 ? 32 : 38);
+            const qreal h = QFontMetricsF(tf).height() + 12 + buttons.size() * (QFontMetricsF(bf).height() + 2);
+            const qreal y = centred(W / 2.0, (H - h) / 2, {title}, tf, QColor(0x64, 0x48, 0x3c), QColor(0x64, 0x48, 0x3c), 0);
+            centred(W / 2.0, y + 12, buttons, bf, QColor(0x64, 0x48, 0x3c), QColor(0xb3, 0x00, 0x1b), 2);
+        } else if (st == QLatin1String("monitor")) {
+            const QImage back = load(QStringLiteral("images/anim/backdrop/back.jpg"));
+            if (!back.isNull()) p.drawImage(canvas.rect(), back);
+            const QImage noise = load(QStringLiteral("images/anim/backdrop/1.png"));
+            if (!noise.isNull()) p.drawImage(canvas.rect(), noise);
+            const QFont tf = fontOf(m_family, 88);
+            centred(W * 0.455, H * 0.28 - QFontMetricsF(tf).height() / 2, {title}, tf, QColor(216, 216, 216, 184), QColor(216, 216, 216, 184), 0);
+            centred(W * 0.455, H * 0.36, buttons, fontOf(m_family, buttons.size() > 6 ? 26 : 32), QColor(0xcf, 0xd4, 0xdc, 0xb0), Qt::white, 0);
+        } else if (st == QLatin1String("noir")) {
+            Mat m = mul(mul(saturation(0.0), brightness(-0.1)), contrast(1.25));
+            p.end();
+            apply(canvas, m);
+            p.begin(&canvas);
+            p.setRenderHint(QPainter::SmoothPixmapTransform);
+            p.setRenderHint(QPainter::TextAntialiasing);
+            softColumn(820, QColor(0, 0, 0, 0xb8), 18);
+            QFont tf(QStringLiteral("Times New Roman")), bf(QStringLiteral("Times New Roman"));
+            tf.setPixelSize(80);
+            bf.setPixelSize(44);
+            const qreal h = QFontMetricsF(tf).height() + 10 + (hasAuthor ? 30 : 0) + 30 + buttons.size() * (QFontMetricsF(bf).height() + 6);
+            qreal y = (H - h) / 2;
+            outlineText(p, QPointF(120, y + QFontMetricsF(tf).ascent()), title, tf, QColor(0xf2, 0xf2, 0xf2), Qt::transparent, 0);
+            y += QFontMetricsF(tf).height();
+            p.fillRect(QRectF(120, y + 2, 240, 4), QColor(0xc0, 0x39, 0x2b));
+            y += 10;
+            if (hasAuthor) {
+                QFont af(QStringLiteral("Times New Roman"));
+                af.setPixelSize(24);
+                outlineText(p, QPointF(120, y + QFontMetricsF(af).ascent()), author, af, QColor(0x9a, 0x9a, 0x9a), Qt::transparent, 0);
+                y += 30;
+            }
+            y += 30;
+            for (int i = 0; i < buttons.size(); ++i) {
+                outlineText(p, QPointF(120, y + QFontMetricsF(bf).ascent()), buttons[i], bf, i == 0 ? QColor(0xe7, 0x4c, 0x3c) : QColor(0xd0, 0xd0, 0xd0),
+                            Qt::transparent, 0);
+                y += QFontMetricsF(bf).height() + 6;
+            }
+        } else if (st == QLatin1String("cinema")) {
+            p.fillRect(QRectF(0, 0, W, 140), Qt::black);
+            p.fillRect(QRectF(0, 940, W, 140), Qt::black);
+            const QFont tf = fontOf(m_header, 88);
+            const QFontMetricsF tm(tf);
+            outlineText(p, QPointF(W / 2.0 - tm.horizontalAdvance(title) / 2, H * 0.46 - tm.height() / 2 + tm.ascent()), title, tf,
+                        QColor(0xf5, 0xf5, 0xf5), QColor(0, 0, 0, 0x99), 3);
+            if (hasAuthor) centred(W / 2.0, H * 0.555 - 14, {author}, font(24), QColor(0xcf, 0xcf, 0xcf), QColor(0xcf, 0xcf, 0xcf), 0);
+            const QFont bf = fontOf(m_header, 34);
+            const QFontMetricsF bm(bf);
+            qreal total = 0;
+            for (const QString& b : buttons) total += bm.horizontalAdvance(b) + 56;
+            qreal x = (W - total + 56) / 2;
+            for (int i = 0; i < buttons.size(); ++i) {
+                outlineText(p, QPointF(x, 1010 - bm.height() / 2 + bm.ascent()), buttons[i], bf, i == 0 ? QColor(0xff, 0xd2, 0x7d) : QColor(0xcf, 0xcf, 0xcf),
+                            Qt::transparent, 0);
+                x += bm.horizontalAdvance(buttons[i]) + 56;
+            }
+        } else if (st == QLatin1String("map")) {
+            // the camp map: every button lit on its own place, its caption written there
+            const QImage base = load(QStringLiteral("images/maps/map.jpg"));
+            const QImage open = load(QStringLiteral("images/maps/map_available.jpg"));
+            const QImage lit = load(QStringLiteral("images/maps/map_selected.jpg"));
+            if (!base.isNull()) p.drawImage(canvas.rect(), base);
+            QStringList kinds = s.modMenuKinds;
+            while (kinds.size() < buttons.size()) kinds << QString();
+            const QStringList places = menuMapPlaces(kinds.mid(0, buttons.size()));
+            const QFont cf = fontOf(m_header, 30);
+            for (int i = 0; i < buttons.size(); ++i) {
+                const EsMapZone* z = esMapZone(places.value(i));
+                if (!z) continue;
+                const QRect r(z->x1, z->y1, z->x2 - z->x1, z->y2 - z->y1);
+                const QImage& src = i == 0 && !lit.isNull() ? lit : open;
+                if (!src.isNull()) p.drawImage(r, src, src.width() == W ? r : QRect(r.x() * src.width() / W, r.y() * src.height() / H,
+                                                                                 r.width() * src.width() / W, r.height() * src.height() / H));
+            }
+            for (int i = 0; i < buttons.size(); ++i) {
+                const EsMapZone* z = esMapZone(places.value(i));
+                if (!z) continue;
+                const QFontMetricsF fm(cf);
+                outlineText(p, QPointF(z->cx - fm.horizontalAdvance(buttons[i]) / 2, z->cy - fm.height() / 2 + fm.ascent()), buttons[i], cf, Qt::white,
+                            QColor(0, 0, 0, 0xcc), 3);
+            }
+            const QFont hf = fontOf(m_header, 36);
+            const qreal tw = QFontMetricsF(hf).horizontalAdvance(title);
+            const QRectF cr(W / 2.0 - tw / 2 - 34, 34, tw + 68, QFontMetricsF(hf).height() + 24);
+            p.fillRect(cr, QColor(0, 0, 0, 180));
+            outlineText(p, QPointF(cr.left() + 34, cr.top() + 12 + QFontMetricsF(hf).ascent()), title, hf, QColor(0xf1, 0xec, 0xe0), Qt::black, 1);
+        } else {
+            panel();                     // «панель» and «живое» (its picture follows the player's clock in the game)
         }
     }
     // relationship meters screen
@@ -1287,19 +1664,132 @@ QImage Renderer::render(const SceneState& s, bool hud) const
             else p.drawImage(cell, img);
         }
     }
-    // the mod's achievements
+    // the mod's achievements (Достижения 2.0): a twin of ES's gallery screen - history_bg, «★ Достижения n/m ★» in
+    // settings_link, 3x3 cards in ES's 336x196 frames, the closed eye of an unseen one, «Назад»; the info line of the first
     if (s.showAchievements) {
-        const int n = qMax(1, int(s.achievements.size()));
-        const QRectF r = panel(900, 32 * 2 + 50 + n * 46 + 70);
-        outlineText(p, QPointF(r.left() + 44, r.top() + 32 + 40), U("Достижения"), font(42), QColor(0xff, 0xd2, 0x7d), Qt::black, 0);
-        qreal y = r.top() + 32 + 66;
-        for (const QString& a : s.achievements) {
-            const bool got = a.endsWith(QLatin1String("|1"));
-            p.fillRect(QRectF(r.left() + 44, y + 10, 18, 18), got ? QColor(0x9b, 0xd3, 0x5a) : QColor(0x33, 0x48, 0x3c));
-            outlineText(p, QPointF(r.left() + 44 + 34, y + 30), a.section(QLatin1Char('|'), 0, 0), font(28), got ? Qt::white : QColor(0x65, 0x79, 0x6a), Qt::black, 0);
-            y += 46;
+        const QImage bg = load(QStringLiteral("images/gui/settings/history_bg.jpg"));
+        if (!bg.isNull()) p.drawImage(QRectF(0, 0, W, H), bg);
+        else p.fillRect(QRectF(0, 0, W, H), QColor(0x1a, 0x14, 0x10));
+        QFont link(m_link);
+        link.setPixelSize(60);
+        int got = 0;
+        for (const QString& a : s.achievements) if (a.section(QLatin1Char('|'), 1, 1) == QLatin1String("1")) ++got;
+        const QString head = U(" Достижения %1/%2 ").arg(got).arg(s.achievements.size());
+        const QFontMetricsF lm(link);
+        const QImage star = load(QStringLiteral("images/gui/settings/star.png"));
+        const qreal hw = lm.horizontalAdvance(head) + 2 * star.width();
+        qreal hx = (W - hw) / 2;
+        const qreal hy = H * 0.08;
+        if (!star.isNull()) p.drawImage(QPointF(hx, hy - star.height() / 2.0 + 6), star);
+        p.setFont(link);
+        p.setPen(Qt::white);
+        p.drawText(QRectF(hx + star.width(), hy - lm.height() / 2, lm.horizontalAdvance(head), lm.height()), Qt::AlignCenter, head);
+        if (!star.isNull()) p.drawImage(QPointF(hx + star.width() + lm.horizontalAdvance(head), hy - star.height() / 2.0 + 6), star);
+        const QImage frame = load(QStringLiteral("images/gui/gallery/thumbnail_idle.png"));
+        const QImage eye = load(QStringLiteral("images/gui/gallery/not_opened_idle.png"));
+        const QImage plate = load(QStringLiteral("images/misc/achievement2.png"));
+        for (int i = 0; i < s.achievements.size() && i < 9; ++i) {
+            const QStringList f = s.achievements[i].split(QLatin1Char('|'));
+            const bool on = f.value(1) == QLatin1String("1"), hidden = f.value(2) == QLatin1String("h") && !on;
+            const QPointF at(W * 0.09 + (i % 3) * 386, H * 0.18 + (i / 3) * 246);
+            if (hidden) {
+                if (!eye.isNull()) p.drawImage(at, eye);
+                continue;
+            }
+            p.fillRect(QRectF(at.x() + 8, at.y() + 8, 320, 180), QColor(0x1c, 0x1f, 0x20));
+            // its picture: the heroine's face, a background or CG (grey while not yet), else ES's ring with the heart
+            QImage pic;
+            const QString img = f.value(3);
+            if (!img.isEmpty()) {
+                QString kind;
+                const QString name = choiceImage(img, &kind);
+                if (kind == QLatin1String("sprite")) {
+                    const QImage sp = sprite(name);
+                    if (!sp.isNull()) pic = sp.copy(290, 200, 320, 180);
+                } else {
+                    const QImage b = background(name);
+                    if (!b.isNull()) pic = b.scaled(320, 180, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                }
+            }
+            if (!pic.isNull()) {
+                p.save();
+                p.setOpacity(on ? 1.0 : 0.55);
+                p.drawImage(QPointF(at.x() + 8, at.y() + 8), on ? pic : pic.convertToFormat(QImage::Format_Grayscale8));
+                p.restore();
+            } else if (!plate.isNull()) {
+                p.save();
+                p.setOpacity(on ? 1.0 : 0.45);
+                const QImage ring = plate.copy(0, 0, 78, 95).scaled(117, 142, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                p.drawImage(QPointF(at.x() + 168 - ring.width() / 2.0, at.y() + 98 - ring.height() / 2.0), on ? ring : ring.convertToFormat(QImage::Format_Grayscale8));
+                p.restore();
+            }
+            if (!frame.isNull()) p.drawImage(at, frame);
         }
-        closeButton(r);
+        if (!s.achievements.isEmpty()) {
+            const QStringList f = s.achievements[0].split(QLatin1Char('|'));
+            const bool on = f.value(1) == QLatin1String("1"), hidden = f.value(2) == QLatin1String("h") && !on;
+            QFont t(m_link);
+            t.setPixelSize(42);
+            p.setFont(t);
+            p.setPen(on ? QColor(Qt::white) : QColor(0x90, 0x9c, 0xa3));
+            p.drawText(QRectF(0, H * 0.86 - 30, W, 60), Qt::AlignCenter, hidden ? QStringLiteral("???") : f.value(0));
+        }
+        QFont back(m_link);
+        back.setPixelSize(60);
+        p.setFont(back);
+        p.setPen(QColor(0x90, 0x9c, 0xa3));
+        p.drawText(QRectF(W * 0.015, H * 0.92 - 40, 400, 80), Qt::AlignLeft | Qt::AlignVCenter, U("Назад"));
+    }
+    // «кодовыйзамок» (genry_codelock): ES's o_rly plate - the hint and the empty cells on the paper, the digits, «Ввести» /
+    // «Уйти» and the tries in settings_link below
+    if (!s.codeLock.isEmpty()) {
+        const QStringList f = s.codeLock.split(QLatin1Char('|'));
+        const QImage plate = load(QStringLiteral("images/gui/o_rly/base.png"));
+        if (!plate.isNull()) p.drawImage(QRectF(0, 0, W, H), plate);
+        else p.fillRect(canvas.rect(), QColor(0, 0, 0, 0xc0));
+        QFont hint(m_header), cells(m_header), link(m_link), small(m_header);
+        hint.setPixelSize(32);
+        cells.setPixelSize(60);
+        link.setPixelSize(54);
+        small.setPixelSize(26);
+        auto centre = [&](const QString& t, const QFont& fn, qreal yalign, const QColor& c) {
+            const QFontMetricsF fm(fn);
+            p.setFont(fn);
+            p.setPen(c);
+            p.drawText(QRectF(0, (H - fm.height()) * yalign, W, fm.height()), Qt::AlignHCenter | Qt::AlignVCenter, t);
+        };
+        centre(f.value(0), hint, 0.415, QColor(0x64, 0x48, 0x3c));
+        QStringList blanks;
+        for (int i = 0; i < qMax(1, f.value(1).toInt()); ++i) blanks << QStringLiteral("_");
+        centre(blanks.join(QStringLiteral("  ")), cells, 0.5, QColor(0x3f, 0x2a, 0x1d));
+        centre(QStringLiteral("1   2   3   4   5   6   7   8   9   0   ←"), link, 0.63, QColor(0x90, 0x9c, 0xa3));
+        centre(U("Ввести          Уйти"), link, 0.735, QColor(0x90, 0x9c, 0xa3));
+        if (f.value(2).toInt() > 0) centre(U("попыток осталось: %1").arg(f.value(2)), small, 0.81, QColor(0x90, 0x9c, 0xa3));
+    }
+    // ES's achievement plate (achievement2.png: the ring, the capsule, «Achievement unlocked», the title in lime)
+    // where achievement_trans stops it, bottom right
+    if (!s.achievementPlate.isEmpty()) {
+        const QImage base = load(QStringLiteral("images/misc/achievement2.png"));
+        QFont sub(m_family), ttl(m_family);
+        sub.setPixelSize(22);
+        ttl.setPixelSize(26);
+        const int w = qMax(443, int(92 + QFontMetricsF(ttl).horizontalAdvance(s.achievementPlate) + 48));
+        const QPointF at((W - w) * 0.95, (H - 95) * 0.97);
+        if (!base.isNull()) {
+            p.drawImage(at, base.copy(0, 0, 86, 95));
+            p.drawImage(QRectF(at.x() + 86, at.y(), w - 86 - 43, 95), base.copy(80, 0, 4, 95));
+            p.drawImage(QPointF(at.x() + w - 43, at.y()), base.copy(400, 0, 43, 95));
+        } else {
+            p.setBrush(QColor(0x3b, 0x3f, 0x40));
+            p.setPen(Qt::NoPen);
+            p.drawRoundedRect(QRectF(at, QSizeF(w, 95)), 47, 47);
+        }
+        p.setFont(sub);
+        p.setPen(Qt::white);
+        p.drawText(QRectF(at.x() + 91, at.y() + 12, w - 100, 28), Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("Achievement unlocked"));
+        p.setFont(ttl);
+        p.setPen(QColor(0xb6, 0xff, 0x00));
+        p.drawText(QRectF(at.x() + 91, at.y() + 42, w - 100, 34), Qt::AlignLeft | Qt::AlignVCenter, s.achievementPlate);
     }
     // ♥ / Инвентарь buttons of the mod, top right
     if (s.metersButton) {
@@ -1408,6 +1898,63 @@ QImage Renderer::modsList(const QString& title, const QString& family, const QSt
         y += row(y, U(other), m_header, QColor(0x4d, 0x2e, 0x19, 0x70), 36, false, false);
     p.end();
     return canvas;
+}
+
+QVector<QRectF> Renderer::choiceRects(const SceneState& s) const
+{
+    // the same layout render() draws (the ES menu, the buttons, the 7DL strips, the timed row)
+    QVector<QRectF> out;
+    const int n = int(s.choices.size());
+    if (!n || s.screenMenu || s.choiceStyle == QLatin1String("phone")) return out;
+    if (s.choiceStyle == QLatin1String("images")) {
+        const int sw = W / n;
+        for (int i = 0; i < n; ++i) out << QRectF(i * sw, 0, sw, H);
+        return out;
+    }
+    if (s.choiceStyle == QLatin1String("timed")) {
+        QFont f(m_family);
+        f.setPixelSize(30);
+        const QFontMetricsF fm(f);
+        QVector<qreal> widths;
+        qreal total = 0;
+        for (const QString& c : s.choices) {
+            widths << qMax<qreal>(320, fm.horizontalAdvance(c) + 60);
+            total += widths.last();
+        }
+        total += 26 * (n - 1);
+        const qreal bh = fm.height() + 36, y = H * 0.88 - bh / 2;
+        qreal x = (W - total) / 2;
+        for (int i = 0; i < n; ++i) {
+            out << QRectF(x, y, widths[i], bh);
+            x += widths[i] + 26;
+        }
+        return out;
+    }
+    if (s.choiceStyle == QLatin1String("buttons")) {
+        QFont f(m_family);
+        f.setPixelSize(28);
+        const qreal bw = 680, bh = QFontMetricsF(f).height() + 36, gap = 16;
+        const qreal total = n * bh + (n - 1) * gap;
+        qreal y = H * 0.45 - total / 2;
+        for (int i = 0; i < n; ++i) {
+            out << QRectF((W - bw) / 2, y, bw, bh);
+            y += bh + gap;
+        }
+        return out;
+    }
+    QFont hf(m_header), hintF(m_header);
+    hf.setPixelSize(37);
+    hintF.setPixelSize(22);
+    const qreal rowH = QFontMetricsF(hf).height() + 12, hintH = QFontMetricsF(hintF).height();
+    qreal boxH = 100 + n * rowH;
+    for (const QString& h : s.choiceHints) if (!h.isEmpty()) boxH += hintH;
+    qreal y = (H - boxH) / 2 + 50;
+    for (int i = 0; i < n; ++i) {
+        const qreal h = rowH + (s.choiceHints.value(i).isEmpty() ? 0 : hintH);
+        out << QRectF(75, y, W - 150, h);
+        y += h;
+    }
+    return out;
 }
 
 } // namespace gb

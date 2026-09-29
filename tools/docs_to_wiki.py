@@ -26,6 +26,7 @@ PAGES = {                      # docs file -> wiki page name
     'faq.md': 'Вопросы-и-проблемы',
     'facts.md': 'Интересные-факты',
     'developers.md': 'Для-разработчиков',
+    'CHANGELOG_V2.md': 'Что-нового-в-V2',
 }
 
 

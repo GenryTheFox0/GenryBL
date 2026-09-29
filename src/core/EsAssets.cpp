@@ -97,6 +97,8 @@ bool EsAssets::load(const QString& catalogJson, const QString& esRoot, QString* 
     dropAudio(music);
     dropAudio(sounds);
     dropAudio(ambience);
+    for (const auto& x : esExtraMusic())
+        if (!music.contains(x.first) && m_vfs.has(x.second)) music.insert(x.first, x.second);
     // the patch's pictures the Steam scripts do not declare: there when the patch is subscribed
     for (const EsPatchImage& p : esPatchImages()) {
         if (p.declared || images.contains(p.name)) continue;
@@ -206,6 +208,24 @@ QStringList EsAssets::cgs() const
         if (it.key().startsWith(QLatin1String("cg "))) out << it.key().mid(3);
     std::sort(out.begin(), out.end());
     return out;
+}
+
+const QVector<QPair<QString, QString>>& esExtraMusic()
+{
+    static const QVector<QPair<QString, QString>> t{
+        {QStringLiteral("free_love"), QStringLiteral("zhenya/sounds/free_love.mp3")},                              // Владимир Иванов
+        {QStringLiteral("just_another_summer_day"), QStringLiteral("zhenya/sounds/just_another_summer_day.mp3")},  // Hiki
+        {QStringLiteral("reflection"), QStringLiteral("zhenya/sounds/reflection.mp3")},                            // Hiki
+        {QStringLiteral("kostry"), QStringLiteral("sound/music/kostry.ogg")},
+        {QStringLiteral("miku_song_learn1"), QStringLiteral("sound/music/miku_song_learn1.ogg")},
+    };
+    return t;
+}
+
+QString esExtraMusicPath(const QString& word)
+{
+    for (const auto& x : esExtraMusic()) if (x.first == word) return x.second;
+    return {};
 }
 
 const QVector<EsMapZone>& esMapZones()

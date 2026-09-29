@@ -12,6 +12,10 @@ Popup {
     property string storyText: ""
     property var fonts: []
     property string name: ""
+    property string author: ""
+    property string hero: ""
+    property string heroAsk: ""         // "" | menu | start
+    property bool heroShe: false
     property string fontRef: ""          // "" = ES default (corbel)
     property string colorHex: ""         // "" = ES default brown
     property int size: 36
@@ -33,6 +37,10 @@ Popup {
         storyText = text
         const t = Engine.modTitle(text)
         name = t.name
+        author = t.author || ""
+        hero = t.hero || ""
+        heroAsk = t.heroAsk || ""
+        heroShe = !!t.heroShe
         fontRef = t.font || ""
         colorHex = t.color || ""
         size = parseInt(t.size) || 36
@@ -40,11 +48,13 @@ Popup {
         italic = (t.style || "").indexOf("i") >= 0
         fonts = Engine.modFonts()
         nameField.text = name
+        authorField.text = author
+        heroField.text = hero
         hexField.text = colorHex
         open()
     }
     function titleState() {
-        return { name: name, font: fontRef, color: colorHex, size: size === 36 ? "" : String(size), style: (bold ? "b" : "") + (italic ? "i" : "") }
+        return { name: name, author: author.trim(), hero: hero.trim(), heroAsk: heroAsk, heroShe: heroShe, font: fontRef, color: colorHex, size: size === 36 ? "" : String(size), style: (bold ? "b" : "") + (italic ? "i" : "") }
     }
     function familyOf(ref) {
         for (const f of fonts) if (f.ref === ref) return f.family
@@ -89,6 +99,69 @@ Popup {
                     selectByMouse: true
                     onTextEdited: mt.name = text
                     background: Rectangle { radius: 8; color: Theme.bg; border.color: nameField.activeFocus ? Theme.accent : Theme.line }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Text { text: "Автор"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                    TextField {
+                        id: authorField
+                        Layout.fillWidth: true
+                        implicitHeight: 34
+                        placeholderText: "пусто — в меню мода автора не будет"
+                        placeholderTextColor: Theme.faint
+                        color: Theme.text
+                        font.family: Theme.ui; font.pixelSize: 15
+                        selectByMouse: true
+                        onTextEdited: mt.author = text
+                        background: Rectangle { radius: 8; color: Theme.bg; border.color: authorField.activeFocus ? Theme.accent : Theme.line }
+                    }
+                    PillButton { dark: true; text: "Убрать"; visible: mt.author !== ""; onClicked: { mt.author = ""; authorField.text = "" } }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Text { text: "Герой"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                    TextField {
+                        id: heroField
+                        Layout.fillWidth: true
+                        implicitHeight: 34
+                        placeholderText: "Семён — или своё имя героя"
+                        placeholderTextColor: Theme.faint
+                        color: Theme.text
+                        font.family: Theme.ui; font.pixelSize: 15
+                        selectByMouse: true
+                        onTextEdited: mt.hero = text
+                        background: Rectangle { radius: 8; color: Theme.bg; border.color: heroField.activeFocus ? Theme.accent : Theme.line }
+                    }
+                    PillButton { text: "Он"; accent: !mt.heroShe; dark: mt.heroShe; onClicked: mt.heroShe = false }
+                    PillButton { text: "Она"; accent: mt.heroShe; dark: !mt.heroShe; onClicked: mt.heroShe = true }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Text { text: "Игрок вводит имя"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                    Item { Layout.fillWidth: true }
+                    Repeater {
+                        model: [["", "Нет"], ["menu", "В меню мода"], ["start", "В начале"]]
+                        PillButton {
+                            required property var modelData
+                            text: modelData[1]
+                            accent: mt.heroAsk === modelData[0]
+                            dark: mt.heroAsk !== modelData[0]
+                            onClicked: mt.heroAsk = modelData[0]
+                        }
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: mt.heroAsk === "menu" ? "В меню мода сама появится кнопка «Имя: …» (нет меню — спросит в начале). В тексте имя — «[имя]»."
+                        : mt.heroAsk === "start" ? "Перед первой строкой игрок увидит табличку «Как тебя зовут?». В тексте имя — «[имя]»."
+                        : "Спросить можно и посреди истории: команда «Имя игрока». В тексте имя — «[имя]»."
+                    // the forms are the same everywhere; one line of help under the choice
+                    + " Падежи: «[имя кого]», «[имя кому]», «[имя кем]», «[имя о ком]». Он/она: «[проснулся/проснулась]» — при вводе имени игрок сам выберет пол."
+                    color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12
                 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -191,7 +264,7 @@ Popup {
                 Text {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                    text: "Свой шрифт кладётся в мод (fonts/…), шрифт игры не копируется. Строки в сценарии: @mod_name, @mod_title_font, @mod_title_color, @mod_title_size, @mod_title_style."
+                    text: "Свой шрифт кладётся в мод (fonts/…), шрифт игры не копируется. Автор пишется в меню мода («автор: …») и подставляется в следующие новые моды. Строки в сценарии: @mod_name, @author, @mod_title_font, @mod_title_color, @mod_title_size, @mod_title_style."
                     color: Theme.faint; font.family: Theme.ui; font.pixelSize: 13
                 }
                 Item { Layout.fillHeight: true }
@@ -202,6 +275,18 @@ Popup {
             Layout.fillWidth: true
             spacing: 10
             PillButton { dark: true; text: "Как в игре"; onClicked: { mt.fontRef = ""; mt.colorHex = ""; hexField.text = ""; mt.size = 36; mt.bold = false; mt.italic = false } }
+            PillButton {
+                dark: true
+                text: "🎲 Наугад"
+                // a ready look: the game's fonts with Cyrillic in colours that read on the list's paper
+                onClicked: {
+                    const looks = Engine.titleLooks().filter(l => l.font !== mt.fontRef)
+                    const l = looks[Math.floor(Math.random() * looks.length)]
+                    mt.fontRef = l.font; mt.colorHex = l.color; hexField.text = l.color; mt.size = l.size
+                    mt.bold = l.style.indexOf("b") >= 0; mt.italic = l.style.indexOf("i") >= 0
+                    Engine.toast("Стиль «" + l.name + "»", 0)
+                }
+            }
             Item { Layout.fillWidth: true }
             PillButton { dark: true; text: "Отмена"; onClicked: mt.close() }
             PillButton {

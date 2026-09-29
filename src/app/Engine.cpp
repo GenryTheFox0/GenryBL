@@ -19,6 +19,8 @@
 #include <QFutureWatcher>
 #include <QImage>
 #include <QJSEngine>
+#include <QJsonArray>
+#include <QRandomGenerator>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLinearGradient>
@@ -31,6 +33,7 @@
 #include <QThread>
 #include <QUrl>
 #include <QtConcurrent/QtConcurrent>
+#include <cmath>
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -68,13 +71,41 @@ QString localPath(const QString& fileUrl)
 
 QVariantMap issueMap(const LintIssue& i)
 {
-    return {{QStringLiteral("line"), i.line}, {QStringLiteral("level"), i.level}, {QStringLiteral("msg"), i.msg}};
+    return {{QStringLiteral("line"), i.line}, {QStringLiteral("level"), i.level}, {QStringLiteral("msg"), i.msg}, {QStringLiteral("file"), i.file},
+            {QStringLiteral("col"), i.col}, {QStringLiteral("len"), i.len}};
 }
 
-QString starter(const QString& root, const QString& id, const QString& name)
+// the looks of a mod's line in ES «Моды и пользовательские сценарии» (fonts: game/fonts with Cyrillic; kis/kisi have none)
+struct TitleLook { const char* name; const char* font; const char* color; int size; const char* style; };
+const TitleLook kTitleLooks[] = {
+    {"Пионерский", "es:fonts/corbelb.ttf", "#8b1a1a", 40, ""},
+    {"Чернила", "es:fonts/timesbi.ttf", "#24407a", 42, ""},
+    {"Лагерная табличка", "es:fonts/gothic.TTF", "#1d5f63", 38, ""},
+    {"Пиксель", "es:fonts/PressStart2P.ttf", "#5b2a86", 24, ""},
+    {"Книжный", "es:fonts/DejaVuSerif.ttf", "#4d2e19", 38, "b"},
+    {"Закат", "es:fonts/calibriz.ttf", "#a44a00", 40, ""},
+    {"Лес", "es:fonts/kisb.TTF", "#2e5d34", 40, ""},
+    {"Нуар", "es:fonts/timesi.ttf", "#1a1a1a", 42, ""},
+    {"Горн", "es:fonts/corbelz.ttf", "#b3001b", 40, ""},
+    {"Ночь", "es:fonts/DejaVuSansOblique.ttf", "#24407a", 36, ""},
+};
+
+QString starter(const QString& root, const QString& id, const QString& name, const QString& author, bool example)
 {
-    QString s = QString::fromUtf8(readFile(root + QStringLiteral("/data/starter_story.txt")));
-    return s.replace(QStringLiteral("@@ID@@"), id).replace(QStringLiteral("@@NAME@@"), name);
+    // a clean page with a hint in comments; the Славя / Алиса sample only when asked for
+    QString s = QString::fromUtf8(readFile(root + (example ? QStringLiteral("/data/starter_story.txt") : QStringLiteral("/data/starter_blank.txt"))));
+    if (s.isEmpty() && !example) s = QString::fromUtf8(readFile(root + QStringLiteral("/data/starter_story.txt")));
+    s.replace(QStringLiteral("@@ID@@"), id).replace(QStringLiteral("@@NAME@@"), name);
+    // the author the maker gave last time («Название мода» → Автор); nobody yet = no @author line at all
+    if (author.isEmpty()) s.replace(QRegularExpression(QStringLiteral("^@author @@AUTHOR@@\r?\n"), QRegularExpression::MultilineOption), QString());
+    s.replace(QStringLiteral("@@AUTHOR@@"), author);
+    // its own look in the game's mod list from the first minute (the old constructor's mods stood out there too)
+    const TitleLook& look = kTitleLooks[qHash(id) % (sizeof(kTitleLooks) / sizeof(kTitleLooks[0]))];
+    QString lines = QStringLiteral("@mod_title_font %1\n@mod_title_color %2\n@mod_title_size %3\n").arg(QLatin1String(look.font), QLatin1String(look.color)).arg(look.size);
+    if (*look.style) lines += QStringLiteral("@mod_title_style %1\n").arg(QLatin1String(look.style));
+    const int nameEnd = int(s.indexOf(QLatin1Char('\n'), s.indexOf(QStringLiteral("@mod_name"))));
+    if (nameEnd > 0) s.insert(nameEnd + 1, lines);
+    return s;
 }
 
 #ifdef Q_OS_WIN
@@ -650,10 +681,133 @@ QVariantList Engine::cast() const
     return out;
 }
 
+QString Engine::esName(const QString& kind, const QString& key) const
+{
+    if (!m_esNamesRead) {
+        // es-doc's captions of the game's resources (GPL-3.0, github.com/sovue/es-doc-assets descriptions.yaml)
+        m_esNamesRead = true;
+        const QJsonObject o = QJsonDocument::fromJson(readFile(m_root + QStringLiteral("/data/es_doc/descriptions.json"))).object();
+        for (auto k = o.begin(); k != o.end(); ++k) {
+            if (!k.value().isObject()) continue;
+            const QJsonObject names = k.value().toObject();
+            QHash<QString, QString>& dst = m_esNames[k.key()];
+            for (auto n = names.begin(); n != names.end(); ++n) dst.insert(n.key(), n.value().toString());
+        }
+    }
+    const auto kindIt = m_esNames.constFind(kind);
+    if (kindIt == m_esNames.constEnd()) return {};
+    const QString t = kindIt->value(key);
+    return t.isEmpty() ? kindIt->value(key + U(" (файл)")) : t;
+}
+
+QVariantMap Engine::diceForm(const QString& id, const QVariantMap& values) const
+{
+    QVariantMap v = values;
+    auto* rng = QRandomGenerator::global();
+    auto pick = [rng](const QStringList& l) { return l.isEmpty() ? QString() : l.at(int(rng->bounded(l.size()))); };
+    if (id == QLatin1String("modmenu")) {
+        // another style each time, on a place of the camp (outside, not an ending's duplicate), with a track of the game
+        const QStringList styles{U("бл"), U("7дл"), U("панель"), U("тетрадь"), U("дневник"), U("доска"), U("монитор"), U("нуар"), U("живое"),
+                                 U("кино"), U("карта"), U("свой"), U("свой"), U("свой")};
+        QString st = v.value(QStringLiteral("style")).toString();
+        for (int i = 0; i < 8 && st == v.value(QStringLiteral("style")).toString(); ++i) st = pick(styles);
+        v.insert(QStringLiteral("style"), st);
+        QStringList places;
+        for (const QString& b : m_es.backgrounds())
+            if (b.startsWith(QLatin1String("ext_")) && !b.contains(QLatin1String("_ending")) && !b.contains(QLatin1String("bus"))) places << b;
+        if (!places.isEmpty()) v.insert(QStringLiteral("bg"), pick(places));
+        // «свой»: parts that go together - the air of the place's hour, a colour for the look, a way to come in
+        for (const char* k : {"layout", "look", "accent", "fx", "enter"}) v.insert(QString::fromLatin1(k), QString());
+        if (st == U("свой")) {
+            const QString bg = v.value(QStringLiteral("bg")).toString();
+            const bool night = bg.contains(QLatin1String("night")), evening = bg.contains(QLatin1String("sunset"));
+            v.insert(QStringLiteral("layout"), pick({U("слева"), U("справа"), U("по центру"), U("снизу")}));
+            const QString look = pick(night ? QStringList{U("неон"), U("таблички"), U("текст")} : QStringList{U("текст"), U("таблички"), U("бл"), U("неон")});
+            v.insert(QStringLiteral("look"), look);
+            if (look != U("бл"))
+                v.insert(QStringLiteral("accent"), pick(night ? QStringList{QStringLiteral("#8be9fd"), QStringLiteral("#bd93f9"), QStringLiteral("#ff79c6"), QStringLiteral("#6be5c5")}
+                                                       : evening ? QStringList{QStringLiteral("#ffb86c"), QStringLiteral("#ffd27d"), QStringLiteral("#ff6e6e")}
+                                                                 : QStringList{QStringLiteral("#ffd27d"), QStringLiteral("#50fa7b"), QStringLiteral("#8be9fd"), QStringLiteral("#ff79c6")}));
+            v.insert(QStringLiteral("fx"), rng->bounded(4) == 0 ? pick({U("снег"), U("сердца"), U("дождь")})
+                                                                : night ? U("светлячки") : evening ? U("листья") : U("пыль"));
+            v.insert(QStringLiteral("enter"), pick({U("выезд"), U("проявление"), U("снизу"), U("печать")}));
+        }
+        QStringList tracks;
+        for (auto it = m_es.music.begin(); it != m_es.music.end(); ++it)
+            if (!it.key().contains(QLatin1String("silence"))) tracks << it.key();
+        if (!tracks.isEmpty()) v.insert(QStringLiteral("music"), pick(tracks));
+        static const QStringList heroes{QStringLiteral("sl smile dress"), QStringLiteral("dv grin pioneer"), QStringLiteral("un shy pioneer"),
+                                        QStringLiteral("mi happy pioneer"), QStringLiteral("us laugh sport"), QStringLiteral("sl happy pioneer"),
+                                        QStringLiteral("un smile dress"), QStringLiteral("mi smile dress"), QStringLiteral("dv smile pioneer")};
+        QStringList ok;
+        for (const QString& h : heroes) if (m_es.sprites.contains(h)) ok << h;
+        QVariantList hs;
+        for (int i = 0; i < 2 && !ok.isEmpty(); ++i) {
+            const QString h = pick(ok);
+            ok.removeAll(h);
+            hs << QVariantMap{{QStringLiteral("sprite"), h}};
+        }
+        if (!hs.isEmpty()) v.insert(QStringLiteral("heroes"), hs);
+    }
+    return v;
+}
+
+QVariantList Engine::titleLooks() const
+{
+    QVariantList out;
+    for (const TitleLook& l : kTitleLooks)
+        out << QVariantMap{{QStringLiteral("name"), QString::fromUtf8(l.name)}, {QStringLiteral("font"), QString::fromLatin1(l.font)},
+                           {QStringLiteral("color"), QString::fromLatin1(l.color)}, {QStringLiteral("size"), l.size},
+                           {QStringLiteral("style"), QString::fromLatin1(l.style)}};
+    return out;
+}
+
+QVariantList Engine::communitySounds() const
+{
+    // es-doc's community folder: sounds, ambiences and music from mods, with their authors
+    QVariantList out;
+    const QJsonObject o = QJsonDocument::fromJson(readFile(m_root + QStringLiteral("/data/es_doc/community.json"))).object();
+    for (const QJsonValue& v : o.value(QStringLiteral("sounds")).toArray()) {
+        const QJsonObject s = v.toObject();
+        QStringList caps;
+        for (const QJsonValue& c : s.value(QStringLiteral("captions")).toArray()) caps << c.toString();
+        const QString file = s.value(QStringLiteral("file")).toString();
+        const QString abs = m_root + QStringLiteral("/data/es_doc/") + file;
+        if (!QFileInfo::exists(abs)) continue;
+        out << QVariantMap{{QStringLiteral("file"), file}, {QStringLiteral("kind"), s.value(QStringLiteral("kind")).toString()},
+                           {QStringLiteral("title"), s.value(QStringLiteral("title")).toString()}, {QStringLiteral("captions"), caps.join(QStringLiteral(" · "))},
+                           {QStringLiteral("url"), QUrl::fromLocalFile(abs).toString()}};
+    }
+    return out;
+}
+
+QString Engine::importCommunity(const QString& file)
+{
+    if (m_current.isEmpty()) return {};
+    const QString src = m_root + QStringLiteral("/data/es_doc/") + file;
+    if (file.contains(QLatin1String("..")) || !QFileInfo::exists(src)) return {};
+    const QString name = QFileInfo(src).fileName();
+    const QString dst = assetsDir(m_current) + QStringLiteral("/audio/") + name;
+    QDir().mkpath(QFileInfo(dst).absolutePath());
+    if (!QFileInfo::exists(dst) && !QFile::copy(src, dst)) { emit toast(U("Не удалось скопировать ") + name, 2); return {}; }
+    // the author goes with the file: CREDITS.txt of the mod
+    for (const QVariant& v : communitySounds()) {
+        const QVariantMap s = v.toMap();
+        if (s.value(QStringLiteral("file")).toString() != file) continue;
+        QFile credits(assetsDir(m_current) + QStringLiteral("/CREDITS.txt"));
+        if (credits.open(QIODevice::Append | QIODevice::Text))
+            credits.write((QStringLiteral("audio/") + name + U("  <-  «") + s.value(QStringLiteral("title")).toString() + U("» (") +
+                           s.value(QStringLiteral("captions")).toString() + U("), каталог сообщества es-doc: https://es-doc.sovue.org\n")).toUtf8());
+    }
+    emit assetsChanged();
+    return QStringLiteral("audio/") + name;
+}
+
 QVariantList Engine::backgrounds() const
 {
     QVariantList out;
-    for (const QString& b : m_es.backgrounds()) out << QVariantMap{{QStringLiteral("id"), b}, {QStringLiteral("custom"), false}};
+    for (const QString& b : m_es.backgrounds())
+        out << QVariantMap{{QStringLiteral("id"), b}, {QStringLiteral("custom"), false}, {QStringLiteral("title"), esName(QStringLiteral("bg"), b)}};
     const auto custom = m_renderer.customImages();
     for (auto it = custom.begin(); it != custom.end(); ++it)
         if (it.key().startsWith(QLatin1String("bg "))) out << QVariantMap{{QStringLiteral("id"), it.key().mid(3)}, {QStringLiteral("custom"), true}};
@@ -664,7 +818,8 @@ QVariantList Engine::cgs() const
 {
     QVariantList out;
     for (const QString& b : m_es.cgs())
-        if (!esPatchImage(QStringLiteral("cg ") + b)) out << QVariantMap{{QStringLiteral("id"), b}, {QStringLiteral("custom"), false}};
+        if (!esPatchImage(QStringLiteral("cg ") + b))
+            out << QVariantMap{{QStringLiteral("id"), b}, {QStringLiteral("custom"), false}, {QStringLiteral("title"), esName(QStringLiteral("cg"), b)}};
     const auto custom = m_renderer.customImages();
     for (auto it = custom.begin(); it != custom.end(); ++it)
         if (it.key().startsWith(QLatin1String("cg "))) out << QVariantMap{{QStringLiteral("id"), it.key().mid(3)}, {QStringLiteral("custom"), true}};
@@ -675,7 +830,8 @@ QVariantList Engine::music() const
 {
     QVariantList out;
     for (auto it = m_es.music.begin(); it != m_es.music.end(); ++it)
-        out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("музыка ") + it.key()}};
+        out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("музыка ") + it.key()},
+                           {QStringLiteral("title"), esName(QStringLiteral("music"), it.key())}};
     if (!m_current.isEmpty())
         for (const QString& f : QDir(assetsDir(m_current) + QStringLiteral("/audio")).entryList(QDir::Files))
             out << QVariantMap{{QStringLiteral("word"), f}, {QStringLiteral("path"), QStringLiteral("audio/") + f},
@@ -687,7 +843,12 @@ QVariantList Engine::sounds() const
 {
     QVariantList out;
     for (auto it = m_es.sounds.begin(); it != m_es.sounds.end(); ++it)
-        out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("звук ") + it.key()}};
+        out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("звук ") + it.key()},
+                           {QStringLiteral("title"), esName(QStringLiteral("sfx"), it.key())}};
+    if (!m_current.isEmpty())
+        for (const QString& f : QDir(assetsDir(m_current) + QStringLiteral("/audio")).entryList(QDir::Files))
+            out << QVariantMap{{QStringLiteral("word"), f}, {QStringLiteral("path"), QStringLiteral("audio/") + f},
+                               {QStringLiteral("cmd"), U("звукфайл audio/") + f}, {QStringLiteral("custom"), true}};
     return out;
 }
 
@@ -695,7 +856,13 @@ QVariantList Engine::ambience() const
 {
     QVariantList out;
     for (auto it = m_es.ambience.begin(); it != m_es.ambience.end(); ++it)
-        out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("атмосфера ") + it.key()}};
+        out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("атмосфера ") + it.key()},
+                           {QStringLiteral("title"), esName(QStringLiteral("ambience"), it.key())}};
+    // the mod's own files loop on the ambience channel too («атмосфера audio/лес.ogg»)
+    if (!m_current.isEmpty())
+        for (const QString& f : QDir(assetsDir(m_current) + QStringLiteral("/audio")).entryList(QDir::Files))
+            out << QVariantMap{{QStringLiteral("word"), f}, {QStringLiteral("path"), QStringLiteral("audio/") + f},
+                               {QStringLiteral("cmd"), U("атмосфера audio/") + f}, {QStringLiteral("custom"), true}};
     return out;
 }
 
@@ -719,6 +886,20 @@ QVariantList Engine::lint(const QString& text) const
     ctx.opt = options();
     QVariantList out;
     for (const LintIssue& i : lintStory(text, ctx)) out << issueMap(i);
+    if (!m_current.isEmpty()) {
+        // the project's files: checked again only when something in the folder changed
+        QString sig;
+        QDirIterator it(assetsDir(m_current), QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            const QFileInfo fi(it.next());
+            sig += fi.filePath() + QString::number(fi.size()) + QString::number(fi.lastModified().toMSecsSinceEpoch());
+        }
+        if (sig != m_assetSig) {
+            m_assetSig = sig;
+            m_assetIssues = build::checkAssets(assetsDir(m_current));
+        }
+        for (const LintIssue& i : std::as_const(m_assetIssues)) out << issueMap(i);
+    }
     return out;
 }
 
@@ -814,7 +995,7 @@ QString Engine::previewUrl(const QString& text, int line, const QString& extra, 
         lines << extra.split(QLatin1Char('\n'));
         st = sceneAt(lines.join(QLatin1Char('\n')), int(lines.size()), &m_es);
     }
-    st.choiceHover = choiceHover;
+    if (choiceHover != -2) st.choiceHover = choiceHover;
     QMutexLocker lock(&m_sceneMx);
     const int key = ++m_sceneKey;
     m_scenes.insert(key, st);
@@ -867,7 +1048,8 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
             {QStringLiteral("frame"), QStringLiteral("image://gb/cine/%1").arg(key)},
             {QStringLiteral("speaker"), st.speakerName}, {QStringLiteral("color"), st.speakerColor}, {QStringLiteral("text"), text},
             {QStringLiteral("typed"), typed}, {QStringLiteral("whatColor"), st.whatColor.isEmpty() ? QStringLiteral("#ffdd7d") : st.whatColor},
-            {QStringLiteral("options"), c.options}, {QStringLiteral("optionOk"), ok}, {QStringLiteral("seconds"), c.seconds},
+            {QStringLiteral("options"), c.options}, {QStringLiteral("optionOk"), ok}, {QStringLiteral("optionHints"), c.optionHints},
+            {QStringLiteral("seconds"), c.seconds},
             {QStringLiteral("music"), url(c.music)}, {QStringLiteral("musicKey"), c.music},
             {QStringLiteral("ambience"), url(c.ambience)}, {QStringLiteral("ambienceKey"), c.ambience},
             {QStringLiteral("sounds"), sounds}, {QStringLiteral("popups"), popups}, {QStringLiteral("video"), video},
@@ -934,9 +1116,295 @@ QStringList Engine::spriteOutfits(const QString& tag) const
     return out;
 }
 
+// the names a story counts with: its meters, its variables, the points of its options
+static QStringList storyVarNames(const QString& fullText)
+{
+    QStringList out;
+    static const QRegularExpression pts(QStringLiteral("\\[\\s*[+\\-−]\\s*\\d+\\s+([^\\]\\[,]+?)\\s*[\\],]"));
+    for (const QString& raw : pySplitLines(fullText)) {
+        const QString s = pyStrip(raw);
+        const QString w = firstWord(s);
+        const QString cmd = normalizeCommand(w);
+        const QString rest = pyStrip(s.mid(w.size()));
+        QString v;
+        if (cmd == QLatin1String("meter")) v = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
+        else if (cmd == QLatin1String("addvar") || cmd == QLatin1String("setvar") || cmd == QLatin1String("variable")) v = pySplit(rest).value(0);
+        if (!v.isEmpty() && !out.contains(v)) out << v;
+        for (auto it = pts.globalMatch(s); it.hasNext();) {
+            const QString p = it.next().captured(1).trimmed();
+            if (!p.isEmpty() && !out.contains(p)) out << p;
+        }
+    }
+    return out;
+}
+
+static QVariantMap choiceOptionMap(const QString& stripped)
+{
+    QString cleaned;
+    const QStringList fx = choiceItemEffects(stripped, &cleaned);
+    const ChoiceItemSpec it = parseChoiceItem(cleaned);
+    QVariantList points;
+    QStringList remember, flags;
+    for (const QString& l : fx) {
+        const QString w = firstWord(l);
+        const QString rest = pyStrip(l.mid(w.size()));
+        if (w == QString::fromUtf8("прибавить")) {
+            const QStringList p = pySplit(rest);
+            points << QVariantMap{{QStringLiteral("v"), p.value(0)}, {QStringLiteral("n"), p.value(1).toDouble()}};
+        } else if (w == QString::fromUtf8("запомнит")) {
+            remember << rest;
+        } else if (w == QString::fromUtf8("установить")) {
+            flags << pySplit(rest).value(0);
+        }
+    }
+    static const QRegularExpression numTail(QStringLiteral("^(.+?)\\s+(-?\\d+(?:[.,]\\d+)?)\\+?$"));
+    const QRegularExpressionMatch nm = numTail.match(it.need);
+    return {{QStringLiteral("caption"), it.caption}, {QStringLiteral("target"), it.target}, {QStringLiteral("image"), it.image},
+            {QStringLiteral("cond"), it.cond}, {QStringLiteral("need"), it.need}, {QStringLiteral("hint"), it.hint},
+            {QStringLiteral("needVar"), nm.hasMatch() ? nm.captured(1).trimmed() : QString()},
+            {QStringLiteral("needN"), nm.hasMatch() ? QString(nm.captured(2)).replace(QLatin1Char(','), QLatin1Char('.')).toDouble() : 0.0},
+            {QStringLiteral("exit"), it.exit}, {QStringLiteral("always"), it.always}, {QStringLiteral("points"), points},
+            {QStringLiteral("remember"), remember}, {QStringLiteral("flags"), flags}};
+}
+
+// an option's mechanics at a glance: «+1» green / «-1» red, «🔒» a lock, «?» a condition, «★» remembered, «↪» its own scene
+static QVariantList choiceBadgeParts(const QVariantMap& o)
+{
+    QVariantList parts;
+    auto part = [&](const QString& t, const char* c) { parts << QVariantMap{{QStringLiteral("t"), t}, {QStringLiteral("c"), QString::fromLatin1(c)}}; };
+    for (const QVariant& pv : o.value(QStringLiteral("points")).toList()) {
+        const double n = pv.toMap().value(QStringLiteral("n")).toDouble();
+        if (n) part((n > 0 ? QStringLiteral("+") : QString()) + QString::number(n), n > 0 ? "#50fa7b" : "#ff6b6b");
+    }
+    if (!o.value(QStringLiteral("need")).toString().isEmpty()) part(QString::fromUtf8("🔒"), "#ffc857");
+    if (!o.value(QStringLiteral("cond")).toString().isEmpty()) part(QStringLiteral("?"), "#bd93f9");
+    if (!o.value(QStringLiteral("remember")).toStringList().isEmpty()) part(QString::fromUtf8("★"), "#8be9fd");
+    if (!o.value(QStringLiteral("flags")).toStringList().isEmpty()) part(QString::fromUtf8("⚑"), "#ff79c6");
+    if (!o.value(QStringLiteral("target")).toString().isEmpty()) part(QString::fromUtf8("↪"), "#ff8a80");
+    if (o.value(QStringLiteral("exit")).toBool()) part(QString::fromUtf8("выход"), "#9fb3c8");
+    return parts;
+}
+
+QVariantList Engine::choiceBadges(const QString& text) const
+{
+    QVariantList out;
+    const QStringList lines = pySplitLines(text);
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString s = pyStrip(lines[i]);
+        if (!isChoiceItemLine(s) || (!s.contains(QLatin1Char('[')) && !s.contains(QLatin1String("->")))) continue;
+        const QVariantList parts = choiceBadgeParts(choiceOptionMap(s));
+        if (!parts.isEmpty()) out << QVariantMap{{QStringLiteral("line"), i + 1}, {QStringLiteral("parts"), parts}};
+    }
+    return out;
+}
+
+QVariantMap Engine::choiceOutline(const QString& block) const
+{
+    const QStringList lines = pySplitLines(block);
+    QVariantMap head, timeout;
+    QVariantList options;
+    int depth = 0, end = 0;
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString s = pyStrip(lines[i]);
+        const QString w = firstWord(s);
+        const QString cmd = normalizeCommand(w);
+        if (cmd == QLatin1String("choice")) {
+            if (head.isEmpty()) {
+                const ChoiceHead h = parseChoiceHead(pyStrip(s.mid(w.size())));
+                head = {{QStringLiteral("line"), i + 1}, {QStringLiteral("style"), h.style}, {QStringLiteral("secs"), h.secs.toDouble()},
+                        {QStringLiteral("loop"), h.loop}, {QStringLiteral("random"), h.random}};
+                depth = 1;
+            } else if (depth > 0) {
+                ++depth;
+            }
+            continue;
+        }
+        if (depth == 0) continue;
+        if (cmd == QLatin1String("endchoice")) {
+            if (--depth == 0) { end = i + 1; break; }
+            continue;
+        }
+        if (depth != 1) continue;
+        if (isChoiceItemLine(s)) {
+            QVariantMap o = choiceOptionMap(s);
+            o.insert(QStringLiteral("line"), i + 1);
+            o.insert(QStringLiteral("badges"), choiceBadgeParts(o));
+            options << o;
+        } else if (s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0))) {
+            timeout = {{QStringLiteral("line"), i + 1}, {QStringLiteral("target"), pyStrip(s.section(QStringLiteral("->"), 1))}};
+        }
+    }
+    if (!end) end = int(lines.size()) + 1;
+    for (int k = 0; k < options.size(); ++k) {
+        QVariantMap o = options[k].toMap();
+        const int from = o.value(QStringLiteral("line")).toInt();
+        int to = (k + 1 < options.size() ? options[k + 1].toMap().value(QStringLiteral("line")).toInt() : end) - 1;
+        const int late = timeout.value(QStringLiteral("line")).toInt();
+        if (late > from && late <= to) to = late - 1;
+        int body = 0, first = 0;
+        for (int l = from; l < to && l < lines.size(); ++l) {
+            if (pyStrip(lines[l]).isEmpty()) continue;
+            if (!first) first = l + 1;
+            ++body;
+        }
+        o.insert(QStringLiteral("bodyTo"), to);
+        o.insert(QStringLiteral("body"), body);
+        // the first line under the option - the card's «Что ответят»
+        o.insert(QStringLiteral("firstBody"), first);
+        o.insert(QStringLiteral("firstBodyText"), first ? pyStrip(lines[first - 1]) : QString());
+        options[k] = o;
+    }
+    return {{QStringLiteral("head"), head}, {QStringLiteral("options"), options}, {QStringLiteral("timeout"), timeout}, {QStringLiteral("end"), end}};
+}
+
+QString Engine::choiceItemLine(const QVariantMap& o) const
+{
+    auto num = [](double d) { return d == std::floor(d) ? QString::number(qint64(d)) : QString::number(d); };
+    QString s = QStringLiteral("- ") + o.value(QStringLiteral("caption")).toString().trimmed();
+    for (const QVariant& pv : o.value(QStringLiteral("points")).toList()) {
+        const QVariantMap p = pv.toMap();
+        const QString v = p.value(QStringLiteral("v")).toString().trimmed();
+        const double n = p.value(QStringLiteral("n")).toDouble();
+        if (!v.isEmpty() && n != 0) s += QStringLiteral(" [%1%2 %3]").arg(n > 0 ? QStringLiteral("+") : QString(), num(n), v);
+    }
+    QString need = o.value(QStringLiteral("need")).toString().trimmed();
+    const QString needVar = o.value(QStringLiteral("needVar")).toString().trimmed();
+    if (!needVar.isEmpty()) need = needVar + QLatin1Char(' ') + num(o.value(QStringLiteral("needN")).toDouble());
+    const QString hint = o.value(QStringLiteral("hint")).toString().trimmed();
+    if (!need.isEmpty()) s += QString::fromUtf8(" [нужно ") + need + (hint.isEmpty() ? QString() : QStringLiteral(" | ") + hint) + QLatin1Char(']');
+    const QString cond = o.value(QStringLiteral("cond")).toString().trimmed();
+    if (!cond.isEmpty()) s += QString::fromUtf8(" [если ") + cond + QLatin1Char(']');
+    for (const QString& who : o.value(QStringLiteral("remember")).toStringList())
+        if (!who.trimmed().isEmpty()) s += QString::fromUtf8(" [запомнит ") + who.trimmed() + QLatin1Char(']');
+    for (const QString& f : o.value(QStringLiteral("flags")).toStringList())
+        if (!f.trimmed().isEmpty()) s += QString::fromUtf8(" [флаг ") + f.trimmed() + QLatin1Char(']');
+    if (o.value(QStringLiteral("exit")).toBool()) s += QString::fromUtf8(" [выход]");
+    if (o.value(QStringLiteral("always")).toBool()) s += QString::fromUtf8(" [всегда]");
+    const QString target = o.value(QStringLiteral("target")).toString().trimmed();
+    if (!target.isEmpty()) s += QStringLiteral(" -> ") + target;
+    const QString image = o.value(QStringLiteral("image")).toString().trimmed();
+    if (!image.isEmpty()) s += QStringLiteral(" | ") + image;
+    return s;
+}
+
+QString Engine::choiceHeadLine(const QVariantMap& h) const
+{
+    const QString style = h.value(QStringLiteral("style")).toString();
+    QString s = QString::fromUtf8("выбор");
+    if (style == QLatin1String("images")) s += QString::fromUtf8(" визуальный");
+    else if (style == QLatin1String("buttons")) s += QString::fromUtf8(" кнопки");
+    else if (style == QLatin1String("phone")) s += QString::fromUtf8(" телефон");
+    else if (style == QLatin1String("timed")) s += QString::fromUtf8(" на время ") + QString::number(qBound(2, int(h.value(QStringLiteral("secs")).toDouble()), 60));
+    if (h.value(QStringLiteral("loop")).toBool()) s += QString::fromUtf8(" по кругу");
+    if (h.value(QStringLiteral("random")).toBool()) s += QString::fromUtf8(" наугад");
+    return s;
+}
+
+QVariantMap Engine::choiceBlockAt(const QString& storyText, int line) const
+{
+    const QStringList lines = pySplitLines(storyText);
+    const int L = line - 1;
+    if (L < 0 || L >= lines.size()) return {};
+    int header = -1, depth = 0;
+    for (int i = L; i >= 0; --i) {
+        const QString s = pyStrip(lines[i]);
+        const QString cmd = normalizeCommand(firstWord(s));
+        if (i < L && (s.startsWith(QLatin1Char(':')) || cmd == QLatin1String("label"))) break;
+        if (cmd == QLatin1String("endchoice") && i < L) { ++depth; continue; }
+        if (cmd == QLatin1String("choice")) {
+            if (depth == 0) { header = i; break; }
+            --depth;
+        }
+    }
+    if (header < 0) return {};
+    int end = int(lines.size()) - 1;
+    depth = 1;
+    for (int k = header + 1; k < lines.size(); ++k) {
+        const QString s = pyStrip(lines[k]);
+        const QString cmd = normalizeCommand(firstWord(s));
+        if (s.startsWith(QLatin1Char(':')) || cmd == QLatin1String("label")) { end = k - 1; break; }
+        if (cmd == QLatin1String("choice")) ++depth;
+        else if (cmd == QLatin1String("endchoice") && --depth == 0) { end = k; break; }
+    }
+    while (end > header && pyStrip(lines[end]).isEmpty()) --end;
+    if (L > end) return {};
+    return {{QStringLiteral("from"), header + 1}, {QStringLiteral("to"), end + 1},
+            {QStringLiteral("text"), QStringList(lines.mid(header, end - header + 1)).join(QLatin1Char('\n'))}};
+}
+
+QVariantList Engine::choiceIssues(const QString& storyText, int from, int to, const QString& block) const
+{
+    const QStringList lines = pySplitLines(storyText);
+    const QStringList b = pySplitLines(block);
+    const int f = qBound(1, from, int(lines.size()) + 1);
+    QStringList all = lines.mid(0, f - 1);
+    all << b;
+    all << (to >= f ? lines.mid(to) : lines.mid(f - 1));
+    QVariantList out;
+    for (const QVariant& v : lint(all.join(QLatin1Char('\n')))) {
+        QVariantMap m = v.toMap();
+        const int ln = m.value(QStringLiteral("line")).toInt();
+        if (ln < f || ln >= f + b.size()) continue;
+        m.insert(QStringLiteral("line"), ln - f + 1);
+        out << m;
+    }
+    return out;
+}
+
+QVariantList Engine::choiceRects(const QString& storyText, int line, const QString& block) const
+{
+    QStringList lines = pySplitLines(storyText).mid(0, qMax(0, line));
+    lines << block.split(QLatin1Char('\n'));
+    const SceneState st = sceneAt(lines.join(QLatin1Char('\n')), int(lines.size()), &m_es);
+    QVariantList out;
+    for (const QRectF& r : m_renderer.choiceRects(st))
+        out << QVariantMap{{QStringLiteral("x"), r.x()}, {QStringLiteral("y"), r.y()}, {QStringLiteral("w"), r.width()}, {QStringLiteral("h"), r.height()}};
+    return out;
+}
+
 QVariantMap Engine::suggest(const QString& lineText, int col, const QString& fullText) const
 {
     const QString before = lineText.left(col);
+    {
+        // «- Вариант [»: what the option's brackets know - and after the word, the names it counts with
+        const int ob = int(before.lastIndexOf(QLatin1Char('['))), cb = int(before.lastIndexOf(QLatin1Char(']')));
+        if (isChoiceItemLine(pyStrip(lineText)) && ob > cb) {
+            const QString inside = before.mid(ob + 1);
+            const int sp = int(inside.lastIndexOf(QLatin1Char(' ')));
+            const QString pre = (sp < 0 ? inside : inside.mid(sp + 1)).toLower();
+            const int at = ob + 1 + (sp < 0 ? 0 : sp + 1);
+            QVariantList items;
+            QSet<QString> seen;
+            auto offer = [&](const QString& text, const QString& hint, const QString& kind) {
+                if (items.size() >= 40 || text.isEmpty() || seen.contains(text)) return;
+                if (!pre.isEmpty() && !text.toLower().startsWith(pre)) return;
+                if (text.toLower() == pre) return;
+                seen.insert(text);
+                items << QVariantMap{{QStringLiteral("text"), text}, {QStringLiteral("hint"), hint}, {QStringLiteral("kind"), kind}};
+            };
+            if (sp < 0) {
+                offer(QStringLiteral("+1"), U("очки: [+1 Славя]"), QStringLiteral("cmd"));
+                offer(QStringLiteral("-1"), U("минус очки: [-1 Алиса]"), QStringLiteral("cmd"));
+                offer(U("нужно"), U("замок: [нужно Славя 3]"), QStringLiteral("cmd"));
+                offer(U("если"), U("появится, если: [если ключ]"), QStringLiteral("cmd"));
+                offer(U("запомнит"), U("«Славя это запомнит»"), QStringLiteral("cmd"));
+                offer(U("флаг"), U("отметка на потом: [флаг помог]"), QStringLiteral("cmd"));
+                offer(U("выход]"), U("закончить расспросы (по кругу)"), QStringLiteral("cmd"));
+                offer(U("всегда]"), U("не пропадает (по кругу)"), QStringLiteral("cmd"));
+            } else {
+                const QString w0 = firstWord(inside).toLower();
+                const bool counts = w0.startsWith(QLatin1Char('+')) || w0.startsWith(QLatin1Char('-')) || w0 == U("нужно") || w0 == U("если");
+                if (w0 == U("если") && sp == int(firstWord(inside).size())) {
+                    offer(U("предмет"), U("есть предмет"), QStringLiteral("cmd"));
+                    offer(U("не"), U("наоборот"), QStringLiteral("cmd"));
+                }
+                if (counts) for (const QString& v : storyVarNames(fullText)) offer(v, U("очки"), QStringLiteral("code"));
+                if (counts || w0 == U("запомнит"))
+                    for (const QVariant& v : cast()) offer(v.toMap().value(QStringLiteral("name")).toString(), U("героиня"), QStringLiteral("char"));
+            }
+            return {{QStringLiteral("start"), at}, {QStringLiteral("items"), items}};
+        }
+    }
     const int start = int(before.lastIndexOf(QRegularExpression(QStringLiteral("\\s")))) + 1;
     const QString prefix = before.mid(start).toLower();
     QVariantList items;
@@ -1057,7 +1525,7 @@ void Engine::refreshProjects()
     emit projectsChanged();
 }
 
-QString Engine::createProject(const QString& name)
+QString Engine::createProject(const QString& name, bool example)
 {
     const QString clean = pyStrip(name).isEmpty() ? U("Мой мод") : pyStrip(name);
     const QString base = slug(clean, QStringLiteral("mod"), false);
@@ -1071,7 +1539,7 @@ QString Engine::createProject(const QString& name)
     for (const char* sub : {"/assets/images", "/assets/audio"}) QDir().mkpath(projectDir(id) + QLatin1String(sub));
     writeFile(projectDir(id) + QStringLiteral("/project.json"),
               QJsonDocument(QJsonObject{{QStringLiteral("name"), clean}, {QStringLiteral("created"), QDateTime::currentDateTime().toString(Qt::ISODate)}}).toJson());
-    writeFile(projectDir(id) + QStringLiteral("/story.txt"), starter(m_root, QStringLiteral("genry_") + id, clean).toUtf8());
+    writeFile(projectDir(id) + QStringLiteral("/story.txt"), starter(m_root, QStringLiteral("genry_") + id, clean, m_settings.value(QStringLiteral("author")).toString().trimmed(), example).toUtf8());
     refreshProjects();
     return id;
 }
@@ -1193,12 +1661,34 @@ QString Engine::saveProjectImage(const QImage& img, const QString& kind, const Q
     } else if (kind == QLatin1String("bg") || kind == QLatin1String("cg")) {
         n = kind + QLatin1Char(' ') + n;
     }
-    const QString dst = assetsDir(m_current) + QStringLiteral("/images/") + n + QStringLiteral(".png");
+    // a background / CG: the screen's 1920×1080 (what the preview shows and the game draws), a photo as JPG like
+    // the game's own; a giant sprite comes down to the game's height. Was: a 4000×3000 PNG of 20+ MB in the mod.
+    QImage pic = img;
+    QString ext = QStringLiteral(".png");
+    QString note;
+    if (kind == QLatin1String("bg") || kind == QLatin1String("cg")) {
+        if (pic.size() != QSize(1920, 1080)) {
+            note = U(" (подогнал %1×%2 под экран 1920×1080)").arg(pic.width()).arg(pic.height());
+            pic = pic.scaled(1920, 1080, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+            pic = pic.copy((pic.width() - 1920) / 2, (pic.height() - 1080) / 2, 1920, 1080);
+        }
+        if (!pic.hasAlphaChannel()) ext = QStringLiteral(".jpg");
+    } else if (kind == QLatin1String("sprite") && pic.height() > 1500) {
+        note = U(" (уменьшил %1×%2 до высоты 1080, как спрайты БЛ)").arg(pic.width()).arg(pic.height());
+        pic = pic.scaledToHeight(1080, Qt::SmoothTransformation);
+    }
+    const QString base = assetsDir(m_current) + QStringLiteral("/images/") + n;
+    const QString dst = base + ext;
     QDir().mkpath(QFileInfo(dst).absolutePath());
-    if (!img.save(dst, "PNG")) { emit toast(U("Не удалось сохранить PNG"), 2); return {}; }
+    for (const char* other : {".png", ".jpg", ".jpeg", ".webp"})      // the same name in another format would win half the time
+        if (base + QLatin1String(other) != dst) QFile::remove(base + QLatin1String(other));
+    if (!pic.save(dst, ext == QLatin1String(".jpg") ? "JPG" : "PNG", ext == QLatin1String(".jpg") ? 92 : -1)) {
+        emit toast(U("Не удалось сохранить картинку"), 2);
+        return {};
+    }
     m_renderer.setCustomImages(build::customImageFiles(assetsDir(m_current)));
     emit assetsChanged();
-    emit toast(U("Добавлено: ") + n, 0);
+    emit toast(U("Добавлено: ") + n + note, 0);
     return n;
 }
 
@@ -1225,7 +1715,7 @@ QString Engine::importAudio(const QString& fileUrl)
         w->deleteLater();
         setBusy(false);
         emit assetsChanged();
-        emit toast(ok ? U("Музыка готова: audio/") + name : U("ffmpeg не смог сконвертировать"), ok ? 0 : 2);
+        emit toast(ok ? U("Файл готов: audio/") + name : U("ffmpeg не смог сконвертировать"), ok ? 0 : 2);
     });
     w->setFuture(QtConcurrent::run([ffmpeg, src, dst] {
         QProcess p;
@@ -1304,18 +1794,26 @@ QVariantMap Engine::modTitle(const QString& text) const
 {
     const ModMeta m = parseMeta(pySplitLines(stripBom(text)), nullptr, options());
     return {{QStringLiteral("name"), m.modName}, {QStringLiteral("font"), m.titleFont}, {QStringLiteral("color"), m.titleColor},
-            {QStringLiteral("size"), m.titleSize}, {QStringLiteral("style"), m.titleStyle}};
+            {QStringLiteral("size"), m.titleSize}, {QStringLiteral("style"), m.titleStyle}, {QStringLiteral("author"), m.author},
+            {QStringLiteral("hero"), m.heroName}, {QStringLiteral("heroAsk"), m.heroAsk},
+            {QStringLiteral("heroShe"), m.heroShe}};
 }
 
-QString Engine::applyModTitle(const QString& text, const QVariantMap& t) const
+QString Engine::applyModTitle(const QString& text, const QVariantMap& t)
 {
+    // the author given here is also the one the next new mod starts with
+    if (t.contains(QStringLiteral("author"))) m_settings.setValue(QStringLiteral("author"), t.value(QStringLiteral("author")).toString().trimmed());
     // replace / add / drop the @mod_name and @mod_title_* lines, leave everything else alone
     const QList<QPair<QString, QString>> want{
         {QStringLiteral("mod_name"), t.value(QStringLiteral("name")).toString().trimmed()},
         {QStringLiteral("mod_title_font"), t.value(QStringLiteral("font")).toString().trimmed()},
         {QStringLiteral("mod_title_color"), t.value(QStringLiteral("color")).toString().trimmed()},
         {QStringLiteral("mod_title_size"), t.value(QStringLiteral("size")).toString().trimmed()},
-        {QStringLiteral("mod_title_style"), t.value(QStringLiteral("style")).toString().trimmed()}};
+        {QStringLiteral("mod_title_style"), t.value(QStringLiteral("style")).toString().trimmed()},
+        {QStringLiteral("author"), t.value(QStringLiteral("author")).toString().trimmed()},
+        {QStringLiteral("hero_name"), t.value(QStringLiteral("hero")).toString().trimmed()},
+        {QStringLiteral("hero_ask"), t.value(QStringLiteral("heroAsk")).toString().trimmed()},
+        {QStringLiteral("hero_gender"), t.value(QStringLiteral("heroShe")).toBool() ? U("она") : QString()}};
     QStringList lines = stripBom(text).split(QLatin1Char('\n'));
     int anchor = -1;
     for (const auto& kv : want) {
@@ -1671,6 +2169,7 @@ void Engine::openFolder(const QString& path) const { QDesktopServices::openUrl(Q
 
 QString Engine::audioUrl(const QString& gamePath) const
 {
+    if (gamePath.startsWith(QLatin1String("file:"))) return gamePath;          // a file of GenryBL itself (the community sounds)
     if (gamePath.startsWith(QLatin1String("audio/")) && !m_current.isEmpty())
         return QUrl::fromLocalFile(assetsDir(m_current) + QLatin1Char('/') + gamePath).toString();
     const QString cache = m_root + QStringLiteral("/work/cache/") + gamePath;

@@ -290,9 +290,9 @@ ColumnLayout {
         RowLayout {
             spacing: 6
             readonly property var list: {
-                if (fe.type === "music") return Engine.music.filter(m => !m.custom).map(m => ({ value: m.word, label: m.word, audio: m.path }))
-                if (fe.type === "sound") return Engine.sounds.map(m => ({ value: m.word, label: m.word, audio: m.path }))
-                if (fe.type === "ambience") return Engine.ambience.map(m => ({ value: m.word, label: m.word, audio: m.path }))
+                if (fe.type === "music") return Engine.music.filter(m => !m.custom).map(m => ({ value: m.word, label: m.title ? m.title + "  ·  " + m.word : m.word, audio: m.path }))
+                if (fe.type === "sound") return Engine.sounds.filter(m => !m.custom).map(m => ({ value: m.word, label: m.title ? m.title + "  ·  " + m.word : m.word, audio: m.path }))
+                if (fe.type === "ambience") return Engine.ambience.map(m => ({ value: m.custom ? m.path : m.word, label: (m.title ? m.title + "  ·  " : "") + m.word + (m.custom ? "  ★" : ""), audio: m.path }))
                 return Engine.projectAudio().map(m => ({ value: m.path, label: m.title, audio: m.path }))
             }
             readonly property string audioPath: {
@@ -322,10 +322,10 @@ ColumnLayout {
                 onClicked: fe.host.pickFrom(fe.field.label, parent.list, (v) => fe.set(v))
             }
             PillButton {
-                visible: fe.type === "audiofile"
+                visible: fe.type === "audiofile" || fe.type === "ambience"
                 dark: true
                 text: "＋ Файл"
-                onClicked: fe.host.pickFile("Звук или музыка (ogg/mp3/wav/flac…)", ["Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus)"], (url) => {
+                onClicked: fe.host.pickFile("Звук, музыка или атмосфера (ogg/mp3/wav/flac… — переделаю в ogg)", ["Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus)"], (url) => {
                     const p = Engine.importAudio(url)
                     if (p) fe.set(p)
                 })

@@ -1,6 +1,6 @@
 @mod_id @@ID@@
 @mod_name @@NAME@@
-@author GenryTheFox
+@author @@AUTHOR@@
 
 : start
 время день

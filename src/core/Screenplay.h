@@ -34,5 +34,16 @@ QStringList expandScreenplayLine(const QStringList& lines, int index, QVector<Sc
 QStringList convertToStory(const QString& text, bool expand = false, QVector<ScreenplayNote>* notes = nullptr);
 // kind of a play line for the highlighter: "heading", "say", "direction", "prose" or "" (not one)
 QString screenplayKind(const QString& line);
+// the hero's name in a case: 0 им, 1 рд, 2 дт, 3 вн, 4 тв, 5 пр (Семён -> Семёна / Семёну / Семёна / Семёном / Семёне);
+// the same rules the mod runs (kV1Hero genry_name_case)
+QString declineName(const QString& name, int grammaticalCase, bool she);
+// «[имя кому]» -> 2, «[имя]» -> 0, not a case word -> -1
+int nameCaseOf(const QString& word);
+// the same, with the words before the name: a bare «кого» is родительный after «у / без / для / нет…»
+// («у Кати») and винительный after a verb («искала Катю»)
+int nameCaseIn(const QString& word, const QString& before);
+// a line too long for ES's dialogue box -> the boxes it is shown in, like any novel does: cut after a sentence, else
+// after a comma, else at a space; never inside a {tag}…{/tag} or a [substitution] (Ren'Py would fail on the halves)
+QStringList splitForBox(const QString& text, int maxVisible = 250);
 
 } // namespace gb

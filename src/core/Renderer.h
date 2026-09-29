@@ -7,7 +7,9 @@
 #include <QHash>
 #include <QImage>
 #include <QMutex>
+#include <QRectF>
 #include <QString>
+#include <QVector>
 
 namespace gb {
 
@@ -35,6 +37,8 @@ public:
     QImage background(const QString& name) const;                          // 1920x1080
     QImage gameFile(const QString& path) const;                            // any image in the game
     QString fontFamily() const { return m_family; }
+    // where render() draws each option of the frame's choice menu (1920x1080) - a click on the preview finds its option
+    QVector<QRectF> choiceRects(const SceneState& s) const;
 
 private:
     QImage load(const QString& gamePath) const;
@@ -47,6 +51,8 @@ private:
     QHash<QString, QString> m_custom;
     mutable QMutex m_mx;
     mutable QHash<QString, QImage> m_files, m_sprites, m_bgs;
+    mutable qint64 m_cacheBytes = 0;   // all three caches; past the limit they start over (a huge mod no longer eats the RAM)
+    void remember(QHash<QString, QImage>& cache, const QString& key, const QImage& img) const;   // m_mx held
 };
 
 } // namespace gb

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQml.Models
 import QtQuick.Controls
 import QtQuick.Layouts
 import GenryBL
@@ -11,6 +12,7 @@ Item {
     signal back()
     property string hoverExtra: ""
     property var issues: []
+    property var badges: []                  // the options' marks («🔒», «★», «+1», «↪») after their lines
     property string previewSrc: ""
     property var scene: ({})
     readonly property int errors: issues.filter(i => i.level >= 2).length
@@ -19,6 +21,7 @@ Item {
     Component.onCompleted: {
         code.setText(Engine.loadStory(projectId))
         issues = Engine.lint(code.text)
+        badges = Engine.choiceBadges(code.text)
         code.focusEditor()
         if (shotPage.indexOf("editor") === 0) code.gotoLine(shotPage === "editor-top" || shotPage === "editor-top-hover" ? 1 : 13)
         if (shotPage === "editor-top-hover") hoverExtra = "погода снег"
@@ -51,7 +54,16 @@ Item {
         if (shotPage === "editor-dialogue") Qt.callLater(() => { dialogue.openFor(code.text, code.currentLine); dialogue.fillDemo() })
         if (shotPage === "editor-title") Qt.callLater(() => { titleDialog.openFor(code.text); titleDialog.name = "Лето с последствиями"; titleDialog.colorHex = "#b3001b"; titleDialog.size = 44; titleDialog.bold = true })
         if (shotPage === "editor-choice") Qt.callLater(() => { choiceWizard.openFor(code.text, code.currentLine); choiceWizard.fillDemo() })
-        if (shotPage === "editor-choice-timed") Qt.callLater(() => { choiceWizard.openFor(code.text, code.currentLine); choiceWizard.fillDemo(); choiceWizard.mode = "timed"; choiceWizard.refresh() })
+        // «умный Enter»: «выбор», the options and their answers typed the way a person would
+        if (shotPage === "editor-smart-enter") Qt.callLater(() => {
+            code.setText("@mod_id genry_enter\n\n: start\nфон ext_square_day\nСлавя: Куда пойдём?\n")
+            code.gotoLine(6)
+            code.typeLikeAPerson(["выбор", "\n", "На площадь [+1 Славя]", "\n", "Славя: Пошли!", "\n", "\n",
+                                  "Остаться здесь", "\n", "Славя: Ну и ладно.", "\n", "\n", "\n", "Славя: Идём дальше."])
+        })
+        if (shotPage === "editor-line-menu") Qt.callLater(() => { code.gotoLine(13); ed.lineScenes = Engine.sceneNames(code.text); lineMenu.popup(code, code.width - 300, 160) })
+        if (shotPage === "editor-choice-sync") Qt.callLater(() => { choiceWizard.openFor(code.text, code.currentLine); choiceWizard.fillDemo(); choiceSyncShot.start() })
+        if (shotPage === "editor-choice-timed") Qt.callLater(() => { choiceWizard.openFor(code.text, code.currentLine); choiceWizard.fillDemo(); choiceWizard.setStyle("timed") })
         if (shotPage === "editor-choice-picker") Qt.callLater(() => { choiceWizard.openFor(code.text, code.currentLine); choiceWizard.fillDemo(); choiceWizard.openPickerDemo() })
         if (shotPage === "editor-screenplay") Qt.callLater(() => { screenplay.openFor(code.text, code.currentLine, ""); screenplay.fillDemo(); screenplay.current = Number(shotArg) || 4 })
         if (shotPage === "editor-form") Qt.callLater(() => cmdForm.openNew(shotArg || "show", {}, code.text, code.currentLine))
@@ -82,6 +94,7 @@ Item {
     }
     // the line under the cursor -> its form, filled with what the line says
     readonly property var lineForm: Engine.parseCommand(code.lineText(code.currentLine))
+    readonly property bool inChoice: !!Engine.choiceBlockAt(code.text, code.currentLine).from
     // «Алиса (злая, слева): …» under the cursor -> the commands it stands for
     readonly property string playKind: Engine.screenplayKind(code.lineText(code.currentLine))
     function expandLine() {
@@ -93,6 +106,8 @@ Item {
         Engine.toast(warn.length ? "⚠ " + warn[0].text : "Развернул в " + r.lines.length + " стр.", warn.length ? 1 : 0)
     }
     function editLine() {
+        // a line of a «выбор» block: the whole choice opens in its studio
+        if (Engine.choiceBlockAt(code.text, code.currentLine).from) { choiceWizard.openFor(code.text, code.currentLine); return }
         if (playKind !== "" && playKind !== "prose" && !lineForm.id) { expandLine(); return }
         const p = Engine.parseCommand(code.lineText(code.currentLine))
         if (!p.id) { Engine.toast("Эту строку в форме не настроить — выбери команду в палитре", 1); return }
@@ -111,8 +126,9 @@ Item {
     }
 
     Timer { id: previewTimer; interval: 40; onTriggered: ed.refreshPreview() }
+    Timer { id: choiceSyncShot; interval: 900; onTriggered: choiceWizard.demoSync() }
     Timer { id: facefixShot; property var args: []; interval: 9000; onTriggered: charBrowser.fixFace(args[0], args.slice(1).join(" "), "") }
-    Timer { id: lintTimer; interval: 300; onTriggered: ed.issues = Engine.lint(code.text) }
+    Timer { id: lintTimer; interval: 300; onTriggered: { ed.issues = Engine.lint(code.text); ed.badges = Engine.choiceBadges(code.text) } }
     Timer { id: saveTimer; interval: 900; onTriggered: ed.save() }
     onHoverExtraChanged: previewTimer.restart()
     Connections {
@@ -173,9 +189,60 @@ Item {
         onInsertBlock: (block) => ed.insert(block)
         onClosed: code.focusEditor()
     }
+    // «+» on the current line: what to put right under it
+    property var lineScenes: []
+    function lineIndent() {
+        const t = code.lineText(code.currentLine)
+        const ind = t.match(/^\s*/)[0]
+        return /^\s*-(?!>)/.test(t) ? ind + "    " : ind            // under an option: its own lines
+    }
+    function lastSpeaker() {
+        const lines = code.text.split("
+")
+        for (let i = Math.min(lines.length, code.currentLine) - 1; i >= 0; --i) {
+            const m = lines[i].match(/^\s*([^\s\-\[:#@][^:]{0,30}):\s/)
+            if (m && m[1].toLowerCase() !== "выбор") return m[1]
+        }
+        return "Славя"
+    }
+    function endChoice() {
+        // the options are over: close the choice, or put the cursor right after it to go on with the story
+        const b = Engine.choiceBlockAt(code.text, code.currentLine)
+        if (!b.from) return
+        const head = code.lineText(b.from).match(/^\s*/)[0]
+        if (/^\s*конецвыбора/i.test(code.lineText(b.to))) code.insertAfterLine(b.to, head)
+        else code.insertAfterLine(b.to, head + "конецвыбора")
+    }
+    Menu {
+        id: lineMenu
+        MenuItem { text: "Реплика героя"; onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + ed.lastSpeaker() + ": ") }
+        MenuItem { text: "Слова рассказчика"; onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + "текст ") }
+        MenuItem { text: "Сменить локацию (фон)…"; onTriggered: cmdForm.openNew("bg", {}, code.text, code.currentLine) }
+        MenuItem { text: "Выбор…"; onTriggered: choiceWizard.openFor(code.text, code.currentLine) }
+        MenuItem { text: "Конец выбора — дальше история"; visible: ed.inChoice; height: visible ? implicitHeight : 0; onTriggered: ed.endChoice() }
+        Menu {
+            id: lineJumpMenu
+            title: "Перейти в сцену"
+            Instantiator {
+                model: ed.lineScenes
+                delegate: MenuItem {
+                    required property string modelData
+                    text: modelData
+                    onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + "переход " + modelData)
+                }
+                onObjectAdded: (index, object) => lineJumpMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => lineJumpMenu.removeItem(object)
+            }
+            MenuSeparator {}
+            MenuItem { text: "Другая…"; onTriggered: cmdForm.openNew("jump", {}, code.text, code.currentLine) }
+        }
+        MenuItem { text: "Новая сцена…"; onTriggered: cmdForm.openNew("label", {}, code.text, code.currentLine) }
+        MenuItem { text: "Конец игры"; onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + "конецигры") }
+    }
     ChoiceDialog {
         id: choiceWizard
         onInsertBlock: (block) => ed.insert(block)
+        onReplaceBlock: (from, to, block) => code.replaceLines(from, to, block)
         onClosed: code.focusEditor()
     }
     ExportDialog { id: exportDialog; onClosed: code.focusEditor() }
@@ -282,7 +349,7 @@ Item {
                     PillButton {
                         dark: true
                         text: tools.linePlay ? "⇲ Развернуть строку" : "✎ Настроить строку"
-                        enabled: tools.linePlay || !!ed.lineForm.id
+                        enabled: tools.linePlay || !!ed.lineForm.id || ed.inChoice
                         onClicked: tools.linePlay ? ed.expandLine() : ed.editLine()
                         ToolTip.visible: hovered
                         ToolTip.text: tools.linePlay ? "Сценарная строка → команды, которые она означает: показать …, фон …, реплика (Ctrl+Shift+E)"
@@ -297,10 +364,12 @@ Item {
                     }
                     PillButton {
                         dark: true
-                        text: "⑂ Выбор"
+                        accent: ed.inChoice
+                        text: ed.inChoice ? "⑂ Этот выбор" : "⑂ Выбор"
                         onClicked: choiceWizard.openFor(code.text, code.currentLine)
                         ToolTip.visible: hovered
-                        ToolTip.text: "Выбор и последствия: варианты с картинками как в 7ДЛ, очки, сцены веток и общая сцена после"
+                        ToolTip.text: ed.inChoice ? "Открыть выбор под курсором в студии: текст, превью, карточка варианта (Ctrl+E)"
+                                                  : "Студия выбора: пишешь варианты текстом, окно помогает — очки, замки, «запомнит», превью меню БЛ"
                     }
                     PillButton {
                         dark: true
@@ -336,7 +405,7 @@ Item {
                     id: moreMenu
                     MenuItem {
                         text: tools.linePlay ? "Развернуть строку" : "Настроить строку"
-                        enabled: tools.linePlay || !!ed.lineForm.id
+                        enabled: tools.linePlay || !!ed.lineForm.id || ed.inChoice
                         onTriggered: tools.linePlay ? ed.expandLine() : ed.editLine()
                     }
                     MenuItem { text: "Сценарий — пиши как сценарий"; onTriggered: screenplay.openFor(code.text, code.currentLine, "") }
@@ -448,6 +517,9 @@ Item {
             SplitView.fillWidth: true
             SplitView.minimumWidth: 380
             issues: ed.issues
+            badges: ed.badges
+            lineTool: true
+            onLineToolClicked: (line, anchor) => { ed.lineScenes = Engine.sceneNames(code.text); lineMenu.popup(anchor, anchor.width + 4, 0) }
         }
 
         Rectangle {
@@ -498,7 +570,7 @@ Item {
                                 radius: 6
                                 color: ia.containsMouse ? Theme.panel3 : "transparent"
                                 Rectangle { x: 10; anchors.verticalCenter: parent.verticalCenter; width: 10; height: 10; radius: 5; color: Theme.levelColor(modelData.level) }
-                                Text { x: 30; anchors.verticalCenter: parent.verticalCenter; text: "стр. " + modelData.line; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 13; width: 70 }
+                                Text { x: 30; anchors.verticalCenter: parent.verticalCenter; text: modelData.line > 0 ? "стр. " + modelData.line : "файл"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 13; width: 70 }
                                 Text {
                                     id: msg
                                     x: 104; width: parent.width - 114
@@ -506,7 +578,7 @@ Item {
                                     text: modelData.msg; wrapMode: Text.Wrap
                                     color: Theme.text; font.family: Theme.ui; font.pixelSize: 14
                                 }
-                                MouseArea { id: ia; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: code.gotoLine(modelData.line) }
+                                MouseArea { id: ia; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: modelData.line > 0 ? code.gotoLine(modelData.line) : Engine.revealFile(modelData.file) }
                             }
                         }
                         Column {

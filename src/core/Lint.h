@@ -16,6 +16,9 @@ struct LintIssue {
     int line = 0;
     int level = Warning;
     QString msg;
+    QString file;         // a project file the issue is about (line 0)
+    int col = -1;         // the words the issue is about, in the line as written (-1: the whole line)
+    int len = 0;
 };
 
 struct LintContext {

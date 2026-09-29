@@ -91,6 +91,8 @@ void clearTransient(SceneState& st)
     st.choiceStyle.clear();
     st.choiceImages.clear();
     st.choiceKinds.clear();
+    st.choiceHints.clear();
+    st.choiceAsked = false;
     st.menuTitle.clear();
     st.screenMenu = false;
     st.notifyTitle.clear();
@@ -101,6 +103,8 @@ void clearTransient(SceneState& st)
     st.nvlText.clear();
     st.musicPlayer.clear();
     st.achievement.clear();
+    st.achievementPlate.clear();
+    st.codeLock.clear();
     st.videoCard.clear();
     st.moment.clear();
     st.sound.clear();
@@ -117,6 +121,8 @@ void clearTransient(SceneState& st)
 
 void clearSay(SceneState& st)
 {
+    st.textPages = st.textPage = 1;
+    st.textBoxes.clear();
     st.speakerId.clear();
     st.speakerName.clear();
     st.text.clear();
@@ -125,12 +131,38 @@ void clearSay(SceneState& st)
 
 void sayAdv(SceneState& st, const QString& who, const QString& text, const EsAssets* es);
 
+// «[имя]», «[имя кому]», «[проснулся/проснулась]» the way the mod will show them (kV1Hero)
+QString heroText(const QString& text, const SceneState& st)
+{
+    if (!text.contains(QLatin1Char('['))) return text;
+    static const QRegularExpression br(QStringLiteral("(?<!\\[)\\[([^\\[\\]]*)\\]"));
+    const QString hero = st.playerName.isEmpty() ? U("Семён") : st.playerName;
+    QString out;
+    int last = 0;
+    for (auto it = br.globalMatch(text); it.hasNext();) {
+        const auto m = it.next();
+        const QString inner = m.captured(1).trimmed(), low = inner.toLower();
+        const QString w0 = low.section(QLatin1Char(' '), 0, 0);
+        out += text.mid(last, m.capturedStart() - last);
+        last = m.capturedEnd();
+        if (w0 == U("имя") || w0 == U("игрок")) {
+            const int c = nameCaseIn(low.section(QLatin1Char(' '), 1), out);
+            if (c >= 0) { out += declineName(hero, c, st.playerShe); continue; }
+        }
+        if (inner.count(QLatin1Char('/')) == 1) { out += inner.section(QLatin1Char('/'), st.playerShe ? 1 : 0, st.playerShe ? 1 : 0); continue; }
+        out += m.captured(0);
+    }
+    return out + text.mid(last);
+}
+
 // in NVL mode ES stacks the lines on one page instead of the dialogue box
 void say(SceneState& st, const QString& who, const QString& text, const EsAssets* es)
 {
     sayAdv(st, who, text, es);
     if (!st.nvlMode) return;
-    st.nvlPage << (st.speakerName + QLatin1Char('|') + st.speakerColor + QLatin1Char('|') + st.text);
+    // the NVL page holds every box of a long line
+    for (const QString& box : st.textBoxes.isEmpty() ? QStringList{st.text} : st.textBoxes)
+        st.nvlPage << (st.speakerName + QLatin1Char('|') + st.speakerColor + QLatin1Char('|') + box);
     while (st.nvlPage.size() > 12) st.nvlPage.removeFirst();
     st.text.clear();
 }
@@ -139,7 +171,13 @@ void sayAdv(SceneState& st, const QString& who, const QString& text, const EsAss
 {
     CompileState cs;
     const QString id = speakerId(who, cs, {});
-    st.text = text;
+    st.text = heroText(text, st);
+    // a line longer than the box: the game shows it in several boxes - the preview shows the first and «1/N»
+    const QStringList boxes = splitForBox(st.text);
+    st.textPages = int(boxes.size());
+    st.textPage = 1;
+    st.textBoxes = boxes.size() > 1 ? boxes : QStringList();
+    st.text = boxes.value(0);
     st.speakerId = id;
     st.whatColor.clear();
     st.thought = false;
@@ -153,7 +191,7 @@ void sayAdv(SceneState& st, const QString& who, const QString& text, const EsAss
     if (id == QLatin1String("genry")) { st.speakerName = U("Генри"); st.speakerColor = QStringLiteral("#ffcc66"); return; }
     if (id == QLatin1String("scar")) { st.speakerName = U("Шрам"); st.speakerColor = QStringLiteral("#ff6666"); return; }
     if (es && es->characters.contains(id) && !es->characterName(id).isEmpty()) {
-        st.speakerName = es->characterName(id);
+        st.speakerName = id == QLatin1String("me") && !st.playerName.isEmpty() ? st.playerName : es->characterName(id);
         st.speakerColor = es->characterColor(id, st.timeOfDay);
         return;
     }
@@ -173,12 +211,19 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
     const int srcN = upto < 0 ? int(srcLines.size()) : qMin(upto, int(srcLines.size()));
     int n = 0;
     while (n < lines.size() && srcOf[n] < srcN) ++n;
-    int choiceStart = -1;
-    QStringList pendingChoices, pendingImages, pendingKinds;
-    QString pendingStyle, pendingSeconds;
+    // «выбор»: the menu the cursor stands at (drawn over the frame after all the lines), the branches skipped
+    struct Menu {
+        bool on = false;
+        QString style, seconds;
+        QStringList choices, images, kinds, hints;
+        int hover = 0;
+        bool asked = false;
+    } menu;
+    QHash<int, int> skipFrom;
     // V1: what the whole story declares - meters, items, the mod's CGs and achievements
     QHash<QString, QString> itemCaption;
-    QVector<QPair<QString, QString>> achievementsDecl;         // key -> caption
+    struct AchDecl { QString key, title; bool hidden = false, plat = false; QString image; };
+    QVector<AchDecl> achievementsDecl;                           // Достижения 2.0, one per key
     auto fields = [](const QString& r) {
         QStringList f;
         for (const QString& x : r.split(QLatin1Char('|'))) f << pyStrip(x);
@@ -200,8 +245,18 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             const QStringList f = fields(r0);
             if (!f.value(0).isEmpty()) itemCaption.insert(slug(f[0], QStringLiteral("item"), false), f.value(1).isEmpty() ? f[0] : f[1]);
         } else if (c0 == QLatin1String("unlockachievement")) {
-            const QStringList f = fields(r0);
-            if (!f.value(0).isEmpty()) achievementsDecl.push_back({f[0], f.value(1).isEmpty() ? f[0] : f[1]});
+            const AchSpec a = parseAchievement(r0);
+            if (a.key.isEmpty()) continue;
+            bool seen = false;
+            const QString pic = !a.image.isEmpty() ? a.image : a.icon;
+            for (AchDecl& d : achievementsDecl)
+                if (d.key == a.key) {
+                    seen = true;
+                    d.hidden = d.hidden || a.hidden;
+                    d.plat = d.plat || a.plat;
+                    if (d.image.isEmpty()) d.image = pic;
+                }
+            if (!seen) achievementsDecl.push_back({a.key, a.title, a.hidden, a.plat, pic});
         } else if (c0 == QLatin1String("cg")) {
             QStringList ww = pySplit(r0);
             if (!ww.isEmpty() && isEffect(ww.last())) ww.removeLast();
@@ -215,7 +270,22 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
     };
     QSet<QString> achieved;
     bool inModMenu = false;
+    QString metaAuthor, metaName;
     for (int i = 0; i < n; ++i) {
+        const QString s = pyStrip(lines[i]);
+        if (!s.startsWith(QLatin1Char('@'))) continue;
+        const QString key = pySplit(s.mid(1), 1).value(0).toLower();
+        const QString value = pyStrip(s.mid(1 + key.size()));
+        if (key == QLatin1String("author")) metaAuthor = value;
+        else if (key == QLatin1String("mod_name")) metaName = value;
+        else if (key == QLatin1String("hero_name")) st.playerName = value;      // the author's hero instead of Семён
+        else if (key == QLatin1String("hero_gender")) st.playerShe = value.toLower().startsWith(U("она")) || value.toLower().startsWith(U("жен"));
+    }
+    for (int i = 0; i < n; ++i) {
+        if (const auto sk = skipFrom.constFind(i); sk != skipFrom.constEnd()) {
+            i = *sk - 1;
+            continue;
+        }
         const QString s = pyStrip(lines[i]);
         st.line = srcOf[i] + 1;
         if (s.isEmpty() || s.startsWith(QLatin1Char('#')) || s.startsWith(QLatin1Char('@'))) continue;
@@ -230,9 +300,14 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
         // V1 «менюмода … конецменюмода»: the mod's own main menu while the cursor is inside
         if (cmd == QLatin1String("modmenu")) {
             inModMenu = true;
-            st.modMenuTitle.clear();
+            st.modMenuTitle = metaName;
+            st.modMenuStyle = menuStyleKey(rest);
+            st.modMenuHeroes.clear();
+            st.modMenuKinds.clear();
             st.modMenuLogo.clear();
+            st.modMenuAuthor = metaAuthor;
             st.modMenuButtons.clear();
+            st.modMenuParts = MenuParts();
             st.modMenuOpen = true;
             continue;
         }
@@ -240,12 +315,27 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             st.modMenuOpen = true;
             if (cmd == QLatin1String("endmodmenu") || cmd == QLatin1String("endchoice")) { inModMenu = false; continue; }
             const QString lw = first.toLower();
+            if (menuPartLine(lw, rest, &st.modMenuParts)) continue;
             if (lw == U("заголовок") || lw == QLatin1String("title")) { st.modMenuTitle = rest; continue; }
             if (lw == U("лого") || lw == U("логотип") || lw == QLatin1String("logo")) { st.modMenuLogo = rest; continue; }
-            if (lw == U("кнопка") || lw == QLatin1String("button")) {
-                st.modMenuButtons << pyStrip(rest.section(QStringLiteral("->"), 0, 0));
+            if (lw == U("автор") || lw == QLatin1String("author")) {
+                static const QSet<QString> none{U("нет"), U("скрыть"), U("убрать"), U("без"), QStringLiteral("-"), QStringLiteral("none"), QStringLiteral("no")};
+                st.modMenuAuthor = none.contains(rest.toLower()) ? QString() : rest;
                 continue;
             }
+            if (lw == U("кнопка") || lw == QLatin1String("button")) {
+                static const QRegularExpression nameTag(U("\\[(имя|игрок)\\]"), QRegularExpression::CaseInsensitiveOption);
+                const QString cap = pyStrip(rest.section(QStringLiteral("->"), 0, 0));
+                const QString target = rest.contains(QLatin1String("->")) ? pyStrip(rest.section(QStringLiteral("->"), 1)) : QString();
+                st.modMenuButtons << QString(cap).replace(nameTag, st.playerName.isEmpty() ? U("Семён") : st.playerName);
+                st.modMenuKinds << menuButtonKind(target.isEmpty() ? cap : target);
+                continue;
+            }
+            if (lw == U("герои") || lw == U("героини") || lw == U("вайфу") || lw == QLatin1String("heroes")) {
+                for (const QString& h : rest.split(QLatin1Char('|'))) if (!pyStrip(h).isEmpty()) st.modMenuHeroes << pyStrip(h);
+                continue;
+            }
+            if (lw == U("стиль") || lw == QLatin1String("style")) { st.modMenuStyle = menuStyleKey(rest); continue; }
             // фон / музыка / показать … fall through: the menu stands on them
         }
         if (cmd == QLatin1String("meter")) continue;
@@ -298,49 +388,94 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
         if (cmd == QLatin1String("gallery")) { st.showGallery = true; continue; }
         if (cmd == QLatin1String("achievements")) {
             st.achievements.clear();
-            for (const auto& a : achievementsDecl) st.achievements << a.second + (achieved.contains(a.first) ? QStringLiteral("|1") : QStringLiteral("|0"));
+            for (const AchDecl& a : achievementsDecl)
+                st.achievements << a.title + (achieved.contains(a.key) ? QStringLiteral("|1") : QStringLiteral("|0")) + (a.hidden ? QStringLiteral("|h|") : QStringLiteral("||")) + a.image;
             st.showAchievements = true;
             continue;
         }
-        if (cmd == QLatin1String("unlockachievement")) achieved.insert(fields(rest).value(0));
-
-        // choice block: show all of its options while the cursor is inside it
-        if (choiceStart >= 0) {
-            if (cmd == QLatin1String("endchoice")) choiceStart = -1;
-            st.choices = pendingChoices;
-            st.choiceStyle = pendingStyle;
-            st.choiceSeconds = pendingSeconds;
-            st.choiceImages = pendingImages;
-            st.choiceKinds = pendingKinds;
+        if (cmd == QLatin1String("codelock")) {
+            const CodeLockSpec k = parseCodeLock(rest);
+            st.codeLock = (k.hint.isEmpty() ? U("Какой код?") : k.hint) + QLatin1Char('|') + QString::number(k.code.size()) + QLatin1Char('|') + QString::number(k.tries);
             continue;
         }
+        if (cmd == QLatin1String("flashlight")) {
+            const FlashSpec f = parseFlashlight(rest);
+            if (f.ok) {
+                st.flashlight = !f.off;
+                st.flashZoom = f.zoom;
+                st.flashColor = f.color;
+                continue;
+            }
+        }
+        if (cmd == QLatin1String("unlockachievement")) {
+            // ES's own plate slides in (not for «платина»: it comes by itself)
+            const AchSpec a = parseAchievement(rest);
+            if (!a.plat && !achieved.contains(a.key)) st.achievementPlate = a.title;
+            if (!a.plat) achieved.insert(a.key);
+            bool all = !achievementsDecl.isEmpty();
+            for (const AchDecl& d : achievementsDecl) if (!d.plat && !achieved.contains(d.key)) all = false;
+            for (const AchDecl& d : achievementsDecl)
+                if (d.plat && all && !achieved.contains(d.key)) { achieved.insert(d.key); st.achievementPlate = d.title; }
+            continue;
+        }
+
+        if (cmd == QLatin1String("endchoice")) continue;
+        if (isChoiceItemLine(s) || (s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0)))) continue;
         if (cmd == QLatin1String("choice")) {
-            choiceStart = i;
-            pendingChoices.clear();
-            pendingImages.clear();
-            pendingKinds.clear();
-            QString style = choiceStyleOf(rest);
+            // the block: its own options (a choice under an option is that option's), where it ends
+            QVector<int> itemAt;
+            int end = int(lines.size()), depth = 1;
+            bool endLine = false;
             for (int k = i + 1; k < lines.size(); ++k) {
                 const QString t = pyStrip(lines[k]);
-                if (normalizeCommand(firstWord(t)) == QLatin1String("endchoice")) break;
-                if (!t.startsWith(QLatin1Char('-'))) continue;
-                pendingChoices << pyStrip(t.mid(1).section(QStringLiteral("->"), 0, 0));
-                const QString target = t.section(QStringLiteral("->"), 1);
-                QString image, kind;
-                if (target.contains(QLatin1Char('|'))) {
-                    image = choiceImage(pyStrip(target.section(QLatin1Char('|'), 1)), &kind);
-                    if (style != QLatin1String("timed")) style = QStringLiteral("images");
+                const QString ck = normalizeCommand(firstWord(t));
+                if (t.startsWith(QLatin1Char(':')) || ck == QLatin1String("label")) { end = k; break; }
+                if (ck == QLatin1String("choice")) { ++depth; continue; }
+                if (ck == QLatin1String("endchoice")) {
+                    if (--depth == 0) { end = k; endLine = true; break; }
+                    continue;
                 }
-                pendingImages << image;
-                pendingKinds << kind;
+                if (depth == 1 && isChoiceItemLine(t)) itemAt << k;
             }
-            pendingStyle = style;
-            pendingSeconds = choiceSeconds(rest);
-            st.choiceSeconds = pendingSeconds;
-            st.choices = pendingChoices;
-            st.choiceStyle = pendingStyle;
-            st.choiceImages = pendingImages;
-            st.choiceKinds = pendingKinds;
+            const int cur = n - 1;
+            if (itemAt.isEmpty()) continue;
+            const int after = endLine ? end + 1 : end;
+            if (cur >= after) {                     // the cursor is past it: none of the branches is on screen
+                skipFrom.insert(itemAt[0], after);
+                continue;
+            }
+            // the cursor in an option's own lines: that branch, as if the player chose it
+            int inside = -1;
+            for (int k = 0; k < itemAt.size(); ++k) {
+                const int to = k + 1 < itemAt.size() ? itemAt[k + 1] : end;
+                if (cur > itemAt[k] && cur < to) inside = k;
+            }
+            const QString curLine = cur >= 0 ? pyStrip(lines[cur]) : QString();
+            if (inside >= 0 && !(curLine.contains(QLatin1String("->")) && isTimeoutWord(curLine.section(QStringLiteral("->"), 0, 0)))) {
+                if (itemAt[inside] + 1 > itemAt[0]) skipFrom.insert(itemAt[0], itemAt[inside] + 1);
+                continue;
+            }
+            // the menu: the question lines before the options happen, the options' own lines do not
+            skipFrom.insert(itemAt[0], after);
+            const ChoiceHead h = parseChoiceHead(rest);
+            menu = Menu();
+            menu.on = true;
+            menu.style = h.style;
+            menu.seconds = h.secs;
+            menu.asked = itemAt[0] > i + 1 && !h.random && (h.style == QLatin1String("es") || h.style == QLatin1String("buttons"));
+            for (int k = 0; k < itemAt.size(); ++k) {
+                const ChoiceItemSpec it = parseChoiceItem(pyStrip(lines[itemAt[k]]));
+                QString image, kind;
+                if (!it.image.isEmpty()) {
+                    image = choiceImage(it.image, &kind);
+                    if (menu.style != QLatin1String("timed") && menu.style != QLatin1String("phone")) menu.style = QStringLiteral("images");
+                }
+                menu.choices << (it.caption.isEmpty() ? QStringLiteral("...") : it.caption);
+                menu.images << image;
+                menu.kinds << kind;
+                menu.hints << (it.need.isEmpty() ? QString() : (it.hint.isEmpty() ? U("нужно: ") + it.need : it.hint));
+                if (itemAt[k] == cur) menu.hover = k;
+            }
             continue;
         }
         if (s.contains(QLatin1Char(':')) && !isCommandName(cmd) && !s.toLower().startsWith(QLatin1String("http"))) {
@@ -349,6 +484,10 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
         }
         auto popEffect = [&] { if (!w.isEmpty() && isEffect(w.last())) w.removeLast(); };
 
+        if (cmd == QLatin1String("extend")) {            // the same box, the same speaker, the text goes on
+            if (!rest.isEmpty()) st.text += (rest.front().isSpace() ? QString() : QStringLiteral(" ")) + heroText(rest, st);
+            continue;
+        }
         if (cmd == QLatin1String("say")) {
             clearSay(st);
             st.text = rest;
@@ -608,6 +747,20 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             else if (m == U("ночь") || m == QLatin1String("night")) st.timeOfDay = st.spriteTime = QStringLiteral("night");
             else if (m == U("пролог") || m == QLatin1String("prolog") || m == QLatin1String("prologue")) st.timeOfDay = QStringLiteral("prologue");
             st.timeExplicit = true;
+            if (st.bg.startsWith(QLatin1String("bg "))) {          // the place turns evening / night too (as the compiler does)
+                const QString other = bgAtTime(st.bg.mid(3), st.timeOfDay);
+                if (!other.isEmpty()) st.bg = QStringLiteral("bg ") + other;
+            }
+            continue;
+        }
+        if (cmd == QLatin1String("askname")) {
+            const QStringList p = rest.split(QLatin1Char('|'));
+            const QString def = pyStrip(p.value(1));
+            if (!def.isEmpty()) st.playerName = def;
+            clearSay(st);
+            st.cardKind = QStringLiteral("askname");
+            st.cardText = pyStrip(p.value(0)).isEmpty() ? U("Как тебя зовут?") : pyStrip(p.value(0));
+            st.cardSub = st.playerName.isEmpty() ? U("Семён") : st.playerName;
             continue;
         }
         if (cmd == QLatin1String("timeskip")) {
@@ -856,6 +1009,18 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             st.sound = pyBasename(pyStrip(rest));
             continue;
         }
+    }
+    if (menu.on) {
+        st.choices = menu.choices;
+        st.choiceStyle = menu.style;
+        st.choiceSeconds = menu.seconds;
+        st.choiceImages = menu.images;
+        st.choiceKinds = menu.kinds;
+        st.choiceHints = menu.hints;
+        st.choiceHover = menu.hover;
+        // images: the question is a line before the menu in the game - the menu covers it
+        if (menu.style == QLatin1String("images") || menu.style == QLatin1String("timed") || menu.style == QLatin1String("phone")) menu.asked = false;
+        st.choiceAsked = menu.asked && !st.text.isEmpty();
     }
     return st;
 }

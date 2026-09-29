@@ -8,11 +8,14 @@
 #include "Weather.h"
 
 #include <QCoreApplication>
+#include <cmath>
 #include <QDateTime>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
+#include <QImageReader>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
@@ -78,8 +81,38 @@ bool copyFile(const QString& src, const QString& dst, QString* err)
     return true;
 }
 
+// «bg x» / «cg x» of the project: the game shows a picture at its own size (a 4000×3000 photo = its top-left
+// corner, 20+ MB for Ren'Py to decode), the preview fits it - so the mod gets the preview's 1920×1080 picture
+bool isScenePicture(const QString& file)
+{
+    const QString base = QFileInfo(file).completeBaseName().toLower();
+    return base.startsWith(QLatin1String("bg ")) || base.startsWith(QLatin1String("cg "));
+}
+
+bool copySceneFitted(const QString& src, const QString& dst, QString* err)
+{
+    const QSize want(1920, 1080);
+    QImageReader r(src);
+    const QSize size = r.size();
+    if (!size.isValid() || size == want) return copyFile(src, dst, err);        // unreadable: copied as is (the check says so)
+    const QFileInfo fs(src), fd(dst);
+    if (fd.exists() && fd.lastModified() >= fs.lastModified() && QImageReader(dst).size() == want) return true;
+    QImage img = r.read();
+    if (img.isNull()) return copyFile(src, dst, err);
+    img = img.scaled(want, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+    img = img.copy((img.width() - want.width()) / 2, (img.height() - want.height()) / 2, want.width(), want.height());
+    QDir().mkpath(fd.absolutePath());
+    const QString ext = fs.suffix().toLower();
+    const bool jpg = ext == QLatin1String("jpg") || ext == QLatin1String("jpeg");
+    if (!img.save(dst, jpg ? "JPG" : nullptr, jpg ? 92 : -1)) {
+        if (err) *err = QStringLiteral("не сохранить %1").arg(QDir::toNativeSeparators(dst));
+        return false;
+    }
+    return true;
+}
+
 // dst/<sub> mirrors src/<sub>: copy new/changed files, drop ones the project no longer has
-int syncTree(const QString& src, const QString& dst, QString* err, bool* ok)
+int syncTree(const QString& src, const QString& dst, QString* err, bool* ok, bool fitScenes = false)
 {
     int copied = 0;
     QSet<QString> want;
@@ -89,6 +122,10 @@ int syncTree(const QString& src, const QString& dst, QString* err, bool* ok)
             const QString f = it.next();
             const QString rel = QDir(src).relativeFilePath(f);
             want.insert(rel.toLower());
+            if (fitScenes && isScenePicture(f)) {
+                if (!copySceneFitted(f, dst + QLatin1Char('/') + rel, err)) { *ok = false; return copied; }
+                continue;
+            }
             if (!sameFile(f, dst + QLatin1Char('/') + rel)) {
                 if (!copyFile(f, dst + QLatin1Char('/') + rel, err)) { *ok = false; return copied; }
                 ++copied;
@@ -204,6 +241,62 @@ QHash<QString, QString> customImageFiles(const QString& assetsDir)
     return out;
 }
 
+QVector<LintIssue> checkAssets(const QString& assetsDir)
+{
+    QVector<LintIssue> out;
+    auto add = [&](int level, const QString& file, const QString& msg) {
+        LintIssue i;
+        i.level = level;
+        i.file = file;
+        i.msg = msg;
+        out << i;
+    };
+    static const QRegularExpression latin(QStringLiteral("[A-Za-z]")), cyr(QStringLiteral("[\\x{0400}-\\x{04FF}]"));
+    static const QRegularExpression word(QStringLiteral("[^\\s_.\\-()]+"));
+    const QString root = QDir(assetsDir).absolutePath();
+    QDirIterator it(root, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString f = it.next();
+        const QFileInfo fi(f);
+        const QString rel = QDir(root).relativeFilePath(f);
+        const QString ext = fi.suffix().toLower();
+        // ES Doc «Ren'Py не находит файл»: one Cyrillic «а» inside a Latin word looks right and is not found
+        for (auto m = word.globalMatch(fi.completeBaseName()); m.hasNext();) {
+            const QString w = m.next().captured(0);
+            if (w.contains(latin) && w.contains(cyr)) {
+                add(LintIssue::Warning, f, QString::fromUtf8("«%1»: в слове «%2» смешаны латиница и кириллица (лже-буквы) — "
+                                                             "игра может не найти файл. Переименуй одними буквами").arg(rel, w));
+                break;
+            }
+        }
+        if (rel.startsWith(QLatin1String("images/"))) {
+            if (ext != QLatin1String("png") && ext != QLatin1String("jpg") && ext != QLatin1String("jpeg") && ext != QLatin1String("webp")) continue;
+            QImageReader r(f);
+            const QSize size = r.size();
+            if (!r.canRead() || !size.isValid()) {
+                add(LintIssue::Error, f, QString::fromUtf8("«%1» не открывается как картинка (битая или не то расширение) — "
+                                                           "на ней игра вылетит. Пересохрани в PNG/JPG").arg(rel));
+                continue;
+            }
+            const bool scene = isScenePicture(f);
+            if (scene && size != QSize(1920, 1080))
+                add(LintIssue::Info, f, QString::fromUtf8("«%1» — %2×%3: в мод пойдёт подогнанной под экран 1920×1080, как в превью")
+                                          .arg(rel).arg(size.width()).arg(size.height()));
+            else if (!scene && (size.height() > 1500 || size.width() > 3000))
+                add(LintIssue::Warning, f, QString::fromUtf8("«%1» — %2×%3: в игре картинка показывается в своём размере и не влезет в экран "
+                                                             "(спрайты БЛ — около 1080 в высоту). Уменьши")
+                                             .arg(rel).arg(size.width()).arg(size.height()));
+            if (fi.size() > 25ll * 1024 * 1024)
+                add(LintIssue::Warning, f, QString::fromUtf8("«%1» весит %2 МБ — игра будет долго грузить сцену").arg(rel).arg(fi.size() / (1024 * 1024)));
+        } else if (rel.startsWith(QLatin1String("audio/"))) {
+            static const QSet<QString> ok{QStringLiteral("ogg"), QStringLiteral("mp3"), QStringLiteral("wav"), QStringLiteral("opus"), QStringLiteral("flac")};
+            if (!ok.contains(ext))
+                add(LintIssue::Warning, f, QString::fromUtf8("«%1»: игра не играет .%2 — добавь его через «＋ Свой», GenryBL переделает в ogg").arg(rel, ext));
+        }
+    }
+    return out;
+}
+
 BuildReport install(const BuildEnv& env, const QString& storyText, const CompileOptions& opt, const BuildLog& log)
 {
     BuildReport rep;
@@ -238,7 +331,8 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
     bool ok = true;
     for (int i = 0; kManaged[i]; ++i) {
         const QString sub = QString::fromLatin1(kManaged[i]);
-        rep.copied += syncTree(env.assetsDir + QLatin1Char('/') + sub, rep.modDir + QLatin1Char('/') + sub, &rep.error, &ok);
+        rep.copied += syncTree(env.assetsDir + QLatin1Char('/') + sub, rep.modDir + QLatin1Char('/') + sub, &rep.error, &ok,
+                               sub == QLatin1String("images"));
         if (!ok) return rep;
     }
     // the generated header always references the phone shell
@@ -253,6 +347,25 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
                 rep.error = QStringLiteral("не удалось записать ") + QDir::toNativeSeparators(fx + QLatin1Char('/') + n) + QStringLiteral(".png");
                 return rep;
             }
+        // «фонарик»: a white veil twice the screen with a soft round hole in the middle (the game tints it to the dark);
+        // at zoom 1 it still covers the whole screen with the light in a corner
+        if (rpy.contains(QLatin1String("genry_fx/flashlight.png"))) {
+            QImage mask(3840, 2160, QImage::Format_ARGB32);
+            const double cx = 1920, cy = 1080, r0 = 150, r1 = 330;
+            for (int y = 0; y < mask.height(); ++y) {
+                QRgb* line = reinterpret_cast<QRgb*>(mask.scanLine(y));
+                for (int x = 0; x < mask.width(); ++x) {
+                    const double d = std::hypot(x - cx, y - cy);
+                    double a = d <= r0 ? 0.0 : d >= r1 ? 1.0 : (d - r0) / (r1 - r0);
+                    a = a * a * (3 - 2 * a);                           // smoothstep: no hard edge
+                    line[x] = qRgba(255, 255, 255, int(a * 245));
+                }
+            }
+            if (!mask.save(fx + QStringLiteral("/flashlight.png"), "PNG")) {
+                rep.error = QStringLiteral("не удалось записать ") + QDir::toNativeSeparators(fx + QStringLiteral("/flashlight.png"));
+                return rep;
+            }
+        }
         // the camp map's chibi faces («карта … @sl»)
         const QString chibiDir = rep.modDir + QStringLiteral("/images/genry_chibi");
         QDir().mkpath(chibiDir);
@@ -449,7 +562,11 @@ QStringList lint(const QString& esRoot, const QString& modId, QString* err, int 
     const QString reportPath = QDir::tempPath() + QStringLiteral("/genrybl_lint_%1.txt").arg(QCoreApplication::applicationPid());
     QProcess p;
     p.setWorkingDirectory(esRoot);
-    p.setProcessEnvironment(gameEnvironment());
+    // RENPY_LESS_UPDATES: Ren'Py skips the presplash (display/presplash.py) - a check no longer pops the game's
+    // «Loading…» window over the user's desktop for two minutes
+    QProcessEnvironment env = gameEnvironment();
+    env.insert(QStringLiteral("RENPY_LESS_UPDATES"), QStringLiteral("1"));
+    p.setProcessEnvironment(env);
     p.setStandardOutputFile(reportPath);
     p.setStandardErrorFile(reportPath, QIODevice::Append);
     p.start(esExe(esRoot), {esRoot, QStringLiteral("lint")});

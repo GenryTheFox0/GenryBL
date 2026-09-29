@@ -6,6 +6,7 @@
 #include "Screenplay.h"
 #include "Text.h"
 
+#include <QRandomGenerator>
 #include <QRegularExpression>
 
 namespace gb {
@@ -116,6 +117,93 @@ double Cinema::eval(const QString& expr) const
     return e.orE();
 }
 
+bool Cinema::test(const QString& raw) const
+{
+    // the same words the compiler turns into Python (choiceCondExpr)
+    static const QRegularExpression join(U("\\s+(и|или|and|or)\\s+"), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption);
+    static const QRegularExpression op(QStringLiteral("^(.+?)\\s*(>=|<=|==|!=|=|>|<)\\s*(.+)$"));
+    static const QRegularExpression numTail(QStringLiteral("^(.+?)\\s+(-?\\d+(?:[.,]\\d+)?)\\+?$"));
+    auto name = [](const QString& x) { return x.simplified().replace(QLatin1Char(' '), QLatin1Char('_')); };
+    auto clause = [&](QString t) -> bool {
+        t = pyStrip(t);
+        bool neg = false;
+        const QString w0 = firstWord(t).toLower();
+        if (w0 == U("не") || w0 == QLatin1String("not")) { neg = true; t = pyStrip(t.mid(firstWord(t).size())); }
+        const QString w1 = firstWord(t).toLower();
+        bool yes;
+        if (w1 == U("предмет") || w1 == QLatin1String("item")) yes = m_items.contains(slug(pyStrip(t.mid(firstWord(t).size())), QStringLiteral("item"), false));
+        else if (const QRegularExpressionMatch m = op.match(t); m.hasMatch())
+            yes = eval(name(m.captured(1)) + QLatin1Char(' ') + m.captured(2) + QLatin1Char(' ') + name(m.captured(3)).replace(QLatin1Char(','), QLatin1Char('.'))) != 0;
+        else if (const QRegularExpressionMatch n = numTail.match(t); n.hasMatch())
+            yes = eval(name(n.captured(1)) + QStringLiteral(" >= ") + QString(n.captured(2)).replace(QLatin1Char(','), QLatin1Char('.'))) != 0;
+        else yes = eval(name(t)) != 0;
+        return neg ? !yes : yes;
+    };
+    bool acc = false, first = true, isAnd = false;
+    int last = 0;
+    auto fold = [&](bool v) {
+        acc = first ? v : (isAnd ? (acc && v) : (acc || v));
+        first = false;
+    };
+    for (auto it = join.globalMatch(raw); it.hasNext();) {
+        const auto m = it.next();
+        fold(clause(raw.mid(last, m.capturedStart() - last)));
+        const QString j = m.captured(1).toLower();
+        isAnd = j == U("и") || j == QLatin1String("and");
+        last = int(m.capturedEnd());
+    }
+    fold(clause(raw.mid(last)));
+    return acc;
+}
+
+bool Cinema::insideChoice(int at) const
+{
+    int depth = 0;
+    for (int k = at - 1; k >= 0; --k) {
+        const QString t = pyStrip(m_lines[k]);
+        const QString ck = normalizeCommand(firstWord(t));
+        if (t.startsWith(QLatin1Char(':')) || ck == QLatin1String("label")) return false;
+        if (ck == QLatin1String("endchoice")) ++depth;
+        else if (ck == QLatin1String("choice")) {
+            if (depth == 0) return true;
+            --depth;
+        }
+    }
+    return false;
+}
+
+int Cinema::afterBlock(int from) const
+{
+    int depth = 0;
+    for (int k = from; k < m_lines.size(); ++k) {
+        const QString t = pyStrip(m_lines[k]);
+        const QString ck = normalizeCommand(firstWord(t));
+        if (t.startsWith(QLatin1Char(':')) || ck == QLatin1String("label")) return k;       // a new scene closed it
+        if (ck == QLatin1String("choice")) ++depth;
+        else if (ck == QLatin1String("endchoice")) {
+            if (depth == 0) return k + 1;
+            --depth;
+        }
+    }
+    return int(m_lines.size());
+}
+
+void Cinema::enterOption(const ChoiceOpt& o)
+{
+    // the option's own lines, then: its scene / back to the «по кругу» menu / the story after the choice
+    Branch b;
+    b.end = o.to;
+    b.resume = m_choiceAfter;
+    b.target = o.target;
+    if (m_choiceLoop && o.target.isEmpty()) {
+        if (!o.always) m_seen[m_choiceLine].insert(o.ord);
+        if (o.exit) m_seen.remove(m_choiceLine);
+        else b.loopHeader = m_choiceLine;
+    }
+    m_branches.push_back(b);
+    m_pc = o.from;
+}
+
 void Cinema::load(const QString& storyText, const EsAssets* es)
 {
     m_es = es;
@@ -161,13 +249,14 @@ CinemaStop Cinema::stop(CinemaStop::Kind k, int idx)
     return st;
 }
 
-bool Cinema::jumpTo(const QString& scene, QString* note)
+bool Cinema::jumpTo(const QString& scene, QString* note, bool keepBranches)
 {
     const auto it = m_labels.constFind(label(scene));
     if (it == m_labels.constEnd()) {
         if (note) *note = U("Переход в сцену «%1», а её в истории нет — в игре тут мод закончится").arg(pyStrip(scene));
         return false;
     }
+    if (!keepBranches) m_branches.clear();    // a jump leaves the choices it was inside; a call comes back into them
     m_pc = *it + 1;
     m_scene = pyStrip(scene);
     return true;
@@ -189,6 +278,11 @@ CinemaStop Cinema::start(int line)
     m_targets.clear();
     m_resume = -1;
     m_fromMenu = false;
+    m_opts.clear();
+    m_choiceLine = -1;
+    m_branches.clear();
+    m_seen.clear();
+    m_again = -1;
     // before the first scene: the mod starts from the top (its own main menu first, like in the game)
     int firstScene = -1;
     for (int i = 0; i < m_lines.size() && firstScene < 0; ++i)
@@ -247,11 +341,17 @@ CinemaStop Cinema::start(int line)
         absorb(s);
         m_path << m_lines[i];
     }
-    // a choice block the cursor sits in: start at the block
+    // a choice block the cursor sits in (in its options or in the lines under one): start at the block
+    int depth = 0;
     for (int i = at - 1; i >= 0; --i) {
-        const QString c = normalizeCommand(firstWord(pyStrip(m_lines[i])));
-        if (c == QLatin1String("endchoice") || c == QLatin1String("endmodmenu")) break;
-        if (c == QLatin1String("choice")) { at = i; m_path = m_path.mid(0, i); break; }
+        const QString t = pyStrip(m_lines[i]);
+        const QString c = normalizeCommand(firstWord(t));
+        if (c == QLatin1String("endmodmenu") || t.startsWith(QLatin1Char(':')) || c == QLatin1String("label")) break;
+        if (c == QLatin1String("endchoice")) { ++depth; continue; }             // a whole choice above: not around the cursor
+        if (c == QLatin1String("choice")) {
+            if (depth == 0) { at = i; m_path = m_path.mid(0, i); break; }
+            --depth;
+        }
     }
     m_popups.clear();
     m_sounds.clear();
@@ -262,10 +362,46 @@ CinemaStop Cinema::start(int line)
 
 CinemaStop Cinema::next(int option)
 {
+    // the next box of a long line first (the game shows it in several boxes, splitForBox)
+    if (m_page + 1 < m_pageStop.scene.textBoxes.size()) {
+        ++m_page;
+        CinemaStop p = m_pageStop;
+        p.scene.text = p.scene.textBoxes.value(m_page);
+        p.scene.textPage = m_page + 1;
+        p.sounds.clear();
+        p.popups.clear();
+        p.moment.clear();
+        return p;
+    }
+    m_pageStop = CinemaStop();
+    m_page = 0;
     if (m_ended) {
         CinemaStop st = stop(CinemaStop::End, m_pc - 1);
         st.note = U("Конец");
         return st;
+    }
+    if (m_choiceLine >= 0) {      // «выбор» is waiting for its answer
+        if (option >= 0 && option < m_opts.size() && m_opts[option].locked) return m_choiceStop;   // a locked one: nothing
+        if (option >= 0 && option < m_opts.size()) {
+            enterOption(m_opts[option]);
+        } else {                                  // the timer ran out: «время вышло -> сцена», else the story goes on
+            if (m_timeoutSet && !m_timeoutTarget.isEmpty()) {
+                QString note;
+                if (!jumpTo(m_timeoutTarget, &note)) {
+                    m_choiceLine = -1;
+                    m_ended = true;
+                    CinemaStop st = stop(CinemaStop::End, m_choiceAfter - 1);
+                    st.note = note;
+                    return st;
+                }
+            } else {
+                m_pc = m_choiceAfter;
+            }
+        }
+        m_choiceLine = -1;
+        m_timeoutSet = false;
+        m_resume = -1;
+        return run();
     }
     if (m_resume >= 0) {          // a choice is waiting for its answer
         const int resume = m_resume;
@@ -344,8 +480,8 @@ void Cinema::absorb(const QString& s)
         const QStringList f = fieldsOf(rest);
         m_popups << f.value(1, QStringLiteral("Genry")) + QLatin1Char('|') + f.value(0);
     } else if (cmd == QLatin1String("unlockachievement")) {
-        const QStringList f = fieldsOf(rest);
-        m_popups << U("Достижение|") + (f.value(1).isEmpty() ? f.value(0) : f[1]);
+        const AchSpec a = parseAchievement(rest);
+        if (!a.plat && !a.key.isEmpty()) m_popups << U("Достижение|") + a.title;
     } else if (cmd == QLatin1String("replayunlock")) {
         const QStringList f = fieldsOf(rest);
         m_popups << U("Реплей|Сцена открыта: ") + (f.value(1).isEmpty() ? f.value(0) : f[1]);
@@ -392,8 +528,22 @@ CinemaStop Cinema::run()
         return st;
     };
     int guard = 0;
-    while (m_pc < m_lines.size()) {
+    while (m_pc < m_lines.size() || (!m_branches.isEmpty() && m_pc == m_branches.last().end)) {
         if (++guard > 200000) return finish(m_pc - 1, U("История ходит по кругу без единой реплики — проверь переходы"));
+        // an option's own lines are over: its scene, back to its «по кругу» menu, or on after the choice
+        if (!m_branches.isEmpty() && m_pc == m_branches.last().end) {
+            const Branch b = m_branches.takeLast();
+            if (!b.target.isEmpty()) {
+                QString note;
+                if (!jumpTo(b.target, &note)) return finish(m_pc - 1, note);
+            } else if (b.loopHeader >= 0) {
+                m_again = b.loopHeader;
+                m_pc = b.loopHeader;
+            } else {
+                m_pc = b.resume;
+            }
+            continue;
+        }
         const int i = m_pc++;
         const QString raw = m_lines[i];
         const QString s = pyStrip(raw);
@@ -425,36 +575,93 @@ CinemaStop Cinema::run()
             }
             continue;
         }
+        if ((isChoiceItemLine(s) || (s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0)))) && insideChoice(i)) {
+            m_pc = afterBlock(i + 1);                    // an option's lines are over (walked in from above): on after the choice
+            continue;
+        }
+        if (cmd == QLatin1String("endchoice")) continue;
         if (cmd == QLatin1String("choice")) {
-            QStringList options, block{raw};
-            m_targets.clear();
+            // Выбор 2.0: the question lines are the frame; its own options (a choice under an option is that option's)
+            const ChoiceHead h = parseChoiceHead(rest);
+            QVector<int> itemAt;
+            int end = int(m_lines.size()), depth = 1;
+            bool endLine = false;
             m_timeoutTarget.clear();
             m_timeoutSet = false;
-            int k = i + 1;
-            for (; k < m_lines.size(); ++k) {
+            for (int k = i + 1; k < m_lines.size(); ++k) {
                 const QString t = pyStrip(m_lines[k]);
-                block << m_lines[k];
-                if (normalizeCommand(firstWord(t)) == QLatin1String("endchoice")) break;
-                if (t.startsWith(QLatin1Char('-')) && t.contains(QLatin1String("->"))) {
-                    options << pyStrip(t.mid(1).section(QStringLiteral("->"), 0, 0));
-                    m_targets << pyStrip(t.section(QStringLiteral("->"), 1).section(QLatin1Char('|'), 0, 0));
-                } else if (t.contains(QLatin1String("->")) && isTimeoutWord(t.section(QStringLiteral("->"), 0, 0))) {
+                const QString ck = normalizeCommand(firstWord(t));
+                if (t.startsWith(QLatin1Char(':')) || ck == QLatin1String("label")) { end = k; break; }
+                if (ck == QLatin1String("choice")) { ++depth; continue; }
+                if (ck == QLatin1String("endchoice")) {
+                    if (--depth == 0) { end = k; endLine = true; break; }
+                    continue;
+                }
+                if (depth != 1) continue;
+                if (isChoiceItemLine(t)) itemAt << k;
+                else if (t.contains(QLatin1String("->")) && isTimeoutWord(t.section(QStringLiteral("->"), 0, 0))) {
                     m_timeoutTarget = pyStrip(t.section(QStringLiteral("->"), 1));
                     m_timeoutSet = true;
                 }
             }
-            m_path << block;
-            m_resume = qMin(k + 1, int(m_lines.size()));
+            m_choiceAfter = endLine ? end + 1 : end;
+            if (m_again != i) m_seen.remove(i);       // a «по кругу» menu met anew starts with all its questions
+            m_again = -1;
+            const int qEnd = itemAt.isEmpty() ? end : itemAt[0];
+            for (int k = i; k < qEnd; ++k) {
+                if (k > i) absorb(pyStrip(m_lines[k]));
+                m_path << m_lines[k];
+            }
+            m_opts.clear();
+            QStringList options, hints;
+            for (int k = 0; k < itemAt.size(); ++k) {
+                const ChoiceItemSpec it = parseChoiceItem(pyStrip(m_lines[itemAt[k]]));
+                if (!it.cond.isEmpty() && !test(it.cond)) continue;                    // [если …]: not offered
+                if (h.loop && m_seen.value(i).contains(k)) continue;                   // asked already
+                ChoiceOpt o;
+                o.ord = k;
+                o.from = itemAt[k] + 1;
+                o.to = k + 1 < itemAt.size() ? itemAt[k + 1] : end;
+                o.target = it.target;
+                o.exit = it.exit;
+                o.always = it.always;
+                o.locked = !it.need.isEmpty() && !test(it.need);
+                if (o.locked && (h.random || h.style == QLatin1String("phone"))) continue;
+                m_opts.push_back(o);
+                options << (it.caption.isEmpty() ? QStringLiteral("...") : it.caption);
+                hints << (o.locked ? (it.hint.isEmpty() ? U("нужно: ") + it.need : it.hint) : QString());
+            }
+            m_choiceLine = i;
+            m_choiceLoop = h.loop;
+            if (m_opts.isEmpty()) {                       // nothing left to choose: the game goes on as well
+                m_choiceLine = -1;
+                m_seen.remove(i);
+                m_pc = m_choiceAfter;
+                continue;
+            }
+            if (h.random) {                               // «наугад»: the game picks one itself
+                QVector<int> open;
+                for (int k = 0; k < m_opts.size(); ++k) if (!m_opts[k].locked) open << k;
+                enterOption(m_opts[open[int(QRandomGenerator::global()->bounded(int(open.size())))]]);
+                m_choiceLine = -1;
+                continue;
+            }
             CinemaStop st = stop(CinemaStop::Choice, i);
+            // the game's menu and the buttons keep the question written in the choice in the box; else the box is gone
+            // («window auto» hides it for a menu)
+            if ((h.style != QLatin1String("es") && h.style != QLatin1String("buttons")) || qEnd <= i + 1) st.scene.text.clear();
             st.options = options;
-            for (const QString& t : m_targets) st.optionOk << m_labels.contains(label(t));
-            if (choiceStyleOf(rest) == QLatin1String("timed")) {
-                st.seconds = choiceSeconds(rest).toDouble();
+            st.optionHints = hints;
+            for (const ChoiceOpt& o : m_opts) st.optionOk << (o.target.isEmpty() || m_labels.contains(label(o.target)));
+            if (h.style == QLatin1String("timed")) {
+                st.seconds = h.secs.toDouble();
                 m_timeoutSet = true;                      // no «время вышло»: the story just goes on
             }
+            m_choiceStop = st;
             return st;
         }
-        if (isSayLine(s, cmd) || cmd == QLatin1String("say") || cmd == QLatin1String("voicedsay") || cmd == QLatin1String("punchedsay")) {
+        if (isSayLine(s, cmd) || cmd == QLatin1String("say") || cmd == QLatin1String("voicedsay") || cmd == QLatin1String("punchedsay") ||
+            cmd == QLatin1String("extend")) {
             m_path << raw;
             if (cmd == QLatin1String("voicedsay")) {
                 const QStringList p = fieldsOf(rest);
@@ -463,7 +670,12 @@ CinemaStop Cinema::run()
                 m_sounds.removeAll(QString());
             }
             if (cmd == QLatin1String("punchedsay")) m_moment = QStringLiteral("shake");
-            return stop(CinemaStop::Say, i);
+            CinemaStop st = stop(CinemaStop::Say, i);
+            if (st.scene.textBoxes.size() > 1) {
+                m_pageStop = st;
+                m_page = 0;
+            }
+            return st;
         }
         if (cmd == QLatin1String("note") || cmd == QLatin1String("monologue") || cmd == QLatin1String("diary") || cmd == QLatin1String("memorynote") ||
             cmd == QLatin1String("bigtext")) {
@@ -481,7 +693,7 @@ CinemaStop Cinema::run()
                 return stop(CinemaStop::Note, i);
             }
         }
-        if (cmd == QLatin1String("timeskip") || cmd == QLatin1String("chapter") || cmd == QLatin1String("chapterpng") || cmd == QLatin1String("titlecard") ||
+        if (cmd == QLatin1String("timeskip") || cmd == QLatin1String("askname") || cmd == QLatin1String("chapter") || cmd == QLatin1String("chapterpng") || cmd == QLatin1String("titlecard") ||
             cmd == QLatin1String("splitflap") || cmd == QLatin1String("creditsroll") || cmd == QLatin1String("newchapter")) {
             m_path << raw;
             CinemaStop st = stop(CinemaStop::Card, i);
@@ -511,6 +723,18 @@ CinemaStop Cinema::run()
             m_path << raw;
             CinemaStop st = stop(CinemaStop::Timed, i);
             st.seconds = 1.4;
+            return st;
+        }
+        if (cmd == QLatin1String("codelock")) {
+            // «кодовыйзамок»: the plate is up; the right code or a wrong one (the tries over) lead where the writer said
+            m_path << raw;
+            const CodeLockSpec k = parseCodeLock(rest);
+            m_targets = {k.okTarget, k.badTarget};
+            m_timeoutSet = false;
+            m_resume = i + 1;
+            CinemaStop st = stop(CinemaStop::Choice, i);
+            st.options = {U("Ввести верный код (%1)").arg(k.code), U("Ошибиться")};
+            st.optionOk = {k.okTarget.isEmpty() || m_labels.contains(label(k.okTarget)), k.badTarget.isEmpty() || m_labels.contains(label(k.badTarget))};
             return st;
         }
         if (cmd == QLatin1String("phonecall")) {
@@ -576,7 +800,7 @@ CinemaStop Cinema::run()
             m_path << raw;
             if (cmd == QLatin1String("callscene")) m_calls.push_back({m_pc, m_scene});
             QString note;
-            if (!jumpTo(rest, &note)) {
+            if (!jumpTo(rest, &note, cmd == QLatin1String("callscene"))) {
                 if (cmd == QLatin1String("callscene")) m_calls.removeLast();
                 return finish(i, note);
             }

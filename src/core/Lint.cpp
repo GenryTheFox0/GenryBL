@@ -7,6 +7,7 @@
 #include "Wardrobe.h"
 
 #include <QHash>
+#include <QRegularExpression>
 #include <algorithm>
 
 namespace gb {
@@ -68,12 +69,34 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
     int menuStarts = 0;                     // «менюмода»: buttons that start the mod
     bool timedChoice = false;
     QSet<QString> meterVars;              // «шкала» declarations (anywhere in the story)
+    QSet<QString> setVars;                // everything the story gives a value to (a lock on anything else never opens)
     for (const QString& raw : lines) {
         const QString s = pyStrip(raw);
         const QString w0 = firstWord(s);
-        if (normalizeCommand(w0) == QLatin1String("meter"))
-            meterVars.insert(slugOf(pyStrip(pyStrip(s.mid(w0.size())).section(QLatin1Char('|'), 0, 0)), QStringLiteral("value"), ctx.opt));
+        const QString c0 = normalizeCommand(w0);
+        const QString r0 = pyStrip(s.mid(w0.size()));
+        if (c0 == QLatin1String("meter"))
+            meterVars.insert(slugOf(pyStrip(r0.section(QLatin1Char('|'), 0, 0)), QStringLiteral("value"), ctx.opt));
+        if (c0 == QLatin1String("meter") || c0 == QLatin1String("setvar") || c0 == QLatin1String("addvar") || c0 == QLatin1String("variable"))
+            setVars.insert(slugOf(pySplit(r0.section(QLatin1Char('|'), 0, 0)).value(0), QStringLiteral("value"), ctx.opt));
+        if (c0 == QLatin1String("remember")) {
+            const QString flag = parseV1Opts(r0).get(QStringLiteral("flag"));
+            if (!flag.isEmpty()) setVars.insert(slugOf(flag, QStringLiteral("value"), ctx.opt));
+        }
     }
+    QSet<QString> achKeys;                // Достижения 2.0: every key a «ачивка» line names
+    int achPlain = 0;
+    for (const QString& raw : lines) {
+        const QString s = pyStrip(raw);
+        const QString w0 = firstWord(s);
+        if (normalizeCommand(w0) != QLatin1String("unlockachievement")) continue;
+        const AchSpec a = parseAchievement(pyStrip(s.mid(w0.size())));
+        if (a.key.isEmpty()) continue;
+        achKeys.insert(a.key.toLower());
+        if (!a.plat) ++achPlain;
+    }
+    QVector<int> choiceItems;             // options of each open «выбор» (a choice under an option nests)
+    QVector<bool> choiceTimed;
     QSet<QString> newSpeakers;
     const EsAssets* es = ctx.es;
     // speakers declared anywhere with «персонаж id Имя» are not "new"
@@ -166,6 +189,20 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         if (menuOpen) {
             if (cmd == QLatin1String("endmodmenu") || cmd == QLatin1String("endchoice")) { menuOpen = 0; continue; }
             const QString lw = first.toLower();
+            {
+                // «менюмода свой»: its parts; a word it does not know says what it does know
+                MenuParts mp;
+                if (menuPartLine(lw, rest, &mp)) {
+                    static const QHash<QString, QString> known{
+                        {U("кнопки"), U("слева, справа, по центру, снизу")}, {U("раскладка"), U("слева, справа, по центру, снизу")},
+                        {U("вид"), U("текст, таблички, бл, неон")}, {U("цвет"), U("#ffd27d — цвет в виде #rrggbb")},
+                        {U("частицы"), U("пыль, листья, светлячки, дождь, снег, сердца, по часам, нет")},
+                        {U("появление"), U("выезд, проявление, снизу, печать")}, {U("вход"), U("выезд, проявление, снизу, печать")}};
+                    const bool got = !mp.layout.isEmpty() || !mp.look.isEmpty() || !mp.accent.isEmpty() || !mp.fx.isEmpty() || !mp.enter.isEmpty();
+                    if (!got) add(ln, LintIssue::Warning, U("«%1 %2» не знаю — можно: %3").arg(first, rest, known.value(lw)));
+                    continue;
+                }
+            }
             if (lw == U("заголовок") || lw == QLatin1String("title") || lw == U("лого") || lw == U("логотип") || lw == QLatin1String("logo") ||
                 lw == U("стиль") || lw == QLatin1String("style") || lw == U("автор") || lw == QLatin1String("author"))
                 continue;
@@ -179,7 +216,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             }
             if (lw == U("кнопка") || lw == QLatin1String("button")) {
                 // the kinds the menu knows by word (menuButtonKind: «Дни» = главы, «Выселиться» = выход…)
-                static const QSet<QString> special{U("галерея"), U("достижения"), U("шкалы"), U("главы"), U("настройки"), U("загрузить"), U("выход")};
+                static const QSet<QString> special{U("галерея"), U("достижения"), U("шкалы"), U("главы"), U("настройки"), U("загрузить"), U("выход"), U("имя")};
                 if (rest.contains(QLatin1String("->"))) {
                     const QString t = pyStrip(rest.section(QStringLiteral("->"), 1));
                     if (!special.contains(menuButtonKind(t))) targets.push_back({ln, t});
@@ -188,7 +225,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                 } else if (!special.contains(menuButtonKind(rest)) && ++menuStarts > 1) {
                     // a second button with no target and no known word: it starts the mod too - most likely not meant
                     add(ln, LintIssue::Info, U("Кнопка «%1» тоже начинает мод с начала. Другое нужно — «кнопка %1 -> главы» "
-                                               "(или галерея, настройки, загрузить, выход, имя сцены)").arg(rest));
+                                               "(или галерея, настройки, загрузить, имя, выход, имя сцены)").arg(rest));
                 }
                 continue;
             }
@@ -213,6 +250,95 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             continue;
         }
 
+        // V1 «Выбор 2.0»: options, the lines under them (ordinary lines, checked below as any), choices inside choices
+        if (!ctx.opt.legacy && !choiceItems.isEmpty()) {
+            if (cmd == QLatin1String("endchoice")) {
+                if (choiceItems.last() == 0)
+                    add(ln, LintIssue::Warning, U("В «выбор» нет ни одного варианта «- Текст» — меню не покажется"));
+                choiceItems.removeLast();
+                choiceTimed.removeLast();
+                continue;
+            }
+            if (s.startsWith(QLatin1Char(':')) || cmd == QLatin1String("label")) {
+                add(ln, LintIssue::Info, U("«выбор» без «конецвыбора» — закрою его сам перед этой сценой"));
+                choiceItems.clear();
+                choiceTimed.clear();
+            } else if (isChoiceItemLine(s)) {
+                ++choiceItems.last();
+                const ChoiceItemSpec it = parseChoiceItem(s);
+                // the option's brackets as written: a lock without a number, «запомнит» without who, a word that
+                // almost is a command (it would stay text of the option) - under the very words, not the whole line
+                const QString rawLine = rawLines.value(srcOf.value(i));
+                static const QRegularExpression br(QStringLiteral("\\[([^\\[\\]]*)\\]"));
+                static const QRegularExpression numTail(QStringLiteral("^(.+?)\\s+(-?\\d+(?:[.,]\\d+)?)\\+?$"));
+                static const QRegularExpression opRe(QStringLiteral("(>=|<=|==|!=|=|>|<)"));
+                bool badNeed = false;             // a lock already said wrong: no second word about its points
+                auto at = [&](int col, int len, int level, const QString& msg) {
+                    LintIssue x{ln, level, msg, QString(), col, len};
+                    out.push_back(x);
+                };
+                for (auto m = br.globalMatch(rawLine); m.hasNext();) {
+                    const auto b = m.next();
+                    const QString inner = b.captured(1);
+                    const QString t = pyStrip(inner);
+                    const int innerAt = int(b.capturedStart(1)) + int(inner.indexOf(t));
+                    const QString w = firstWord(t).toLower();
+                    const QString tail = pyStrip(t.mid(firstWord(t).size()));
+                    const int tailAt = innerAt + int(t.indexOf(tail, int(firstWord(t).size())));
+                    if (w == U("нужно") || w == U("нужна") || w == U("нужен") || w == U("надо")) {
+                        const QString cond = pyStrip(tail.section(QLatin1Char('|'), 0, 0));
+                        const QString c0 = firstWord(cond).toLower();
+                        if (cond.isEmpty())
+                            at(int(b.capturedStart()), int(b.capturedLength()), LintIssue::Error, U("Чего нужно? [нужно Славя 3]"));
+                        else if (c0 != U("предмет") && !opRe.match(cond).hasMatch() && !numTail.match(cond).hasMatch() &&
+                                 !cond.contains(U(" и ")) && !cond.contains(U(" или ")) && cond.contains(QLatin1Char(' '))) {
+                            const QString last = cond.section(QLatin1Char(' '), -1);
+                            badNeed = true;
+                            at(tailAt + int(cond.lastIndexOf(last)), int(last.size()), LintIssue::Error,
+                               U("Здесь нужно число: [нужно %1 3]").arg(cond.section(QLatin1Char(' '), 0, -2)));
+                        }
+                    } else if ((w == U("запомнит") || w == U("флаг") || w == U("если")) && tail.isEmpty()) {
+                        at(int(b.capturedStart()), int(b.capturedLength()), LintIssue::Error,
+                           w == U("запомнит") ? U("Кто запомнит? [запомнит Славя]") : w == U("флаг") ? U("Какой флаг? [флаг помог_славе]") : U("Если что? [если ключ]"));
+                    } else if (!w.isEmpty() && w.size() >= 4 && t.count(QLatin1Char('/')) == 0) {
+                        // «[нужн Славя 3]», «[запомнил Алиса]»: almost a command - it would be shown as text of the option
+                        static const QStringList words{U("нужно"), U("если"), U("запомнит"), U("флаг"), U("выход"), U("всегда")};
+                        for (const QString& kw : words)
+                            if (w != kw && dist(w, kw) <= 2 && !(w == U("запомнят") && kw == U("запомнит"))) {
+                                at(innerAt, int(firstWord(t).size()), LintIssue::Warning,
+                                   U("«%1» — не команда, останется текстом варианта. Может, «%2»?").arg(firstWord(t), kw));
+                                break;
+                            }
+                    }
+                }
+                if (it.caption.isEmpty()) add(ln, LintIssue::Warning, U("Пустой текст варианта"));
+                if (!it.target.isEmpty()) targets.push_back({ln, it.target});
+                else if (s.contains(QLatin1String("->"))) add(ln, LintIssue::Warning, U("После «->» нужна сцена — или убери стрелку, и история пойдёт дальше"));
+                if (!it.image.isEmpty()) {
+                    QString kind;
+                    const QString img = choiceImage(it.image, &kind, ctx.customImages);
+                    if (kind == QLatin1String("sprite")) checkSprite(ln, img);
+                    else if (!patchCg(ln, img) && !imageKnown(img)) {
+                        const bool cg = img.startsWith(QLatin1String("cg "));
+                        add(ln, LintIssue::Warning, U("Нет картинки «%1» для варианта — похожие: %2")
+                                                         .arg(it.image, closest(img.mid(3), cg ? (es ? es->cgs() : QStringList()) : (es ? es->backgrounds() : QStringList()))));
+                    }
+                }
+                // a lock on points nothing ever gives never opens; a condition on them never shows the option
+                for (const QString& v : badNeed ? QStringList() : choiceConditionVars(it.need))
+                    if (!setVars.contains(slugOf(v, QStringLiteral("value"), ctx.opt)))
+                        add(ln, LintIssue::Warning, U("«%1» нигде не прибавляется — этот вариант всегда будет закрыт. Дай очки: «[+1 %1]» у другого варианта или «прибавить %1 1»").arg(v));
+                for (const QString& v : choiceConditionVars(it.cond))
+                    if (!setVars.contains(slugOf(v, QStringLiteral("value"), ctx.opt)))
+                        add(ln, LintIssue::Warning, U("«%1» нигде не задаётся — этот вариант никогда не появится").arg(v));
+                continue;
+            } else if (s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0))) {
+                if (!choiceTimed.last()) add(ln, LintIssue::Warning, U("«время вышло» работает только в «выбор на время N»"));
+                targets.push_back({ln, pyStrip(s.section(QStringLiteral("->"), 1))});
+                continue;
+            }
+            // any other line: the question before the options or a line under one - checked like everywhere
+        }
         if (choiceOpen) {
             if (cmd == QLatin1String("endchoice")) { choiceOpen = 0; continue; }
             if (s.startsWith(QLatin1Char('-')) && s.contains(QLatin1String("->"))) {
@@ -263,6 +389,42 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             continue;
         }
         auto popEffect = [&] { if (!w.isEmpty() && isEffect(w.last())) w.removeLast(); };
+        if (cmd == QLatin1String("codelock") && !ctx.opt.legacy) {
+            const CodeLockSpec k = parseCodeLock(rest);
+            const QString rawLine = rawLines.value(srcOf.value(i));
+            static const QRegularExpression digits(QStringLiteral("^\\d+$"));
+            if (k.code.isEmpty()) {
+                add(ln, LintIssue::Error, U("Какой код? «кодовыйзамок 1968 | Подсказка | верно -> сцена | неверно -> сцена»"));
+            } else if (!digits.match(k.code).hasMatch()) {
+                LintIssue x{ln, LintIssue::Error, U("На замке только цифры — «%1» так не набрать").arg(k.code), QString(), int(rawLine.indexOf(k.code)), int(k.code.size())};
+                out.push_back(x);
+            } else if (k.code.size() > 10) {
+                add(ln, LintIssue::Warning, U("Код из %1 цифр — игрок замучается; обычно 3–6").arg(k.code.size()));
+            }
+            if (!k.okTarget.isEmpty()) targets.push_back({ln, k.okTarget});
+            if (!k.badTarget.isEmpty()) targets.push_back({ln, k.badTarget});
+            if (k.okTarget.isEmpty() && k.badTarget.isEmpty())
+                add(ln, LintIssue::Info, U("Замок без «верно -> сцена»: после него история просто идёт дальше, что бы игрок ни набрал"));
+            continue;
+        }
+        if (cmd == QLatin1String("unlockachievement") && !ctx.opt.legacy) {
+            const AchSpec a = parseAchievement(rest);
+            const QString rawLine = rawLines.value(srcOf.value(i));
+            if (a.key.isEmpty()) add(ln, LintIssue::Error, U("Какое достижение? «ачивка ключ | Название»"));
+            for (const QString& n : a.needs)
+                if (!achKeys.contains(n.toLower())) {
+                    LintIssue x{ln, LintIssue::Warning, U("Достижения «%1» нигде нет — в «нужно=» пиши ключ другой «ачивки»").arg(n), QString(),
+                                int(rawLine.indexOf(n)), int(n.size())};
+                    out.push_back(x);
+                }
+            if (a.plat && achPlain == 0) add(ln, LintIssue::Warning, U("«платина» приходит, когда собраны остальные — а других достижений нет"));
+            continue;
+        }
+        if (cmd == QLatin1String("choice") && !ctx.opt.legacy) {
+            choiceItems << 0;
+            choiceTimed << (parseChoiceHead(rest).style == QLatin1String("timed"));
+            continue;
+        }
         if (cmd == QLatin1String("choice")) {
             choiceOpen = ln;
             timedChoice = !ctx.opt.legacy && choiceStyleOf(rest) == QLatin1String("timed");
@@ -394,6 +556,10 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             add(ln, LintIssue::Warning, U("Фильтр «%1» неизвестен: сепия, чб, ночь, тепло, холод, сон, выцвет, хоррор, нет").arg(w[0]));
     }
     if (choiceOpen) add(choiceOpen, LintIssue::Warning, U("Выбор не закрыт «конецвыбора» — закрою сам в конце"));
+    if (!choiceItems.isEmpty()) {
+        add(srcOf.isEmpty() ? 1 : srcOf.last() + 1, LintIssue::Info, U("«выбор» без «конецвыбора» — закрою сам в конце"));
+        if (choiceItems.last() == 0) add(srcOf.isEmpty() ? 1 : srcOf.last() + 1, LintIssue::Warning, U("В «выбор» нет ни одного варианта «- Текст» — меню не покажется"));
+    }
     // a scene runs to its end and the mod ends there (V1 closes every scene): the next scene in the text is not
     // «the next one» - it needs a «переход». Said at the scene's last line, with the fix.
     if (!ctx.opt.legacy) {
@@ -404,8 +570,35 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             const QString s = pyStrip(all[i]);
             if (s.startsWith(QLatin1Char(':'))) heads.push_back({i, pyStrip(s.mid(1))});
         }
-        static const QSet<QString> ends{QStringLiteral("jump"), QStringLiteral("return"), QStringLiteral("endgame"), QStringLiteral("endchoice"),
+        static const QSet<QString> ends{QStringLiteral("jump"), QStringLiteral("return"), QStringLiteral("endgame"),
                                         QStringLiteral("bestmeter"), QStringLiteral("map"), QStringLiteral("screenmenu")};
+        // Выбор 2.0: a choice closes the scene only when every one of its options leads to a scene (an option without
+        // «-> сцена» goes on after the choice - and the scene is over there)
+        // -1: the line is not the end of a choice (nor inside one); 1: every option of that choice leads away; 0: not
+        auto choiceLeadsAway = [&](int at) {
+            int depth = 0;
+            bool every = true, any = false, header = false;
+            for (int i = at; i >= 0; --i) {
+                const QString t = pyStrip(all[i]);
+                const QString c = normalizeCommand(firstWord(t));
+                if (t.startsWith(QLatin1Char(':'))) break;
+                if (c == QLatin1String("endchoice")) {
+                    if (i != at) ++depth;
+                    continue;
+                }
+                if (c == QLatin1String("choice")) {
+                    if (depth == 0) { header = true; break; }
+                    --depth;
+                    continue;
+                }
+                if (depth == 0 && isChoiceItemLine(t)) {
+                    any = true;
+                    if (parseChoiceItem(t).target.isEmpty()) every = false;
+                }
+            }
+            if (!header) return -1;
+            return any && every ? 1 : 0;
+        };
         for (int k = 0; k + 1 < heads.size(); ++k) {
             int last = -1;
             for (int i = heads[k + 1].line - 1; i > heads[k].line; --i) {
@@ -415,11 +608,22 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             if (last < 0) continue;                                       // an empty scene: said elsewhere
             const QString s = pyStrip(all[last]);
             const QString word = normalizeCommand(s.section(QLatin1Char(' '), 0, 0));
-            if (ends.contains(word) || s.startsWith(QLatin1Char('-')) || s.toLower().startsWith(U("конецменюмода"))) continue;
+            const int ch = choiceLeadsAway(last);
+            if (ch == 1) continue;                                        // a choice whose every option leads to a scene
+            if (ch == -1 && (ends.contains(word) || s.toLower().startsWith(U("конецменюмода")))) continue;
+            if (ch == -1 && word == QLatin1String("codelock")) {
+                const CodeLockSpec k = parseCodeLock(pyStrip(s.mid(s.section(QLatin1Char(' '), 0, 0).size())));
+                if (!k.okTarget.isEmpty() && !k.badTarget.isEmpty()) continue;
+            }
             if (word == QLatin1String("renpy") && (s.contains(QLatin1String("jump ")) || s.endsWith(QLatin1String("return")))) continue;
-            add(last + 1, LintIssue::Warning,
-                U("Сцена «%1» кончается без перехода — в игре мод тут и закончится. Нужна следующая «%2»? Допиши «переход %2»")
-                    .arg(heads[k].name, heads[k + 1].name));
+            if (ch == 0)
+                add(last + 1, LintIssue::Warning,
+                    U("После выбора сцена «%1» кончается — варианты без «-> сцена» в игре закончат мод. Допиши после «конецвыбора» «переход %2» "
+                      "(или дай каждому варианту свою сцену)").arg(heads[k].name, heads[k + 1].name));
+            else
+                add(last + 1, LintIssue::Warning,
+                    U("Сцена «%1» кончается без перехода — в игре мод тут и закончится. Нужна следующая «%2»? Допиши «переход %2»")
+                        .arg(heads[k].name, heads[k + 1].name));
         }
     }
     for (const Ref& t : targets) {

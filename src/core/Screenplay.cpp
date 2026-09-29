@@ -20,6 +20,16 @@ struct ScrPair {
 };
 #include "ScreenplayTables.inc"
 
+// a line that is a command of the story - «Фонарик погас.» starts with a command word and still is a sentence
+bool isCommandLine(const QString& s)
+{
+    const QString w = firstWord(s);
+    const QString cmd = normalizeCommand(w);
+    if (!isCommandName(cmd)) return false;
+    if (cmd == QLatin1String("flashlight")) return parseFlashlight(pyStrip(s.mid(w.size()))).ok;
+    return true;
+}
+
 QString U8(const char* s) { return QString::fromUtf8(s); }
 
 QString norm(const QString& s)
@@ -687,16 +697,19 @@ public:
     {
         if (s.isEmpty()) return false;
         const QChar c = s[0];
-        if (!(c.isUpper() || c == QChar(0x00AB) || c == QLatin1Char('"') || c == QChar(0x2026) || c == QChar(0x201E) ||
+        // «[имя] огляделся.» - the player's name opens the sentence (V1 «имяигрока»)
+        const bool nameFirst = s.startsWith(QString::fromUtf8("[имя]"), Qt::CaseInsensitive) || s.startsWith(QString::fromUtf8("[игрок]"), Qt::CaseInsensitive);
+        if (!(nameFirst || c.isUpper() || c == QChar(0x00AB) || c == QLatin1Char('"') || c == QChar(0x2026) || c == QChar(0x201E) ||
               c == QChar(0x201C)))
             return false;
-        if (isCommandName(normalizeCommand(firstWord(s)))) return false;
+        if (isCommandLine(s)) return false;
         const int colon = int(s.indexOf(QLatin1Char(':')));
         if (colon >= 0 && splitWords(s.left(colon)).size() <= 4) return false;   // «Имя: текст»
         return true;
     }
 
-    bool inBlock = false;     // «менюмода … конецменюмода», «выбор … конецвыбора»: their lines are not the play
+    bool inBlock = false;     // «менюмода … конецменюмода»: its lines are not the play
+    int choiceDepth = 0;      // «выбор … конецвыбора»: the options stay as they are, the lines under them are the play
 
     // one line -> commands; false = not a play line (the caller keeps it as it is)
     bool expand(const QString& raw, QStringList* out)
@@ -705,10 +718,31 @@ public:
         const QString s = pyStrip(raw);
         out->clear();
         const QString cmd = normalizeCommand(firstWord(s));
-        if (inBlock || cmd == QLatin1String("modmenu") || cmd == QLatin1String("choice")) {
+        if (inBlock || cmd == QLatin1String("modmenu")) {
             inBlock = cmd != QLatin1String("endmodmenu") && cmd != QLatin1String("endchoice");
             observe(s, st);
             return false;
+        }
+        if (cmd == QLatin1String("choice") || (choiceDepth > 0 && cmd == QLatin1String("endchoice"))) {
+            choiceDepth = qMax(0, choiceDepth + (cmd == QLatin1String("choice") ? 1 : -1));
+            observe(s, st);
+            return false;
+        }
+        if (choiceDepth > 0) {
+            if (s.startsWith(QLatin1Char(':')) || cmd == QLatin1String("label")) choiceDepth = 0;      // a new scene closes it
+            else if (isChoiceItemLine(s)) {
+                // «- Помочь [+1 Славя] [запомнит Славя]»: the effects are the option's first lines
+                QString cleaned;
+                const QStringList fx = choiceItemEffects(s, &cleaned);
+                observe(s, st);
+                if (fx.isEmpty()) return false;
+                *out << cleaned << fx;
+                return true;
+            } else if (s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0))) {
+                observe(s, st);
+                return false;
+            }
+            // else: the question before the options or a line under one - the play, like anywhere
         }
         if (s.isEmpty() || s.startsWith(QLatin1Char(':')) || s.startsWith(QLatin1Char('#')) || s.startsWith(QLatin1Char('@')) ||
             s.startsWith(QLatin1Char('-'))) {
@@ -744,7 +778,7 @@ public:
             for (const QString& l : *out) observe(l, st);
             return true;
         }
-        if (isCommandName(normalizeCommand(firstWord(s)))) {
+        if (isCommandLine(s)) {
             observe(s, st);
             return false;
         }
@@ -944,6 +978,142 @@ QString bgAtTime(const QString& bg, const QString& time)
     return fallback ? QString() : r;
 }
 
+QString declineName(const QString& n, int c, bool she)
+{
+    if (n.isEmpty() || c <= 0 || c > 5) return n;
+    const QString low = n.toLower();
+    const QChar last = low.back();
+    const QChar prev = low.size() > 1 ? low.at(low.size() - 2) : QChar();
+    auto tail = [&](int cut, const QString& add) { return n.left(n.size() - cut) + add; };
+    auto pick = [&](std::initializer_list<const char*> forms) { return QString::fromUtf8(*(forms.begin() + c)); };
+    static const QString gkh = QString::fromUtf8("гкхжшщч"), hushC = QString::fromUtf8("жшщчц");
+    if (last == QChar(0x0430)) {                                        // а: Маша, Саша, Никита
+        if (c == 1) return tail(1, gkh.contains(prev) ? QString::fromUtf8("и") : QString::fromUtf8("ы"));
+        if (c == 3) return tail(1, QString::fromUtf8("у"));
+        if (c == 4) return tail(1, hushC.contains(prev) ? QString::fromUtf8("ей") : QString::fromUtf8("ой"));
+        return tail(1, QString::fromUtf8("е"));
+    }
+    if (last == QChar(0x044F)) {                                        // я: Вася, Катя; ия: Мария
+        if (low.endsWith(QString::fromUtf8("ия"))) return tail(1, pick({"", "и", "и", "ю", "ей", "и"}));
+        return tail(1, pick({"", "и", "е", "ю", "ей", "е"}));
+    }
+    if (she) return n;                                                  // Кэт, Нинель - не склоняются
+    if (last == QChar(0x0439)) {                                        // й: Андрей, Василий
+        if (low.endsWith(QString::fromUtf8("ий"))) return tail(1, pick({"", "я", "ю", "я", "ем", "и"}));
+        return tail(1, pick({"", "я", "ю", "я", "ем", "е"}));
+    }
+    if (last == QChar(0x044C)) return tail(1, pick({"", "я", "ю", "я", "ем", "е"}));    // ь: Игорь
+    if (last < QChar(0x0430) || last > QChar(0x044F) || QString::fromUtf8("еиоуыэю").contains(last)) return n;   // латиница, Отто
+    // a consonant; «Павел» -> Павла, «Лев» -> Льва, «Пётр» -> Петра
+    QString stem = n;
+    if (low == QString::fromUtf8("павел")) stem = n.left(3) + n.mid(4);
+    else if (low == QString::fromUtf8("лев")) stem = n.left(1) + QString::fromUtf8("ьв");
+    else if (low == QString::fromUtf8("пётр")) stem = n.left(1) + QString::fromUtf8("етр");
+    const bool hush = hushC.contains(last);
+    return stem + (c == 4 ? (hush ? QString::fromUtf8("ем") : QString::fromUtf8("ом")) : pick({"", "а", "у", "а", "", "е"}));
+}
+
+int nameCaseOf(const QString& wordIn)
+{
+    const QString w = wordIn.simplified().toLower().replace(QChar(0x0451), QChar(0x0435));
+    static const QList<QPair<int, QStringList>> cases{
+        {0, {QString::fromUtf8("им"), QString::fromUtf8("и"), QString::fromUtf8("кто"), QString::fromUtf8("именительный")}},
+        {1, {QString::fromUtf8("рд"), QString::fromUtf8("р"), QString::fromUtf8("род"), QString::fromUtf8("родительный"), QString::fromUtf8("кого"),
+             QString::fromUtf8("нет кого"), QString::fromUtf8("у кого"), QString::fromUtf8("кого чего")}},
+        {2, {QString::fromUtf8("дт"), QString::fromUtf8("д"), QString::fromUtf8("дат"), QString::fromUtf8("дательный"), QString::fromUtf8("кому")}},
+        {3, {QString::fromUtf8("вн"), QString::fromUtf8("в"), QString::fromUtf8("вин"), QString::fromUtf8("винительный"), QString::fromUtf8("вижу"),
+             QString::fromUtf8("вижу кого")}},
+        {4, {QString::fromUtf8("тв"), QString::fromUtf8("т"), QString::fromUtf8("твор"), QString::fromUtf8("творительный"), QString::fromUtf8("кем"),
+             QString::fromUtf8("с кем")}},
+        {5, {QString::fromUtf8("пр"), QString::fromUtf8("п"), QString::fromUtf8("пред"), QString::fromUtf8("предложный"), QString::fromUtf8("ком"),
+             QString::fromUtf8("о ком")}},
+    };
+    if (w.isEmpty()) return 0;
+    for (const auto& c : cases) if (c.second.contains(w)) return c.first;
+    return -1;
+}
+
+QStringList splitForBox(const QString& text, int maxVisible)
+{
+    // visible characters: text outside {tags}; a cut may only be at a space outside tags, brackets and open tag pairs
+    static const QSet<QString> single{QStringLiteral("w"), QStringLiteral("p"), QStringLiteral("nw"), QStringLiteral("fast"), QStringLiteral("image"),
+                                      QStringLiteral("space"), QStringLiteral("vspace"), QStringLiteral("done"), QStringLiteral("clear"),
+                                      QStringLiteral("genry_g"), QStringLiteral("genry_n")};
+    int visible = 0;
+    for (int i = 0; i < text.size(); ++i) {
+        if (text.at(i) == QLatin1Char('{')) { const int e = int(text.indexOf(QLatin1Char('}'), i)); if (e < 0) break; i = e; continue; }
+        ++visible;
+    }
+    if (visible <= maxVisible) return {text};
+    struct Cut { int at; int visibleBefore; int kind; };      // kind: 2 sentence end, 1 comma, 0 a space
+    QVector<Cut> cuts;
+    QStringList open;
+    int vis = 0, bracket = 0;
+    for (int i = 0; i < text.size(); ++i) {
+        const QChar ch = text.at(i);
+        if (ch == QLatin1Char('{')) {
+            const int e = int(text.indexOf(QLatin1Char('}'), i));
+            if (e < 0) break;
+            const QString tag = text.mid(i + 1, e - i - 1);
+            const QString name = tag.section(QLatin1Char('='), 0, 0);
+            if (name.startsWith(QLatin1Char('/'))) { if (!open.isEmpty()) open.removeLast(); }
+            else if (!single.contains(name) && !name.isEmpty() && name != QLatin1String("{")) open << name;
+            i = e;
+            continue;
+        }
+        if (ch == QLatin1Char('[')) ++bracket;
+        else if (ch == QLatin1Char(']')) bracket = qMax(0, bracket - 1);
+        if (ch == QLatin1Char(' ') && open.isEmpty() && bracket == 0 && i > 0) {
+            int j = i - 1;
+            while (j > 0 && (text.at(j) == QChar(0x00BB) || text.at(j) == QLatin1Char('"') || text.at(j) == QLatin1Char(')'))) --j;
+            const QChar prev = text.at(j);
+            const int kind = QStringLiteral(".!?").contains(prev) || prev == QChar(0x2026) ? 2
+                             : QStringLiteral(",;:").contains(prev) || prev == QChar(0x2014) ? 1 : 0;
+            cuts.push_back({i, vis, kind});
+        }
+        ++vis;
+    }
+    QStringList out;
+    int start = 0, startVis = 0;
+    for (;;) {
+        if (visible - startVis <= maxVisible) break;
+        // the best cut inside this box: the latest sentence end, else the latest comma, else the latest space
+        int best = -1, bestKind = -1;
+        for (const Cut& c : cuts) {
+            if (c.at <= start || c.visibleBefore - startVis > maxVisible) continue;
+            if (c.kind > bestKind || (c.kind == bestKind && c.at > best)) {
+                // a sentence end that leaves a crumb of a box is not worth it: prefer it only past a third of the box
+                if (c.kind > 0 && c.visibleBefore - startVis < maxVisible / 3 && bestKind >= 0) continue;
+                best = c.at;
+                bestKind = c.kind;
+            }
+        }
+        if (best < 0) break;                                     // one endless word: nothing to cut on
+        out << text.mid(start, best - start).trimmed();
+        int v = 0;
+        for (const Cut& c : cuts) if (c.at == best) v = c.visibleBefore;
+        start = best + 1;
+        startVis = v + 1;
+    }
+    out << text.mid(start).trimmed();
+    out.removeAll(QString());
+    return out;
+}
+
+int nameCaseIn(const QString& wordIn, const QString& before)
+{
+    const QString w = wordIn.simplified().toLower();
+    if (w != QString::fromUtf8("кого")) return nameCaseOf(wordIn);
+    static const QRegularExpression words(QStringLiteral("[\\x{0400}-\\x{04FF}A-Za-z]+"));
+    QString prev;
+    for (auto it = words.globalMatch(before); it.hasNext();) prev = it.next().captured(0).toLower();
+    static const QStringList gen = QString::fromUtf8("у без для от ото до из изо около возле после кроме вместо среди против мимо вокруг "
+                                                     "нет ради насчёт насчет вроде вдоль близ позади впереди внутри напротив со стороны "
+                                                     "боится боялся боялась ждал ждала ждали хочет избегал избегала испугался испугалась "
+                                                     "стеснялся стеснялась лишился лишилась").split(QLatin1Char(' '));
+    return gen.contains(prev) ? 1 : 3;
+}
+
 QStringList expandScreenplay(const QStringList& lines, QVector<int>* srcOf, QVector<ScreenplayNote>* notes)
 {
     Expander ex;
@@ -989,7 +1159,7 @@ QString screenplayKind(const QString& line)
         return {};
     Heading h;
     if (TT().black.contains(pyStripChars(norm(s), QStringLiteral(" .!"))) || parseHeading(s, &h)) return QStringLiteral("heading");
-    if (isCommandName(normalizeCommand(firstWord(s)))) return {};
+    if (isCommandLine(s)) return {};
     if (isDash(s[0])) return QStringLiteral("say");
     if (s.startsWith(QLatin1Char('(')) && s.endsWith(QLatin1Char(')'))) return QStringLiteral("direction");
     static const QRegularExpression head(QString::fromUtf8("^[^():|#@\\-—–«\"\\s][^():|]{0,60}?\\s*\\([^()]*\\)\\s*(?::.*|\\.)?\\s*$"));
@@ -1099,7 +1269,7 @@ QStringList convertToStory(const QString& text, bool expand, QVector<ScreenplayN
             out << s;
             continue;
         }
-        if (isCommandName(normalizeCommand(firstWord(s)))) {   // a half-made story pasted back: keep its commands
+        if (isCommandLine(s)) {   // a half-made story pasted back: keep its commands
             flushPara();
             out << s;
             continue;

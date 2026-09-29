@@ -31,4 +31,5 @@ private:
     QPointer<QQuickTextDocument> m_doc;
     QVariantList m_issues;
     QHash<int, int> m_lineLevel;    // line -> worst lint level
+    QHash<int, QVector<QVector<int>>> m_ranges;   // line -> {col, len, level}: the issue's own words
 };

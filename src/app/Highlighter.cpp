@@ -4,6 +4,7 @@
 #include "Engine.h"
 #include "Text.h"
 
+#include <QRegularExpression>
 #include <QTextDocument>
 
 using namespace gb;
@@ -97,13 +98,17 @@ void StoryHighlighter::setIssues(const QVariantList& issues)
     if (issues == m_issues) return;
     m_issues = issues;
     QHash<int, int> lv;
+    QHash<int, QVector<QVector<int>>> ranges;
     for (const QVariant& v : issues) {
         const QVariantMap m = v.toMap();
         const int line = m.value(QStringLiteral("line")).toInt();
-        lv[line] = qMax(lv.value(line, -1), m.value(QStringLiteral("level")).toInt());
+        const int col = m.value(QStringLiteral("col"), -1).toInt(), len = m.value(QStringLiteral("len")).toInt();
+        if (col >= 0 && len > 0) ranges[line] << QVector<int>{col, len, m.value(QStringLiteral("level")).toInt()};   // under its words only
+        else lv[line] = qMax(lv.value(line, -1), m.value(QStringLiteral("level")).toInt());
     }
-    if (lv != m_lineLevel) {
+    if (lv != m_lineLevel || ranges != m_ranges) {
         m_lineLevel = lv;
+        m_ranges = ranges;
         rehighlight();
     }
     emit issuesChanged();
@@ -125,13 +130,38 @@ void StoryHighlighter::highlightBlock(const QString& text)
         const int arrow = int(text.indexOf(QLatin1String("->"), lead));
         setFormat(lead, 1, fmt(QColor(0xff, 0x8a, 0x80), true));
         setFormat(lead + 1, (arrow < 0 ? int(text.size()) : arrow) - lead - 1, fmt(QColor(0xff, 0xdd, 0x7d)));
+        // «Выбор 2.0»: the option's brackets - points green / red, the lock gold, a condition violet, «запомнит» cyan
+        static const QRegularExpression br(QStringLiteral("\\[([^\\[\\]]*)\\]"));
+        for (auto it = br.globalMatch(text); it.hasNext();) {
+            const auto m = it.next();
+            const QString inner = m.captured(1).trimmed();
+            const QString w = firstWord(inner).toLower();
+            QColor c;
+            if (w.size() > 1 && w.at(0) == QLatin1Char('+') && w.at(1).isDigit()) c = QColor(0x50, 0xfa, 0x7b);
+            else if (w.size() > 1 && (w.at(0) == QLatin1Char('-') || w.at(0) == QChar(0x2212)) && w.at(1).isDigit()) c = QColor(0xff, 0x6b, 0x6b);
+            else if (w == QString::fromUtf8("нужно") || w == QString::fromUtf8("нужна") || w == QString::fromUtf8("нужен") || w == QString::fromUtf8("надо"))
+                c = QColor(0xff, 0xc8, 0x57);
+            else if (w == QString::fromUtf8("если")) c = QColor(0xbd, 0x93, 0xf9);
+            else if (w == QString::fromUtf8("запомнит") || w == QString::fromUtf8("запомнят") || inner.toLower().endsWith(QString::fromUtf8(" запомнит")))
+                c = QColor(0x8b, 0xe9, 0xfd);
+            else if (w == QString::fromUtf8("флаг")) c = QColor(0xff, 0x79, 0xc6);
+            else if (w == QString::fromUtf8("выход") || w == QString::fromUtf8("всегда") || w == QString::fromUtf8("хватит")) c = QColor(0x9f, 0xb3, 0xc8);
+            else continue;                               // [имя], [пришёл/пришла]: the option's own words
+            setFormat(int(m.capturedStart()), int(m.capturedLength()), fmt(c));
+            const int wAt = int(text.indexOf(firstWord(inner), int(m.capturedStart())));
+            if (wAt >= 0) setFormat(wAt, int(firstWord(inner).size()), fmt(c, true));
+        }
         if (arrow >= 0) {
             setFormat(arrow, 2, fmt(QColor(0x9b, 0xd3, 0x5a), true));
             int from = arrow + 2;
             while (from < text.size() && text.at(from).isSpace()) ++from;
+            const int pipe = int(text.indexOf(QLatin1Char('|'), from));
             QTextCharFormat t = fmt(QColor(0xff, 0x8a, 0x80), true);
             t.setFontUnderline(true);
-            setFormat(from, int(text.size()) - from, t);
+            setFormat(from, (pipe < 0 ? int(text.size()) : pipe) - from, t);
+            if (pipe >= 0) setFormat(pipe, int(text.size()) - pipe, fmt(QColor(0x80, 0xde, 0xea), false, true));
+        } else if (const int pipe = int(text.lastIndexOf(QLatin1Char('|'))); pipe > lead) {
+            setFormat(pipe, int(text.size()) - pipe, fmt(QColor(0x80, 0xde, 0xea), false, true));     // «| sl smile pioneer»
         }
     } else {
         const QString word = firstWord(s);
@@ -183,12 +213,19 @@ void StoryHighlighter::highlightBlock(const QString& text)
     }
 
     const int level = m_lineLevel.value(currentBlock().blockNumber() + 1, -1);
-    if (level >= 1) {
-        for (int i = 0; i < text.size(); ++i) {
+    // Qt Quick's text draws no wave underline (only a plain one): a line of the issue's colour, and under the issue's
+    // own words a tint as well - the writer sees at once what to fix
+    auto mark = [&](int from, int to, int lvl, bool tint) {
+        const QColor c = lvl >= 2 ? QColor(0xff, 0x55, 0x66) : QColor(0xff, 0xc8, 0x57);
+        for (int i = qMax(0, from); i < qMin(int(text.size()), to); ++i) {
             QTextCharFormat f = format(i);
-            f.setUnderlineStyle(QTextCharFormat::WaveUnderline);
-            f.setUnderlineColor(level >= 2 ? QColor(0xff, 0x55, 0x66) : QColor(0xff, 0xc8, 0x57));
+            f.setUnderlineStyle(QTextCharFormat::SingleUnderline);
+            f.setUnderlineColor(c);
+            if (tint) f.setBackground(QColor(c.red(), c.green(), c.blue(), 70));
             setFormat(i, 1, f);
         }
-    }
+    };
+    if (level >= 1) mark(0, int(text.size()), level, false);
+    for (const QVector<int>& r : m_ranges.value(currentBlock().blockNumber() + 1))
+        if (r.value(2) >= 1) mark(r.value(0), r.value(0) + r.value(1), r.value(2), true);
 }

@@ -25,6 +25,7 @@ struct CinemaStop {
     SceneState scene;             // what the player sees
     QStringList options;          // Choice: captions
     QVector<bool> optionOk;       // false: that option leads nowhere in this story
+    QStringList optionHints;      // "" = open; else the option is locked («[нужно …]») and this says why
     double seconds = 0;           // Card / Timed: auto-advance; Choice: the timer of a timed choice (0 = none)
     QString music, ambience;      // what plays now: "es:<id>" | "file:audio/x.ogg" | "" (silence)
     QStringList sounds;           // sfx / voice starting with this stop: "es:<id>" | "file:audio/x.ogg"
@@ -43,11 +44,17 @@ public:
 
 private:
     struct Target { QString scene; bool timeout = false; };
+    struct ChoiceOpt { int ord = 0, from = 0, to = 0; QString target; bool exit = false, always = false, locked = false; };
+    struct Branch { int end = 0, resume = 0; QString target; int loopHeader = -1; };
     CinemaStop run();
     CinemaStop stop(CinemaStop::Kind k, int idx);
-    bool jumpTo(const QString& scene, QString* note);
+    bool jumpTo(const QString& scene, QString* note, bool keepBranches = false);
+    int afterBlock(int from) const;           // a line of a choice block (its own depth) -> the line after its end
+    bool insideChoice(int at) const;          // the line sits in a «выбор … конецвыбора» block
+    void enterOption(const ChoiceOpt& o);
     void absorb(const QString& s);            // variables, items, music… of a line walked without stopping
     double eval(const QString& expr) const;
+    bool test(const QString& cond) const;     // an option's condition in words: «славя 3 и не ссора», «предмет ключ»
     QString label(const QString& scene) const;
 
     const EsAssets* m_es = nullptr;
@@ -56,6 +63,8 @@ private:
     QVector<int> m_srcOf;
     QHash<QString, int> m_labels;             // Ren'Py label -> index of its «: scene» line
     int m_pc = 0, m_steps = 0;
+    CinemaStop m_pageStop;                    // a long line: its boxes are turned one per click, like the game
+    int m_page = 0;
     QString m_scene;
     QVector<QPair<int, QString>> m_calls;     // return address, scene
     QHash<QString, double> m_vars;            // «установить / прибавить» (persistent ones as "p:<name>")
@@ -68,6 +77,14 @@ private:
     QString m_timeoutTarget;
     bool m_timeoutSet = false;
     int m_resume = -1;                        // where the story goes on after a choice
+    // «выбор» (Выбор 2.0): the options on screen, the branches being walked, the «по кругу» menus' asked options
+    QVector<ChoiceOpt> m_opts;
+    int m_choiceLine = -1, m_choiceAfter = 0;
+    bool m_choiceLoop = false;
+    CinemaStop m_choiceStop;
+    QVector<Branch> m_branches;
+    QHash<int, QSet<int>> m_seen;
+    int m_again = -1;
     bool m_ended = false;
     bool m_fromMenu = false;                  // the mod's main menu is up: its music stops when a route starts
 };

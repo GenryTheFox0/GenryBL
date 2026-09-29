@@ -21,6 +21,7 @@ screen genry_choice_timed(items, seconds=10.0):
     zorder 50
     modal True
     $ genry_late = [genry_x for genry_x in items if genry_x.kwargs.get("timeout")]
+    $ genry_ch = [genry_x for genry_x in items if not genry_x.kwargs.get("timeout")]
     if genry_late:
         timer seconds action genry_late[0].action
     add Solid("#00000055")
@@ -33,16 +34,109 @@ screen genry_choice_timed(items, seconds=10.0):
         hbox:
             xalign 0.5
             spacing 26
+            for genry_it in genry_ch:
+                $ genry_ok = genry_it.kwargs.get("ok", True)
+                button:
+                    action (genry_it.action if genry_ok else None)
+                    activate_sound "sound/sfx/click_1.ogg"
+                    xminimum 320
+                    padding (30, 18)
+                    background Solid("#000000b8" if genry_ok else "#00000070")
+                    hover_background Solid("#262018e8")
+                    vbox:
+                        xalign 0.5
+                        text genry_it.caption size 30 color ("#ffffff" if genry_ok else "#8a8a8a") hover_color "#ffd27d" xalign 0.5 text_align 0.5 font "fonts/calibri.ttf"
+                        if not genry_ok and genry_it.kwargs.get("hint"):
+                            text genry_it.kwargs["hint"] size 20 color "#8a8a8a" xalign 0.5 text_align 0.5 font "fonts/calibri.ttf"
+    for genry_k, genry_x in enumerate(genry_ch[:9]):
+        if genry_x.kwargs.get("ok", True):
+            key ("K_%d" % (genry_k + 1)) action genry_x.action
+            key ("K_KP%d" % (genry_k + 1)) action genry_x.action
+)rpy";
+
+static const char* const kV1ChoiceEs = R"rpy(
+# GenryBL V1: меню выбора самой БЛ (её рамка, шрифт и цвета по времени суток) + закрытые варианты с подсказкой, клавиши 1-9
+screen genry_choice_es(items):
+    modal True
+    $ genry_tod = persistent.timeofday if persistent.timeofday in ("day", "night", "sunset", "prologue") else "day"
+    $ genry_idle = {"day": "#466123", "night": "#145644", "sunset": "#69652f", "prologue": "#496463"}[genry_tod]
+    $ genry_hov = {"day": "#9dcd55", "night": "#3ccfa2", "sunset": "#dcd168", "prologue": "#98d8da"}[genry_tod]
+    $ genry_ch = [genry_x for genry_x in items if genry_x.action]
+    window:
+        background Frame(get_image("gui/choice/" + genry_tod + "/choice_box.png"), 50, 50)
+        xfill True
+        yalign 0.5
+        left_padding 75
+        right_padding 75
+        bottom_padding 50
+        top_padding 50
+        vbox:
+            xalign 0.5
             for genry_it in items:
-                if not genry_it.kwargs.get("timeout"):
+                if genry_it.action and genry_it.caption:
+                    $ genry_ok = genry_it.kwargs.get("ok", True)
                     button:
-                        action genry_it.action
-                        activate_sound "sound/sfx/click_1.ogg"
-                        xminimum 320
-                        padding (30, 18)
-                        background Solid("#000000b8")
-                        hover_background Solid("#262018e8")
-                        text genry_it.caption size 30 color "#ffffff" hover_color "#ffd27d" xalign 0.5 text_align 0.5 font "fonts/calibri.ttf"
+                        background None
+                        xalign 0.5
+                        action (genry_it.action if genry_ok else None)
+                        vbox:
+                            xalign 0.5
+                            text genry_it.caption font header_font size 37 color (genry_idle if genry_ok else "#8c8c8c") hover_color genry_hov xalign 0.5 text_align 0.5
+                            if not genry_ok and genry_it.kwargs.get("hint"):
+                                text genry_it.kwargs["hint"] font header_font size 22 color "#9a9a9a" xalign 0.5 text_align 0.5
+                elif genry_it.caption:
+                    text genry_it.caption font header_font size 60 color genry_idle xalign 0.5 text_align 0.5
+    for genry_k, genry_x in enumerate(genry_ch[:9]):
+        if genry_x.kwargs.get("ok", True):
+            key ("K_%d" % (genry_k + 1)) action genry_x.action
+            key ("K_KP%d" % (genry_k + 1)) action genry_x.action
+)rpy";
+
+static const char* const kV1ChoiceBtn = R"rpy(
+# GenryBL V1: тёмные кнопки старого конструктора + закрытые варианты с подсказкой, клавиши 1-9
+screen genry_choice_btn(items):
+    zorder 50
+    modal True
+    $ genry_ch = [genry_x for genry_x in items if genry_x.action]
+    # the question in the dialogue box stays bright under the menu
+    if renpy.get_screen("say"):
+        add Solid("#00000099", ysize=905)
+    else:
+        add Solid("#00000099")
+    vbox:
+        at genry_choice_in
+        xalign 0.5
+        yalign 0.45
+        spacing 16
+        for genry_it in items:
+            if genry_it.action:
+                $ genry_ok = genry_it.kwargs.get("ok", True)
+                button:
+                    action (genry_it.action if genry_ok else None)
+                    activate_sound "sound/sfx/click_1.ogg"
+                    xsize 680
+                    ypadding 18
+                    xpadding 30
+                    background Solid("#16243a" if genry_ok else "#1a1d22")
+                    hover_background Solid("#2a4f86")
+                    vbox:
+                        xalign 0.5
+                        text genry_it.caption size 28 color ("#eef6ff" if genry_ok else "#7d8794") xalign 0.5 text_align 0.5
+                        if not genry_ok and genry_it.kwargs.get("hint"):
+                            text genry_it.kwargs["hint"] size 20 color "#7d8794" xalign 0.5 text_align 0.5
+            elif genry_it.caption:
+                text genry_it.caption size 34 color "#ffd27d" xalign 0.5 text_align 0.5
+    for genry_k, genry_x in enumerate(genry_ch[:9]):
+        if genry_x.kwargs.get("ok", True):
+            key ("K_%d" % (genry_k + 1)) action genry_x.action
+            key ("K_KP%d" % (genry_k + 1)) action genry_x.action
+)rpy";
+
+static const char* const kV1ChoiceRandom = R"rpy(
+# GenryBL V1: «выбор наугад» - игра сама берёт один из вариантов (события, которые каждый раз разные)
+screen genry_choice_random(items):
+    default genry_pick = renpy.random.choice([genry_x for genry_x in items if genry_x.action])
+    timer 0.01 action genry_pick.action
 )rpy";
 
 static const char* const kV1Popups = R"rpy(
@@ -241,31 +335,6 @@ screen genry_gallery(cgs, called=False):
             add genry_big
 )rpy";
 
-static const char* const kV1Achievements = R"rpy(
-# GenryBL V1: экран достижений мода
-screen genry_achievements(achs, called=False):
-    modal True
-    zorder 90
-    add Solid("#000000cc")
-    frame:
-        xalign 0.5
-        yalign 0.5
-        background Solid("#0f141bf2")
-        padding (44, 32)
-        vbox:
-            spacing 12
-            xmaximum 900
-            text u"Достижения" size 42 color "#ffd27d" font "fonts/corbel.ttf"
-            for genry_key, genry_name in achs:
-                $ genry_got = getattr(persistent, genry_key, False)
-                hbox:
-                    spacing 16
-                    add Solid(("#9bd35a" if genry_got else "#33483c"), xsize=18, ysize=18) yalign 0.5
-                    text genry_name size 28 color ("#ffffff" if genry_got else "#65796a") yalign 0.5 font "fonts/calibri.ttf"
-            null height 8
-            textbutton u"Закрыть" action (Return(True) if called else Hide("genry_achievements")) xalign 0.5 text_size 28 text_color "#eef6ff" text_hover_color "#ffd27d" background None hover_background None text_font "fonts/corbel.ttf" activate_sound "sound/sfx/click_1.ogg"
-)rpy";
-
 static const char* const kV1MenuButton = R"rpy(
 # GenryBL V1: главное меню мода - кнопки выезжают по очереди, наведённая сдвигается с золотой чертой
 transform genry_menu_btn:
@@ -273,6 +342,9 @@ transform genry_menu_btn:
         easein 0.2 xoffset 0
     on hover:
         easein 0.2 xoffset 18
+
+init python:
+    import time as genry_clock          # «живое» меню: фон по часам игрока
 
 transform genry_menu_in(d=0.0):
     alpha 0.0
@@ -284,6 +356,175 @@ transform genry_waifu_in:
     alpha 0.0
     xoffset 90
     easein 0.6 alpha 1.0 xoffset 0
+    # she stands and breathes
+    block:
+        ease 2.6 yoffset -5
+        ease 2.6 yoffset 0
+        repeat
+
+# --- GenryBL V1: жизнь главного меню мода (кривые - варперы Ren'Py, как на es-doc «Варперы»)
+# из темноты
+transform genry_menu_unveil:
+    alpha 1.0
+    easein 1.2 alpha 0.0
+
+# место меню медленно дышит (наезд и обратно)
+transform genry_menu_kb:
+    subpixel True
+    align (0.5, 0.5)
+    zoom 1.0
+    ease 24.0 zoom 1.08
+    ease 24.0 zoom 1.0
+    repeat
+
+transform genry_menu_fadein(d=0.0, t=0.8):
+    alpha 0.0
+    pause d
+    easein t alpha 1.0
+
+# снизу с мягкой посадкой
+transform genry_menu_rise(d=0.0):
+    alpha 0.0
+    yoffset 36
+    pause d
+    easein_back 0.55 alpha 1.0 yoffset 0
+
+# заголовок: чуть крупнее - и точно на место
+transform genry_menu_title(d=0.0):
+    subpixel True
+    alpha 0.0
+    zoom 1.12
+    pause d
+    easein_quart 0.9 alpha 1.0 zoom 1.0
+
+# кнопка под мышкой приподнимается
+transform genry_menu_hz:
+    on idle:
+        easein 0.18 yoffset 0
+    on hover:
+        easein_back 0.25 yoffset -5
+
+# листок настроек БЛ у наведённой строки
+transform genry_menu_leaf:
+    alpha 0.0
+    rotate -25
+    xoffset -10
+    easein_back 0.3 alpha 1.0 rotate 0 xoffset 0
+
+# черта прочерчивается слева направо
+transform genry_menu_line:
+    xzoom 0.0
+    easein_cubic 0.35 xzoom 1.0
+
+# тёмная колонка выезжает слева
+transform genry_menu_column:
+    xoffset -760
+    easein_quart 0.75 xoffset 0
+
+# доска падает и отскакивает
+transform genry_menu_drop:
+    subpixel True
+    yoffset -1100
+    pause 0.3
+    easein_bounce 1.1 yoffset 0
+
+# тетрадь выплывает снизу и ложится
+transform genry_menu_page:
+    subpixel True
+    align (0.5, 0.5)
+    alpha 0.0
+    yoffset 300
+    rotate 3
+    easein_cubic 0.9 alpha 1.0 yoffset 0 rotate 0
+
+# книга перелистывается справа
+transform genry_menu_turn:
+    subpixel True
+    align (0.5, 0.5)
+    alpha 0.0
+    xoffset 420
+    rotate 2
+    easein_quart 0.8 alpha 1.0 xoffset 0 rotate 0
+
+# кинескоп: линия раскрывается в картинку
+transform genry_menu_crt:
+    subpixel True
+    anchor (0.455, 0.33)
+    pos (0.455, 0.33)
+    yzoom 0.004
+    alpha 0.0
+    pause 0.25
+    linear 0.06 alpha 1.0
+    easein_expo 0.4 yzoom 1.0
+
+transform genry_menu_flash:
+    alpha 0.0
+    pause 0.3
+    linear 0.05 alpha 0.35
+    easein 0.5 alpha 0.0
+
+# шум экрана
+transform genry_menu_flicker:
+    alpha 0.6
+    linear 0.08 alpha 0.85
+    linear 0.12 alpha 0.5
+    linear 0.07 alpha 0.8
+    linear 0.15 alpha 0.55
+    repeat
+
+transform genry_menu_cursor:
+    alpha 1.0
+    pause 0.5
+    alpha 0.0
+    pause 0.5
+    repeat
+
+# молния; гром (таймер 11 с) - сразу после неё
+transform genry_menu_lightning:
+    alpha 0.0
+    pause 10.27
+    linear 0.05 alpha 0.55
+    linear 0.12 alpha 0.0
+    pause 0.12
+    linear 0.04 alpha 0.35
+    linear 0.40 alpha 0.0
+    repeat
+
+transform genry_menu_bar_top:
+    yoffset -140
+    easein_cubic 0.9 yoffset 0
+
+transform genry_menu_bar_bottom:
+    yoffset 140
+    easein_cubic 0.9 yoffset 0
+
+# заголовок фильма: из темноты и медленно растёт
+transform genry_menu_film:
+    subpixel True
+    alpha 0.0
+    zoom 0.96
+    pause 0.9
+    easein 1.4 alpha 1.0 zoom 1.0
+    ease 30.0 zoom 1.04
+
+# карта раскрывается чуть ближе, чем надо
+transform genry_menu_mapin:
+    subpixel True
+    align (0.5, 0.5)
+    alpha 0.0
+    zoom 1.14
+    easein_quart 1.1 alpha 1.0 zoom 1.0
+
+# место меню на карте дышит
+transform genry_menu_pulse(d=0.0):
+    alpha 0.0
+    pause d
+    pause 0.6
+    easein 0.4 alpha 1.0
+    block:
+        ease 1.3 alpha 0.8
+        ease 1.3 alpha 1.0
+        repeat
 )rpy";
 
 static const char* const kV1Chapters = R"rpy(
@@ -568,4 +809,106 @@ static const char* const kV1Lids = R"rpy(
 # GenryBL V1: закрытые веки без анимации - «фон» под закрытыми глазами стирает blink вместе со сценой (scene),
 # веки возвращаются сразу, до первого кадра; ES blink в конце анимации стоит ровно так
 image genry_lids = Fixed("anim blink_up", "anim blink_down")
+)rpy";
+
+static const char* const kV1Hero = R"rpy(
+# GenryBL V1: имя героя вместо «Семёна». Семён в БЛ - DynamicCharacter, читает me_name, а reload_names() (каждое
+# «время») кладёт туда names['me']: ставим оба. names - своя копия в сохранении, сюжет самой игры не трогается.
+init python:
+    def genry_hero_apply(name, she=False):
+        store.genry_hero_she = bool(she)
+        if not name:
+            return
+        if store.names.get('me') != name:
+            store.names = dict(store.names)
+            store.names['me'] = name
+        store.me_name = name
+
+    def genry_hero_set(var, name, fallback, she=None):
+        name = (name or u"").strip() or fallback
+        setattr(store, var, name)
+        setattr(persistent, var, name)
+        if she is not None:
+            setattr(store, var + "_she", bool(she))
+            setattr(persistent, var + "_she", bool(she))
+        genry_hero_apply(name, getattr(store, var + "_she", False))
+
+    # «[имя кому]»: the hero's name in a case (0 им, 1 рд, 2 дт, 3 вн, 4 тв, 5 пр) - the rules GenryBL's preview uses
+    def genry_name_case(n, c, she):
+        if not n or c <= 0 or c > 5:
+            return n
+        low = n.lower()
+        last = low[-1]
+        prev = low[-2:-1]
+        def tail(cut, add):
+            return n[:len(n) - cut] + add
+        if last == u"а":
+            if c == 1:
+                return tail(1, u"и" if prev and prev in u"гкхжшщч" else u"ы")
+            if c == 3:
+                return tail(1, u"у")
+            if c == 4:
+                return tail(1, u"ей" if prev and prev in u"жшщчц" else u"ой")
+            return tail(1, u"е")
+        if last == u"я":
+            if low.endswith(u"ия"):
+                return tail(1, [u"", u"и", u"и", u"ю", u"ей", u"и"][c])
+            return tail(1, [u"", u"и", u"е", u"ю", u"ей", u"е"][c])
+        if she:
+            return n
+        if last == u"й":
+            if low.endswith(u"ий"):
+                return tail(1, [u"", u"я", u"ю", u"я", u"ем", u"и"][c])
+            return tail(1, [u"", u"я", u"ю", u"я", u"ем", u"е"][c])
+        if last == u"ь":
+            return tail(1, [u"", u"я", u"ю", u"я", u"ем", u"е"][c])
+        if not (u"а" <= last <= u"я") or last in u"еиоуыэю":
+            return n
+        stem = n
+        if low == u"павел":
+            stem = n[:3] + n[4:]
+        elif low == u"лев":
+            stem = n[:1] + u"ьв"
+        elif low == u"пётр":
+            stem = n[:1] + u"етр"
+        if c == 4:
+            return stem + (u"ем" if last in u"жшщчц" else u"ом")
+        return stem + [u"", u"а", u"у", u"а", u"", u"е"][c]
+
+    def genry_g_tag(tag, argument):
+        parts = argument.split(u"/")
+        she = getattr(store, "genry_hero_she", False)
+        return [(renpy.TEXT_TEXT, parts[1] if she and len(parts) > 1 else parts[0])]
+
+    def genry_n_tag(tag, argument):
+        try:
+            c = int(argument)
+        except Exception:
+            c = 0
+        return [(renpy.TEXT_TEXT, genry_name_case(getattr(store, "me_name", u""), c, getattr(store, "genry_hero_she", False)))]
+
+    config.self_closing_custom_text_tags["genry_g"] = genry_g_tag
+    config.self_closing_custom_text_tags["genry_n"] = genry_n_tag
+
+# табличка самой игры (screens.rpy yesno_prompt): бумага o_rly, header_font, #64483c, «Готово» как «Да»
+screen genry_ask_name(ask_text, start_name, hero_var, shown=False):
+    modal True
+    zorder 200
+    default genry_typed = start_name
+    default genry_she = bool(getattr(store, hero_var + "_she", False))
+    $ genry_genders = getattr(store, hero_var + "_genders", False)
+    $ genry_done = [Function(genry_hero_set, hero_var, genry_typed, start_name, genry_she), (Hide("genry_ask_name") if shown else Return(True))]
+    add get_image("gui/o_rly/base.png")
+    text ask_text text_align 0.5 xalign 0.5 yalign 0.413 color "#64483c" font header_font size 34
+    input value ScreenVariableInputValue("genry_typed") length 20 exclude "[]{}" xalign 0.5 yalign 0.487 color "#3f2a1d" font header_font size 52
+    if genry_genders:
+        # «кто ты»: the text of the mod follows it («[проснулся/проснулась]»)
+        hbox:
+            xalign 0.5
+            yalign 0.61
+            spacing 90
+            textbutton u"Парень" text_size 44 style "log_button" text_style "settings_link" text_color ("#ffffff" if not genry_she else "#8f8178") action SetScreenVariable("genry_she", False)
+            textbutton u"Девушка" text_size 44 style "log_button" text_style "settings_link" text_color ("#ffffff" if genry_she else "#8f8178") action SetScreenVariable("genry_she", True)
+    textbutton u"Готово" text_size 60 style "log_button" text_style "settings_link" xalign 0.5 yalign (0.71 if genry_genders else 0.66) action genry_done
+    key "input_enter" action genry_done
 )rpy";

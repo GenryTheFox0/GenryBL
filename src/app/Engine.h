@@ -123,16 +123,25 @@ public:
     QVariantList music() const;
     QVariantList sounds() const;
     QVariantList ambience() const;
+    // es-doc (github.com/sovue/es-doc-assets): the game's resources by their Russian names, community sounds
+    QString esName(const QString& kind, const QString& key) const;
+    Q_INVOKABLE QVariantList communitySounds() const;
+    // how a mod stands in ES «Моды и пользовательские сценарии»: ready looks from the game's own fonts (Cyrillic ones)
+    // in colours that read on the list's beige paper; a new mod gets one of them, 🎲 in «Название мода» another
+    Q_INVOKABLE QVariantList titleLooks() const;
+    // 🎲 of a form («dice» in forms.json): «Главное меню мода» - a style, a place of the camp, a track, heroines
+    Q_INVOKABLE QVariantMap diceForm(const QString& id, const QVariantMap& values) const;
+    Q_INVOKABLE QString importCommunity(const QString& file);           // -> "audio/x.ogg" in the mod + CREDITS.txt
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
-    QString version() const { return QStringLiteral("V1.0.5"); }
+    QString version() const { return QStringLiteral("V2.0.0"); }
 
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;
     Q_INVOKABLE QVariantList lint(const QString& text) const;
     Q_INVOKABLE QVariantMap sceneInfo(const QString& text, int line) const;
     // choiceHover: which option of a 7DL picture menu is drawn lit
-    Q_INVOKABLE QString previewUrl(const QString& text, int line, const QString& extra = QString(), int choiceHover = 0);
+    Q_INVOKABLE QString previewUrl(const QString& text, int line, const QString& extra = QString(), int choiceHover = -2);   // -2: the option under the cursor
     Q_INVOKABLE QVariantList lineStarts(const QString& text) const;
     Q_INVOKABLE int lineAt(const QString& text, int pos) const;
     Q_INVOKABLE QStringList sceneNames(const QString& text) const;
@@ -141,9 +150,24 @@ public:
     Q_INVOKABLE QStringList spriteOutfits(const QString& tag) const;
     Q_INVOKABLE QVariantMap suggest(const QString& lineText, int col, const QString& fullText) const;
 
+    // ---- «Студия выбора»: the text of the choice is the truth, these read and write it ----
+    // the block: {head: {line, style, secs, loop, random}, options: [{line, bodyTo, caption, target, image, cond, need, needVar,
+    // needN, hint, exit, always, points: [{v, n}], remember: [..], flags: [..], body}], timeout: {line, target}, end}
+    Q_INVOKABLE QVariantMap choiceOutline(const QString& block) const;
+    // the story's option lines with their marks for the editor: [{line, parts: [{t, c}]}]
+    Q_INVOKABLE QVariantList choiceBadges(const QString& text) const;
+    Q_INVOKABLE QString choiceItemLine(const QVariantMap& option) const;       // one option -> «- Текст [+1 Славя] -> сцена | картинка»
+    Q_INVOKABLE QString choiceHeadLine(const QVariantMap& head) const;         // «выбор кнопки по кругу»
+    // the choice's block around a story line: {from, to, text} (1-based, inclusive) | {}
+    Q_INVOKABLE QVariantMap choiceBlockAt(const QString& storyText, int line) const;
+    // the story's checks for the block put in at [from, to] (to < from: inserted before `from`), lines of the block
+    Q_INVOKABLE QVariantList choiceIssues(const QString& storyText, int from, int to, const QString& block) const;
+    // where the preview draws each option (1920x1080) for a click on it
+    Q_INVOKABLE QVariantList choiceRects(const QString& storyText, int line, const QString& block) const;
+
     // ---- projects ----
     Q_INVOKABLE void refreshProjects();
-    Q_INVOKABLE QString createProject(const QString& name);
+    Q_INVOKABLE QString createProject(const QString& name, bool example = false);   // example: the Славя / Алиса sample
     Q_INVOKABLE bool openProject(const QString& id);
     Q_INVOKABLE QString loadStory(const QString& id) const;
     Q_INVOKABLE bool saveStory(const QString& id, const QString& text);
@@ -160,7 +184,7 @@ public:
     Q_INVOKABLE QVariantList storySpeakers(const QString& text) const;      // [{name, color}]: story's own first, then ES cast
     // the mod's line in ES «Моды и пользовательские сценарии»: {name, font, color, size, style}
     Q_INVOKABLE QVariantMap modTitle(const QString& text) const;
-    Q_INVOKABLE QString applyModTitle(const QString& text, const QVariantMap& title) const;   // story with the @mod_* lines set
+    Q_INVOKABLE QString applyModTitle(const QString& text, const QVariantMap& title);   // story with the @mod_* lines set
     Q_INVOKABLE QVariantList modFonts();                                    // [{ref, label, family}]: the game's + the project's
     Q_INVOKABLE QString importFont(const QString& fileUrl);                 // -> "fonts/x.ttf"
     Q_INVOKABLE QString modsListUrl(const QVariantMap& title);             // image of the ES mods page
@@ -303,6 +327,10 @@ private:
     QString listDir() const;
     void applyFaceShifts();
     mutable int m_fixNonce = 0;
+    mutable QString m_assetSig;                 // the project folder as lint() saw it last
+    mutable QHash<QString, QHash<QString, QString>> m_esNames;   // data/es_doc/descriptions.json: kind -> key -> «Пляж, закат»
+    mutable bool m_esNamesRead = false;
+    mutable QVector<gb::LintIssue> m_assetIssues;   // build::checkAssets of that state
     void setHidden(const QSet<QString>& keys, const QString& toast);
     bool spriteHidden(const QString& tag, const QString& name) const;
     gb::Cinema m_cinema;

@@ -11,6 +11,7 @@
 #include <QRegularExpression>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 
 namespace gb {
 
@@ -20,6 +21,8 @@ namespace {
 #include "Tables.inc"
 #include "V1Screens.inc"
 #include "V1Phone.inc"
+#include "V2Achievements.inc"
+#include "V2Mechanics.inc"
 
 using SL = QStringList;
 const QString I4 = QStringLiteral("    ");
@@ -794,6 +797,9 @@ SL compileMusicPlay(const QString& rest, const Ctx& c)
     const QString opts = parseAudioOptions(w, QStringLiteral("2"));
     const QString name = pyStrip(joinW(w));
     if (name.isEmpty()) return {U("    # music command needs a music id")};
+    // V1: a track the game has only as a file (es-doc: «Free Love», «Kostry»…) - played by its path
+    const QString extra = c.opt.legacy ? QString() : esExtraMusicPath(name);
+    if (!extra.isEmpty()) return {QStringLiteral("    play music ") + pyQ(extra) + opts};
     const QString resolve = QStringLiteral("genry_resolve_music(%1)").arg(pyQ(name));
     return {QStringLiteral("    $ _genry_music_file = ") + resolve, QStringLiteral("    if _genry_music_file:"),
             QStringLiteral("        play music ") + playFile(c.opt.legacy, QStringLiteral("_genry_music_file"), resolve) + opts,
@@ -1348,7 +1354,9 @@ SL endgameTerminator()
     return {QStringLiteral("    stop music fadeout 2"), QStringLiteral("    stop ambience fadeout 2"), QStringLiteral("    stop sound"), QStringLiteral("    return")};
 }
 
-SL ensureLabelExits(const SL& lines, const QSet<QString>& choiceTargets)
+// topLevel (V1): only the scene's own statements count - a `jump` inside the last option of a menu does not end the
+// scene when another option goes on after the choice (it would run into the next scene's label)
+SL ensureLabelExits(const SL& lines, const QSet<QString>& choiceTargets, bool topLevel = false)
 {
     SL fixed;
     bool inLabel = false, hasBody = false;
@@ -1373,7 +1381,7 @@ SL ensureLabelExits(const SL& lines, const QSet<QString>& choiceTargets)
         }
         if (inLabel && line.startsWith(I4) && !pyStrip(line).isEmpty() && !pyLStrip(line).startsWith(QLatin1Char('#'))) {
             hasBody = true;
-            lastExec = pyStrip(line);
+            if (!topLevel || !line.at(4).isSpace()) lastExec = pyStrip(line);
         }
         fixed << line;
     }
@@ -1581,6 +1589,14 @@ const QHash<QString, QString>& v1Renames()
         {U("рабочийстол"), QStringLiteral("phonehome")}, {QStringLiteral("phonehome"), QStringLiteral("phonehome")},
         {U("телефон"), QStringLiteral("phonestart")}, {U("открытьтелефон"), QStringLiteral("phonestart")},
         {U("закрытьтелефон"), QStringLiteral("phoneend")},
+        {U("имяигрока"), QStringLiteral("askname")}, {U("спроситьимя"), QStringLiteral("askname")}, {U("вводимени"), QStringLiteral("askname")},
+        {U("имягероя"), QStringLiteral("askname")}, {QStringLiteral("askname"), QStringLiteral("askname")},
+        // ES `extend`: the rest of the line appears in the same box after a click («+ Но это может быть.»)
+        {QStringLiteral("+"), QStringLiteral("extend")}, {U("дописать"), QStringLiteral("extend")}, {QStringLiteral("extend"), QStringLiteral("extend")},
+        // V2: «кодовыйзамок 1905 | Год основания? | верно -> сейф | неверно -> тупик | попыток=3» - on ES's o_rly plate
+        {U("кодовыйзамок"), QStringLiteral("codelock")}, {U("кодзамок"), QStringLiteral("codelock")}, {QStringLiteral("codelock"), QStringLiteral("codelock")},
+        // V2: «фонарик» / «фонарик выкл» / «фонарик 1.4 | цвет=#012» - the dark with a light that follows the mouse (7ДЛ)
+        {U("фонарик"), QStringLiteral("flashlight")}, {U("фонарь"), QStringLiteral("flashlight")}, {QStringLiteral("flashlight"), QStringLiteral("flashlight")},
     };
     return m;
 }
@@ -1635,6 +1651,7 @@ QString relModPath(const QString& modId, const QString& subpath)
 QString speakerId(const QString& name, const CompileState& st, const CompileOptions& opt)
 {
     const QString key = pyStrip(name).toLower();
+    if (!opt.legacy && (key == U("[имя]") || key == U("[игрок]"))) return QStringLiteral("me");
     if (st.speakers.contains(key)) return st.speakers.value(key);
     if (T().speakers.contains(key)) return T().speakers.value(key);
     const QString id = slugOf(key, QStringLiteral("genry"), opt);
@@ -1674,6 +1691,14 @@ ModMeta parseMeta(const QStringList& lines, QStringList* body, const CompileOpti
                 if (key == QLatin1String("mod_id")) m.modId = value;
                 else if (key == QLatin1String("mod_name")) m.modName = value;
                 else if (key == QLatin1String("author")) m.author = value;
+                else if (key == QLatin1String("hero_name")) m.heroName = value;
+                else if (key == QLatin1String("hero_gender")) m.heroShe = value.toLower().startsWith(U("она")) || value.toLower().startsWith(U("жен")) ||
+                                                                      value.toLower() == QLatin1String("f") || value.toLower() == QLatin1String("she");
+                else if (key == QLatin1String("hero_ask")) {
+                    const QString v = value.toLower();
+                    m.heroAsk = v == QLatin1String("menu") || v == U("меню") ? QStringLiteral("menu")
+                              : v == QLatin1String("start") || v == U("начало") || v == U("старт") ? QStringLiteral("start") : QString();
+                }
                 else if (key == QLatin1String("mod_title_font")) m.titleFont = value;
                 else if (key == QLatin1String("mod_title_color")) m.titleColor = value;
                 else if (key == QLatin1String("mod_title_size")) m.titleSize = value;
@@ -1728,6 +1753,12 @@ QString v1OptKey(const QString& k)
         {U("тьма"), QStringLiteral("dim")}, {U("затемнение"), QStringLiteral("dim")}, {QStringLiteral("dim"), QStringLiteral("dim")},
         {U("музыка"), QStringLiteral("music")}, {QStringLiteral("music"), QStringLiteral("music")},
         {U("переход"), QStringLiteral("effect")}, {QStringLiteral("effect"), QStringLiteral("effect")},
+        // «ачивка» (Достижения 2.0)
+        {U("описание"), QStringLiteral("desc")}, {QStringLiteral("desc"), QStringLiteral("desc")},
+        {U("раздел"), QStringLiteral("section")}, {U("героиня"), QStringLiteral("section")}, {U("рут"), QStringLiteral("section")},
+        {QStringLiteral("section"), QStringLiteral("section")},
+        {U("нужно"), QStringLiteral("needs")}, {U("после"), QStringLiteral("needs")}, {QStringLiteral("needs"), QStringLiteral("needs")},
+        {U("картинка"), QStringLiteral("image")}, {QStringLiteral("image"), QStringLiteral("image")},
     };
     return keys.value(pyStrip(k).toLower(), pyStrip(k).toLower());
 }
@@ -1744,6 +1775,76 @@ V1Opts parseV1Opts(const QString& rest, const QHash<QString, QString>& switches)
         o.pos << p;
     }
     return o;
+}
+
+FlashSpec parseFlashlight(const QString& rest)
+{
+    // «фонарик» / «фонарик вкл» / «фонарик выкл» / «фонарик 1.4» / «фонарик | цвет=#012» - anything else is a sentence
+    // («Фонарик погас.»), never the command
+    FlashSpec f;
+    const V1Opts o = parseV1Opts(rest);
+    const QString w = pyStrip(o.pos.value(0)).toLower();
+    static const QSet<QString> on{QString(), U("вкл"), U("включить"), U("включи"), U("on")};
+    static const QSet<QString> off{U("выкл"), U("выключить"), U("выключи"), U("убрать"), U("off"), U("стоп")};
+    double z = 0;
+    if (on.contains(w)) f.ok = true;
+    else if (off.contains(w)) { f.ok = true; f.off = true; }
+    else if (pyFloat(QString(w).replace(QLatin1Char(','), QLatin1Char('.')), &z) && z > 0) { f.ok = true; f.zoom = qBound(1.0, z, 2.4); }
+    if (o.pos.size() > 1) f.ok = false;
+    const QString col = o.get(QStringLiteral("color"));
+    if (!col.isEmpty()) {
+        if (pyIsHexColor(col)) f.color = col;
+        else f.ok = false;
+    }
+    return f;
+}
+
+CodeLockSpec parseCodeLock(const QString& rest)
+{
+    CodeLockSpec k;
+    int field = 0;
+    for (const QString& raw : rest.split(QLatin1Char('|'))) {
+        const QString p = pyStrip(raw);
+        if (p.contains(QLatin1String("->"))) {            // «верно -> сейф» / «неверно -> тупик»
+            const QString w = pyStrip(p.section(QStringLiteral("->"), 0, 0)).toLower(), t = pyStrip(p.section(QStringLiteral("->"), 1));
+            if (w.startsWith(U("не")) || w.startsWith(U("ошиб")) || w == U("нет") || w == QLatin1String("fail") || w == QLatin1String("wrong")) k.badTarget = t;
+            else k.okTarget = t;
+            continue;
+        }
+        const int eq = int(p.indexOf(QLatin1Char('=')));
+        if (eq > 0 && !p.left(eq).contains(QLatin1Char(' '))) {
+            const QString w = p.left(eq).toLower();
+            if (w.startsWith(U("попыт")) || w == QLatin1String("tries")) k.tries = qBound(0, pyStrip(p.mid(eq + 1)).toInt(), 99);
+            continue;
+        }
+        if (field == 0) k.code = p;
+        else if (field == 1) k.hint = p;
+        ++field;
+    }
+    return k;
+}
+
+AchSpec parseAchievement(const QString& rest)
+{
+    static const QHash<QString, QString> sw{{U("скрытое"), QStringLiteral("hidden")}, {U("скрытая"), QStringLiteral("hidden")},
+                                            {U("скрыто"), QStringLiteral("hidden")}, {U("секрет"), QStringLiteral("hidden")},
+                                            {U("секретное"), QStringLiteral("hidden")}, {QStringLiteral("hidden"), QStringLiteral("hidden")},
+                                            {U("платина"), QStringLiteral("plat")}, {U("платиновое"), QStringLiteral("plat")},
+                                            {QStringLiteral("platinum"), QStringLiteral("plat")}};
+    const V1Opts o = parseV1Opts(rest, sw);
+    AchSpec a;
+    a.key = pyStrip(o.pos.value(0));
+    a.title = pyStrip(o.pos.value(1));
+    if (a.title.isEmpty()) a.title = a.key;
+    a.icon = pyStrip(o.pos.value(2));
+    a.desc = o.get(QStringLiteral("desc"));
+    a.section = o.get(QStringLiteral("section"));
+    a.image = o.get(QStringLiteral("image"));
+    for (const QString& n : o.get(QStringLiteral("needs")).split(QLatin1Char(',')))
+        if (!pyStrip(n).isEmpty()) a.needs << pyStrip(n);
+    a.hidden = o.sw.contains(QStringLiteral("hidden"));
+    a.plat = o.sw.contains(QStringLiteral("plat"));
+    return a;
 }
 
 QString rememberWhere(const QString& where)
@@ -2102,7 +2203,8 @@ static SL compileV1Feature(const QString& cmd, const QString& rest, const QStrin
     }
     if (cmd == QLatin1String("gallery")) return {QStringLiteral("    call screen genry_gallery(") + c.sys(QStringLiteral("cgs")) + QStringLiteral(", called=True)")};
     if (cmd == QLatin1String("achievements"))
-        return {QStringLiteral("    call screen genry_achievements(") + c.sys(QStringLiteral("achievements")) + QStringLiteral(", called=True)")};
+        return {QStringLiteral("    call screen genry_achievements(") + c.sys(QStringLiteral("achievements")) + QStringLiteral(", called=True, dates=") +
+                pyQ(c.sys(QStringLiteral("ach_dates"))) + QLatin1Char(')')};
     return {};
 }
 
@@ -2162,6 +2264,7 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
                     t = st.timeOfDay;
                 }
             }
+            if (t.isEmpty() && !st.timeSynced) t = st.timeOfDay.isEmpty() ? QStringLiteral("day") : st.timeOfDay;
             if (!t.isEmpty() && (t != st.timeOfDay || !st.timeSynced)) {
                 timeLines = compileTimeOfDay(t);        // a scene opened from the app mid-mod gets the right colours too
                 if (t != st.timeOfDay) st.timeExplicit = false;
@@ -2169,6 +2272,7 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
                 st.timeSynced = true;
             }
         }
+        if (!opt.legacy) st.bgImage = cmd == QLatin1String("cg") || plain ? QString() : pyStrip(image);
         QString out;
         if (cmd == QLatin1String("cg")) out = QStringLiteral("    scene cg ") + image;
         else if (cmd == QLatin1String("bg")) out = plain ? QStringLiteral("    scene ") + image : QStringLiteral("    scene bg ") + image;
@@ -2182,6 +2286,7 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
     if (cmd == QLatin1String("scene")) {
         st.activePrologueDream = false;
         st.activeSpriteTags.clear();
+        st.bgImage.clear();
         return {QStringLiteral("    scene ") + rest};
     }
     if (cmd == QLatin1String("show")) {
@@ -2226,13 +2331,22 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
     if (cmd == QLatin1String("exitright")) return compileExitShow(rest, false);
     if (cmd == QLatin1String("pulse")) return compilePulse(rest);
     if (cmd == QLatin1String("timeofday")) {
-        const SL r = compileTimeOfDay(rest);
+        SL r = compileTimeOfDay(rest);
         for (const QString& x : r) {
             if (x.contains(QLatin1String("day_time()"))) st.timeOfDay = QStringLiteral("day");
             else if (x.contains(QLatin1String("sunset_time()"))) st.timeOfDay = QStringLiteral("sunset");
             else if (x.contains(QLatin1String("night_time()"))) st.timeOfDay = QStringLiteral("night");
         }
         st.timeSynced = st.timeExplicit = true;
+        if (!opt.legacy && !st.bgImage.isEmpty()) {
+            // V1: a day square under «вечер» is the evening square when the game has one - same tag, so it
+            // melts into place behind the heroines instead of clearing them like a «фон» would
+            const QString other = bgAtTime(st.bgImage, st.timeOfDay);
+            if (!other.isEmpty() && other != st.bgImage) {
+                r << QStringLiteral("    show bg ") + other << QStringLiteral("    with dissolve");
+                st.bgImage = other;
+            }
+        }
         return r;
     }
     if (cmd == QLatin1String("eyesclose")) {
@@ -2401,6 +2515,26 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         else if (p.size() > 1) title = U("День ") + day;
         return {QStringLiteral("    window hide"), QStringLiteral("    $ backdrop = ") + pyQ(backdrop),
                 QStringLiteral("    $ new_chapter(%1, %2)").arg(day, pyUQ(title)), QStringLiteral("    scene black"), QStringLiteral("    with dissolve")};
+    }
+    if (!opt.legacy && cmd == QLatin1String("extend")) {
+        // es-doc «Продолжение реплики»: the space between the parts is the writer's forgotten one - put it in
+        QString t = rest;
+        if (!t.isEmpty() && !t.front().isSpace()) t.prepend(QLatin1Char(' '));
+        return {QStringLiteral("    extend ") + pyQ(t)};
+    }
+    if (!opt.legacy && cmd == QLatin1String("askname")) {
+        // V1 «имяигрока Как тебя зовут? | Семён»: the player types the hero's name. ES's Семён is a DynamicCharacter
+        // reading me_name, and reload_names() (every «время») puts names['me'] back into it - so both carry the
+        // name; names becomes the save's own copy, so a loaded game keeps it and ES's story stays untouched
+        const QStringList p = rest.split(QLatin1Char('|'));
+        QString ask = pyStrip(p.value(0));
+        const QString def = pyStrip(p.value(1));
+        if (ask.isEmpty()) ask = U("Как тебя зовут?");
+        const QString hero = c.sys(QStringLiteral("hero"));
+        // the field starts with the name this player typed last time, else the author's default, else the current one
+        return {QStringLiteral("    window hide"),
+                QStringLiteral("    call screen genry_ask_name(%1, persistent.%2 or %3, %4)")
+                    .arg(pyUQ(ask), hero, def.isEmpty() ? QStringLiteral("me_name") : pyUQ(def), pyQ(hero))};
     }
     if (cmd == QLatin1String("timeskip")) {
         st.activePrologueDream = false;
@@ -2587,6 +2721,35 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
     }
     if (cmd == QLatin1String("weather")) return compileWeather(rest, c);
     if (cmd == QLatin1String("notify")) return compileNotifyPopup(rest, modId, c);
+    if (cmd == QLatin1String("codelock") && !opt.legacy) {
+        // V2: ES's o_rly plate; the right code / a wrong one (or the tries are over) go where the writer said, else on
+        const CodeLockSpec k = parseCodeLock(rest);
+        if (k.code.isEmpty()) return {U("    # кодовыйзамок: код | подсказка | верно -> сцена | неверно -> сцена | попыток=3")};
+        SL r{QStringLiteral("    window auto hide"),
+             QStringLiteral("    call screen genry_codelock(%1, %2, %3)").arg(pyUQ(k.code), pyUQ(k.hint)).arg(k.tries)};
+        if (!k.okTarget.isEmpty() && !k.badTarget.isEmpty())
+            r << QStringLiteral("    if _return:") << QStringLiteral("        jump ") + c.lab(k.okTarget) << QStringLiteral("    jump ") + c.lab(k.badTarget);
+        else if (!k.okTarget.isEmpty()) r << QStringLiteral("    if _return:") << QStringLiteral("        jump ") + c.lab(k.okTarget);
+        else if (!k.badTarget.isEmpty()) r << QStringLiteral("    if not _return:") << QStringLiteral("        jump ") + c.lab(k.badTarget);
+        return r;
+    }
+    if (cmd == QLatin1String("flashlight") && !opt.legacy) {
+        // V2: 7ДЛ's flashlight - the mask is drawn by the builder (images/genry_fx/flashlight.png), tinted to the dark
+        const FlashSpec f = parseFlashlight(rest);
+        if (!f.ok) return compileLine(U("текст ") + stripped, modId, st, opt);        // «Фонарик погас.» - a sentence
+        if (f.off) return {QStringLiteral("    hide screen genry_flashlight")};
+        return {QStringLiteral("    show screen genry_flashlight(%1, %2, %3)")
+                    .arg(pyQ(relModPath(modId, QStringLiteral("images/genry_fx/flashlight.png"))), pyQ(f.color), pyRepr(f.zoom))};
+    }
+    if (cmd == QLatin1String("unlockachievement") && !opt.legacy) {
+        // Достижения 2.0: the flag for good, the day it came, ES's own plate; «платина» comes by itself
+        const AchSpec a = parseAchievement(rest);
+        if (a.key.isEmpty()) return {QStringLiteral("    # unlockachievement needs: name | caption")};
+        if (a.plat) return {U("    # «%1» — платина: откроется сама, когда соберут остальные").arg(a.title)};
+        return {QStringLiteral("    $ genry_ach_unlock(%1, %2, %3, %4)")
+                    .arg(c.sys(QStringLiteral("achievements")), pyQ(c.sys(QStringLiteral("ach_dates"))),
+                         pyQ(persistentKey(modId, a.key, QStringLiteral("ach"), opt)), pyUQ(a.title))};
+    }
     if (cmd == QLatin1String("unlockachievement")) {
         const SL p = c.pipes(rest);
         if (p.isEmpty()) return {QStringLiteral("    # unlockachievement needs: name | caption | [icon] | [seconds]")};
@@ -2717,6 +2880,148 @@ bool isTimeoutWord(const QString& s)
     return w.contains(pyStrip(s).toLower());
 }
 
+ChoiceHead parseChoiceHead(const QString& rest)
+{
+    ChoiceHead h;
+    QString w = QStringLiteral(" ") + pyStrip(rest).toLower() + QStringLiteral(" ");
+    static const QStringList loops{U(" по кругу "), U(" кругом "), U(" повтор "), U(" повторять "), U(" расспрос "), U(" расспросы "),
+                                   U(" вопросы "), QStringLiteral(" loop ")};
+    static const QStringList randoms{U(" наугад "), U(" случайно "), U(" случайный "), U(" рандом "), U(" судьба "), QStringLiteral(" random ")};
+    for (const QString& x : loops) if (w.contains(x)) { h.loop = true; w.replace(x, QStringLiteral(" ")); }
+    for (const QString& x : randoms) if (w.contains(x)) { h.random = true; w.replace(x, QStringLiteral(" ")); }
+    h.style = choiceStyleOf(w.simplified());
+    h.secs = choiceSeconds(w);
+    return h;
+}
+
+bool isChoiceItemLine(const QString& stripped)
+{
+    return stripped.size() > 1 && stripped.front() == QLatin1Char('-') && stripped.at(1) != QLatin1Char('>');
+}
+
+namespace {
+// the words of the option brackets («[нужно славя 3]»: нужно)
+enum class ChoiceWord { None, Cond, Need, Exit, Always };
+ChoiceWord choiceWord(const QString& inner, QString* tail)
+{
+    const QString w = firstWord(inner).toLower();
+    *tail = pyStrip(inner.mid(firstWord(inner).size()));
+    static const QSet<QString> cond{U("если"), U("когда"), QStringLiteral("if"), QStringLiteral("when")};
+    static const QSet<QString> need{U("нужно"), U("нужна"), U("нужен"), U("нужны"), U("надо"), U("требуется"), U("замок"), QStringLiteral("need"),
+                                    QStringLiteral("needs")};
+    static const QSet<QString> exit{U("выход"), U("хватит"), U("закончить"), U("конец"), QStringLiteral("exit")};
+    static const QSet<QString> always{U("всегда"), U("повтор"), U("снова"), QStringLiteral("always")};
+    if (cond.contains(w) && !tail->isEmpty()) return ChoiceWord::Cond;
+    if (need.contains(w) && !tail->isEmpty()) return ChoiceWord::Need;
+    if (tail->isEmpty() && exit.contains(w)) return ChoiceWord::Exit;
+    if (tail->isEmpty() && always.contains(w)) return ChoiceWord::Always;
+    return ChoiceWord::None;
+}
+const QRegularExpression& bracketRe()
+{
+    static const QRegularExpression re(QStringLiteral("\\[([^\\[\\]]*)\\]"));
+    return re;
+}
+}   // namespace
+
+ChoiceItemSpec parseChoiceItem(const QString& stripped)
+{
+    ChoiceItemSpec it;
+    const QString s = pyStrip(stripped.mid(1));
+    QString kept;
+    int last = 0;
+    for (auto m = bracketRe().globalMatch(s); m.hasNext();) {
+        const auto x = m.next();
+        QString tail;
+        const ChoiceWord kind = choiceWord(pyStrip(x.captured(1)), &tail);
+        if (kind == ChoiceWord::None) continue;                  // [имя], [пришёл/пришла] - the caption's own text
+        kept += s.mid(last, x.capturedStart() - last);
+        last = int(x.capturedEnd());
+        if (kind == ChoiceWord::Cond) it.cond = tail;
+        else if (kind == ChoiceWord::Need) {
+            it.need = pyStrip(tail.section(QLatin1Char('|'), 0, 0));
+            it.hint = pyStrip(tail.section(QLatin1Char('|'), 1));
+        } else if (kind == ChoiceWord::Exit) it.exit = true;
+        else it.always = true;
+    }
+    const QString rest = (kept + s.mid(last)).simplified();
+    if (rest.contains(QLatin1String("->"))) {
+        it.caption = pyStrip(rest.section(QStringLiteral("->"), 0, 0));
+        const QString right = rest.section(QStringLiteral("->"), 1);
+        it.target = pyStrip(right.section(QLatin1Char('|'), 0, 0));
+        it.image = pyStrip(right.section(QLatin1Char('|'), 1));
+    } else {
+        it.caption = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
+        it.image = pyStrip(rest.section(QLatin1Char('|'), 1));
+    }
+    return it;
+}
+
+QStringList choiceItemEffects(const QString& stripped, QString* cleaned)
+{
+    // «[+1 Славя]», «[Славя +1]», «[+1 Славя, -1 Алиса]», «[запомнит Алиса]», «[Алиса запомнит]», «[флаг помог_славе]»
+    static const QRegularExpression pointsA(QStringLiteral("^([+\\-−]\\s*\\d+(?:[.,]\\d+)?)\\s+(.+)$"), QRegularExpression::UseUnicodePropertiesOption);
+    static const QRegularExpression pointsB(QStringLiteral("^(.+?)\\s+([+\\-−]\\s*\\d+(?:[.,]\\d+)?)$"), QRegularExpression::UseUnicodePropertiesOption);
+    auto name = [](const QString& x) { return x.simplified().replace(QLatin1Char(' '), QLatin1Char('_')); };
+    auto num = [](QString n) {
+        n.remove(QLatin1Char(' ')).replace(QChar(0x2212), QLatin1Char('-')).replace(QLatin1Char(','), QLatin1Char('.'));
+        return n.startsWith(QLatin1Char('+')) ? n.mid(1) : n;
+    };
+    QStringList fx;
+    QString kept;
+    int last = 0;
+    for (auto m = bracketRe().globalMatch(stripped); m.hasNext();) {
+        const auto x = m.next();
+        const QString inner = pyStrip(x.captured(1));
+        const QString w = firstWord(inner).toLower();
+        const QString lw = inner.section(QLatin1Char(' '), -1).toLower();
+        QStringList mine;
+        if (w == U("запомнит") || w == U("запомнят") || w == QLatin1String("remembers")) {
+            mine << U("запомнит ") + pyStrip(inner.mid(firstWord(inner).size()));
+        } else if ((lw == U("запомнит") || lw == U("запомнят")) && inner.contains(QLatin1Char(' '))) {
+            mine << U("запомнит ") + pyStrip(inner.left(inner.lastIndexOf(QLatin1Char(' '))));
+        } else if ((w == U("флаг") || w == QLatin1String("flag")) && inner.contains(QLatin1Char(' '))) {
+            mine << U("установить %1 True").arg(name(inner.mid(firstWord(inner).size())));
+        } else {
+            for (const QString& part : inner.split(QLatin1Char(','))) {
+                const QString p = pyStrip(part);
+                QRegularExpressionMatch pm = pointsA.match(p);
+                if (pm.hasMatch()) { mine << U("прибавить %1 %2").arg(name(pm.captured(2)), num(pm.captured(1))); continue; }
+                pm = pointsB.match(p);
+                if (pm.hasMatch()) { mine << U("прибавить %1 %2").arg(name(pm.captured(1)), num(pm.captured(2))); continue; }
+                mine.clear();                                   // not all of it is points: the caption's own [text]
+                break;
+            }
+        }
+        if (mine.isEmpty()) continue;
+        fx << mine;
+        kept += stripped.mid(last, x.capturedStart() - last);
+        last = int(x.capturedEnd());
+    }
+    if (cleaned) *cleaned = fx.isEmpty() ? stripped : (kept + stripped.mid(last)).simplified();
+    return fx;
+}
+
+QStringList choiceConditionVars(const QString& cond)
+{
+    static const QRegularExpression join(U("\\s+(?:и|или|and|or)\\s+"), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption);
+    static const QRegularExpression op(QStringLiteral("^(.+?)\\s*(?:>=|<=|==|!=|=|>|<)\\s*(.+)$"));
+    static const QRegularExpression numTail(QStringLiteral("^(.+?)\\s+-?\\d+(?:[.,]\\d+)?\\+?$"));
+    QStringList out;
+    for (QString t : cond.split(join)) {
+        t = pyStrip(t);
+        const QString w0 = firstWord(t).toLower();
+        if (w0 == U("не") || w0 == QLatin1String("not")) t = pyStrip(t.mid(firstWord(t).size()));
+        const QString w1 = firstWord(t).toLower();
+        if (w1 == U("предмет") || w1 == QLatin1String("item") || t.isEmpty()) continue;
+        QRegularExpressionMatch m = op.match(t);
+        QString v = m.hasMatch() ? m.captured(1) : (numTail.match(t).hasMatch() ? numTail.match(t).captured(1) : t);
+        v = v.simplified().replace(QLatin1Char(' '), QLatin1Char('_'));
+        if (!v.isEmpty() && !v.front().isDigit()) out << v;
+    }
+    return out;
+}
+
 QString choiceImage(const QString& raw, QString* kind, const QSet<QString>& customImages)
 {
     const QString s = raw.simplified();
@@ -2774,22 +3079,30 @@ static SL imageMenuScreen()
             QStringLiteral("            xysize (genry_w, config.screen_height)"),
             QStringLiteral("            padding (0, 0)"),
             QStringLiteral("            background None"),
-            QStringLiteral("            action genry_it.action"),
+            QStringLiteral("            action (genry_it.action if genry_it.kwargs.get(\"ok\", True) else None)"),
             QStringLiteral("            activate_sound \"sound/sfx/click_1.ogg\""),
             QStringLiteral("            fixed:"),
             QStringLiteral("                xysize (genry_w, config.screen_height)"),
             QStringLiteral("                add genry_choice_panel(genry_it.kwargs.get(\"img\"), genry_it.kwargs.get(\"kind\", \"bg\"), genry_w)"),
+            QStringLiteral("                if not genry_it.kwargs.get(\"ok\", True):"),
+            QStringLiteral("                    add Solid(\"#000000a8\", xsize=genry_w, ysize=config.screen_height)"),
             QStringLiteral("                add Solid(\"#000000a0\", xsize=genry_w, ysize=250) yalign 1.0"),
             QStringLiteral("                vbox:"),
             QStringLiteral("                    xalign 0.5"),
             QStringLiteral("                    yalign 0.95"),
             QStringLiteral("                    xmaximum genry_w - 60"),
             QStringLiteral("                    spacing 6"),
-            QStringLiteral("                    text genry_it.caption size 44 color \"#ffffff\" outlines [(3, \"#000000cc\", 0, 0)] text_align 0.5 xalign 0.5 font \"fonts/calibri.ttf\""),
-            QStringLiteral("                    if genry_it.chosen:"),
+            QStringLiteral("                    text genry_it.caption size 44 color (\"#ffffff\" if genry_it.kwargs.get(\"ok\", True) else \"#9a9a9a\") outlines [(3, \"#000000cc\", 0, 0)] text_align 0.5 xalign 0.5 font \"fonts/calibri.ttf\""),
+            QStringLiteral("                    if not genry_it.kwargs.get(\"ok\", True) and genry_it.kwargs.get(\"hint\"):"),
+            QStringLiteral("                        text genry_it.kwargs[\"hint\"] size 24 color \"#d8d8d8\" outlines [(2, \"#000000cc\", 0, 0)] text_align 0.5 xalign 0.5 font \"fonts/calibri.ttf\""),
+            QStringLiteral("                    elif genry_it.chosen:"),
             U("                        text \"√ уже выбирали\" size 22 color \"#9bd35a\" xalign 0.5 font \"fonts/calibri.ttf\""),
             QStringLiteral("    for genry_i in range(1, genry_n):"),
-            QStringLiteral("        add Solid(\"#ffffff30\", xsize=2, ysize=config.screen_height) xpos genry_i * genry_w - 1")};
+            QStringLiteral("        add Solid(\"#ffffff30\", xsize=2, ysize=config.screen_height) xpos genry_i * genry_w - 1"),
+            QStringLiteral("    for genry_k, genry_x in enumerate(items[:9]):"),
+            QStringLiteral("        if genry_x.kwargs.get(\"ok\", True):"),
+            QStringLiteral("            key (\"K_%d\" % (genry_k + 1)) action genry_x.action"),
+            QStringLiteral("            key (\"K_KP%d\" % (genry_k + 1)) action genry_x.action")};
 }
 
 // V1: a mod that shows a CG of the 18+ patch would crash for every player without the
@@ -2885,12 +3198,543 @@ QString menuButtonKind(const QString& word)
         {"настройки", {"настройки", "опции", "параметры", "settings", "options", "preferences"}},
         {"загрузить", {"загрузить", "продолжить", "сохранения", "загрузка", "load", "continue"}},
         {"выход", {"выход", "выйти", "выселиться", "уйти", "покинуть", "закрыть", "назад в игру", "exit", "quit", "leave"}},
+        {"имя", {"имя", "мое имя", "твое имя", "имя героя", "имя игрока", "представиться", "как тебя зовут", "кто ты", "name"}},
     };
+    // «Имя: [имя]» -> «имя»: the caption may show the name itself
+    static const QRegularExpression tag(QStringLiteral("\\[[^\\]]*\\]"));
+    w = pyStripChars(w.remove(tag), QStringLiteral(" :?!.,"));
     for (const Kind& k : kinds)
         for (const char* x : k.words)
             if (w == QString::fromUtf8(x)) return QString::fromUtf8(k.key);
     return w;
 }
+
+// V1 «менюмода <стиль>»: the style's own key (the menu block, the preview, the form and the 🎲 all speak it)
+bool menuPartLine(const QString& lw, const QString& rest, MenuParts* p)
+{
+    QString v = pyStrip(rest).toLower();
+    v.replace(QChar(0x0451), QChar(0x0435));                // ё -> е
+    auto pick = [&](std::initializer_list<std::pair<const char*, const char*>> m) -> QString {
+        for (const auto& kv : m)
+            if (v == QString::fromUtf8(kv.first)) return QString::fromUtf8(kv.second);
+        return {};
+    };
+    if (lw == U("кнопки") || lw == U("раскладка")) {
+        p->layout = pick({{"слева", "left"}, {"справа", "right"}, {"центр", "center"}, {"по центру", "center"}, {"в центре", "center"},
+                          {"посередине", "center"}, {"снизу", "bottom"}, {"внизу", "bottom"}, {"в ряд", "bottom"}});
+        return true;
+    }
+    if (lw == U("вид")) {
+        p->look = pick({{"текст", "text"}, {"таблички", "plates"}, {"плашки", "plates"}, {"кнопки", "plates"}, {"бл", "es"}, {"как в бл", "es"},
+                        {"оригинал", "es"}, {"неон", "neon"}});
+        return true;
+    }
+    if (lw == U("цвет")) {
+        if (pyIsHexColor(pyStrip(rest))) p->accent = pyStrip(rest);
+        return true;
+    }
+    if (lw == U("частицы")) {
+        p->fx = pick({{"пыль", "dust"}, {"листья", "leaf"}, {"светлячки", "spark"}, {"искры", "spark"}, {"дождь", "rain"}, {"снег", "snow"},
+                      {"сердца", "heart"}, {"сердечки", "heart"}, {"по часам", "hour"}, {"по времени", "hour"}, {"нет", "none"}, {"без", "none"}});
+        return true;
+    }
+    if (lw == U("появление") || lw == U("вход")) {
+        p->enter = pick({{"выезд", "slide"}, {"слева", "slide"}, {"проявление", "fade"}, {"плавно", "fade"}, {"снизу", "rise"},
+                         {"подъем", "rise"}, {"печать", "type"}, {"печатается", "type"}});
+        return true;
+    }
+    return false;
+}
+
+QString menuStyleKey(const QString& word)
+{
+    QString w = pyStrip(word).toLower();
+    w.replace(QChar(0x0451), QChar(0x0435));                // ё -> е
+    struct Kind { const char* key; std::initializer_list<const char*> words; };
+    static const Kind kinds[] = {
+        {"es", {"бл", "оригинал", "как в бл", "es", "original"}},
+        {"7dl", {"7дл", "как в 7дл", "7dl", "героини"}},
+        {"notebook", {"тетрадь", "блокнот", "настройки", "notebook"}},
+        {"diary", {"дневник", "история", "diary"}},
+        {"board", {"доска", "табличка", "рамка", "board"}},
+        {"monitor", {"монитор", "экран", "день", "monitor"}},
+        {"noir", {"нуар", "чб", "черно-белое", "noir"}},
+        {"live", {"живое", "живой", "часы", "по часам", "live"}},
+        {"cinema", {"кино", "фильм", "титры", "cinema", "movie"}},
+        {"map", {"карта", "лагерь", "карта лагеря", "map"}},
+        {"custom", {"свой", "своё", "свое", "собрать", "конструктор", "custom"}},
+        {"panel", {"панель", "кнопки", "колонка", "panel", ""}},
+    };
+    for (const Kind& k : kinds)
+        for (const char* x : k.words)
+            if (w == QString::fromUtf8(x)) return QString::fromUtf8(k.key);
+    return QStringLiteral("panel");
+}
+
+namespace {
+
+struct MenuSpec {
+    QString screen, style, title, author, logo, bg, bgTime, waifuKey;
+    QStringList heroes;                        // python literals of the sprites (7ДЛ)
+    QVector<QPair<QString, QString>> buttons;  // caption literal, action
+    QString fxDust, fxSpark, fxLeaf, fxRain;   // the mod's weather pictures (<mod>__weather_<kind>_<level>)
+    QStringList chibis;                        // heroines' faces for «карта» (paths in the mod)
+    // «свой»: the parts - «кнопки» left|right|center|bottom, «вид» text|plates|es|neon, «цвет» #hex,
+    // «частицы» (a weather picture, "hour" = by the menu's hour, "" = none), «появление» slide|fade|rise|type
+    QString layout, look, accent, fxPick = QStringLiteral("hour"), enter;
+};
+
+// «карта»: which place of the camp a button stands on - by what it does, then the free places in order
+QVector<QString> menuMapZones(const QVector<QPair<QString, QString>>& buttons)
+{
+    QStringList kinds;
+    for (const auto& b : buttons) {
+        const QString& act = b.second;
+        kinds << (act.contains(QLatin1String("genry_gallery")) ? U("галерея") : act.contains(QLatin1String("genry_achievements")) ? U("достижения")
+                  : act.contains(QLatin1String("genry_meters")) ? U("шкалы") : act.contains(QLatin1String("genry_chapters")) ? U("главы")
+                  : act.contains(QLatin1String("\"preferences\"")) ? U("настройки") : act.contains(QLatin1String("\"load\"")) ? U("загрузить")
+                  : act.contains(QLatin1String("__exit")) ? U("выход") : act.contains(QLatin1String("genry_ask_name")) ? U("имя") : QString());
+    }
+    return menuMapPlaces(kinds);            // one list (two temporaries' iterators = the crash class of V1.0.5)
+}
+
+} // namespace
+
+QStringList menuMapPlaces(const QStringList& kinds)
+{
+    QStringList out;
+    for (int i = 0; i < kinds.size(); ++i) out << QString();
+    QSet<QString> used;
+    auto kindZone = [](const QString& k) -> QString {
+        if (k == U("галерея")) return QStringLiteral("library");
+        if (k == U("достижения")) return QStringLiteral("clubs");
+        if (k == U("шкалы")) return QStringLiteral("music_club");
+        if (k == U("главы")) return QStringLiteral("estrade");
+        if (k == U("настройки")) return QStringLiteral("medic_house");
+        if (k == U("загрузить")) return QStringLiteral("me_mt_house");
+        if (k == U("выход")) return QStringLiteral("camp_entrance");
+        if (k == U("имя")) return QStringLiteral("dining_hall");
+        return {};
+    };
+    for (int i = 0; i < kinds.size(); ++i) {
+        const QString z = kindZone(kinds[i]);
+        if (!z.isEmpty() && !used.contains(z)) { out[i] = z; used.insert(z); }
+    }
+    static const QStringList free{QStringLiteral("square"), QStringLiteral("beach"), QStringLiteral("boat_station"), QStringLiteral("sport_area"),
+                                  QStringLiteral("forest"), QStringLiteral("estrade"), QStringLiteral("dining_hall"), QStringLiteral("music_club"),
+                                  QStringLiteral("clubs"), QStringLiteral("library"), QStringLiteral("medic_house"), QStringLiteral("me_mt_house")};
+    for (int i = 0; i < kinds.size(); ++i) {
+        if (!out[i].isEmpty()) continue;
+        for (const QString& z : free)
+            if (!used.contains(z)) { out[i] = z; used.insert(z); break; }
+    }
+    return out;
+}
+
+namespace {
+
+SL menuScreenLines(const MenuSpec& m)
+{
+    const QString click = QStringLiteral("activate_sound \"sound/sfx/click_1.ogg\"");
+    const QString corbel = QStringLiteral("\"fonts/corbel.ttf\"");
+    SL s{QString(), QStringLiteral("screen %1():").arg(m.screen), QStringLiteral("    modal True"), QStringLiteral("    default genry_hov = -1")};
+    auto delay = [](int i, double base = 0.55) { return pyRepr(base + 0.09 * i); };
+    // one button: the entrance on the button, the hover life on its text (Ren'Py gives hover only to the direct child)
+    auto btn = [&](const QString& indent, int i, const QString& enter, const QString& textLook, const QString& buttonLook = QString()) {
+        s << indent + QStringLiteral("button at %1:").arg(enter) << indent + QStringLiteral("    action ") + m.buttons[i].second
+          << indent + QStringLiteral("    background None") << indent + QStringLiteral("    hover_background None")
+          << indent + QStringLiteral("    hovered SetScreenVariable(\"genry_hov\", %1)").arg(i)
+          << indent + QStringLiteral("    unhovered SetScreenVariable(\"genry_hov\", -1)") << indent + QStringLiteral("    ") + click;
+        if (!buttonLook.isEmpty()) s << indent + QStringLiteral("    ") + buttonLook;
+        s << indent + QStringLiteral("    text %1 at genry_menu_hz %2").arg(m.buttons[i].first, textLook);
+    };
+    // the menu's own place, breathing (a slow zoom) over the scene the label put up; its particles by the hour
+    auto place = [&](const QString& particles) {
+        if (!m.bg.isEmpty()) s << QStringLiteral("    add %1 at genry_menu_kb").arg(pyQ(QStringLiteral("bg ") + m.bg));
+        if (!particles.isEmpty()) s << QStringLiteral("    add %1 at genry_menu_fadein(0.4, 2.0)").arg(particles);
+    };
+    auto hourFx = [&]() {                       // day - dust in the light, evening - leaves, night - fireflies
+        return m.bgTime == QLatin1String("night") ? m.fxSpark : m.bgTime == QLatin1String("sunset") ? m.fxLeaf : m.fxDust;
+    };
+    auto unveil = [&]() { s << QStringLiteral("    add Solid(\"#000\") at genry_menu_unveil"); };
+    auto panelColumn = [&](const QString& color, int width, int step, int alpha) {
+        s << QStringLiteral("    fixed at genry_menu_column:");
+        s << QStringLiteral("        add Solid(\"%1%2\", xsize=%3, ysize=config.screen_height)").arg(color).arg(alpha, 2, 16, QLatin1Char('0')).arg(width);
+        for (int k = 0; k < 10; ++k)
+            s << QStringLiteral("        add Solid(\"%1%2\", xsize=%3, ysize=config.screen_height) xpos %4")
+                     .arg(color).arg(int(alpha * (10 - k) / 11.0), 2, 16, QLatin1Char('0')).arg(step).arg(width + step * k);
+    };
+    auto panel = [&](const QString& particles, bool withPlace = true) {
+        if (withPlace) place(particles);
+        panelColumn(QStringLiteral("#0b0f0c"), 540, 16, 0xd8);
+        s << QStringLiteral("    vbox:") << QStringLiteral("        xpos 90") << QStringLiteral("        yalign 0.5")
+          << QStringLiteral("        xmaximum 500") << QStringLiteral("        spacing 8");
+        if (!m.logo.isEmpty()) s << QStringLiteral("        add Transform(%1, fit=\"contain\", xysize=(460, 220)) at genry_menu_title(0.2)").arg(m.logo);
+        if (!m.title.isEmpty())
+            s << QStringLiteral("        text %1 size 64 color \"#ffd27d\" outlines [(3, \"#00000088\", 0, 0)] font %2 at genry_menu_title(0.3)").arg(m.title, corbel);
+        if (!m.author.isEmpty())
+            s << QStringLiteral("        text %1 size 22 color \"#a9b9a4\" font \"fonts/calibri.ttf\" at genry_menu_fadein(0.5)").arg(m.author);
+        s << QStringLiteral("        null height 36");
+        for (int i = 0; i < m.buttons.size(); ++i)
+            s << QStringLiteral("        button at genry_menu_in(%1):").arg(delay(i))
+              << QStringLiteral("            action ") + m.buttons[i].second << QStringLiteral("            background None")
+              << QStringLiteral("            hover_background None") << QStringLiteral("            ") + click
+              << QStringLiteral("            hbox at genry_menu_btn:") << QStringLiteral("                spacing 12")
+              << QStringLiteral("                text u\"—\" size 46 color \"#ffd27d00\" hover_color \"#ffd27d\" yalign 0.5 font ") + corbel
+              << QStringLiteral("                text %1 size 46 color \"#eef6ff\" hover_color \"#ffd27d\" yalign 0.5 font %2").arg(m.buttons[i].first, corbel);
+        unveil();
+    };
+    const QString st = m.style;
+    if (st == QLatin1String("custom")) {
+        // «свой»: the menu from its parts - where the buttons stand, how they look, its colour, the air, how it comes
+        const QString accent = pyIsHexColor(m.accent) ? m.accent : QStringLiteral("#ffd27d");
+        const QString lay = m.layout.isEmpty() ? QStringLiteral("left") : m.layout;
+        const QString look = m.look.isEmpty() ? QStringLiteral("text") : m.look;
+        const QString fx = m.fxPick == QLatin1String("hour") ? hourFx() : m.fxPick;
+        place(fx);
+        // the shade the buttons stand on
+        if (lay == QLatin1String("left")) {
+            panelColumn(QStringLiteral("#0b0f0c"), 560, 16, 0xc8);
+        } else if (lay == QLatin1String("right")) {
+            s << QStringLiteral("    fixed at genry_menu_fadein(0.1, 0.7):")
+              << QStringLiteral("        add Solid(\"#0b0f0cc8\", xsize=560, ysize=config.screen_height) xalign 1.0");
+            for (int k = 0; k < 10; ++k)
+                s << QStringLiteral("        add Solid(\"#0b0f0c%1\", xsize=16, ysize=config.screen_height) xpos %2")
+                         .arg(int(0xc8 * (10 - k) / 11.0), 2, 16, QLatin1Char('0')).arg(1920 - 560 - 16 * (k + 1));
+        } else if (lay == QLatin1String("center")) {
+            s << QStringLiteral("    add Solid(\"#00000078\") at genry_menu_fadein(0.1, 0.7)");
+        } else {
+            s << QStringLiteral("    fixed at genry_menu_fadein(0.1, 0.7):")
+              << QStringLiteral("        add Solid(\"#0b0f0cd0\", xsize=config.screen_width, ysize=260) yalign 1.0");
+            for (int k = 0; k < 8; ++k)
+                s << QStringLiteral("        add Solid(\"#0b0f0c%1\", xsize=config.screen_width, ysize=16) ypos %2")
+                         .arg(int(0xd0 * (8 - k) / 9.0), 2, 16, QLatin1Char('0')).arg(1080 - 260 - 16 * (k + 1));
+        }
+        // the heroines on the free side
+        if (!m.heroes.isEmpty()) {
+            const QString x = lay == QLatin1String("right") ? QStringLiteral("0.2") : lay == QLatin1String("center") ? QStringLiteral("0.0")
+                                                                                   : QStringLiteral("0.8");
+            s << QStringLiteral("    add %1 xalign %2 yalign 1.0 at genry_waifu_in").arg(m.heroes[0], x);
+            if (lay == QLatin1String("center") && m.heroes.size() > 1) s << QStringLiteral("    add %1 xalign 1.0 yalign 1.0 at genry_waifu_in").arg(m.heroes[1]);
+        }
+        // how each thing comes: slides in, melts in, rises, or the title types itself
+        auto enter = [&](double d) {
+            if (m.enter == QLatin1String("fade") || m.enter == QLatin1String("type")) return QStringLiteral("genry_menu_fadein(%1)").arg(pyRepr(d));
+            if (m.enter == QLatin1String("rise")) return QStringLiteral("genry_menu_rise(%1)").arg(pyRepr(d));
+            return QStringLiteral("genry_menu_in(%1)").arg(pyRepr(d));
+        };
+        // «как в БЛ»: ES's choice box and its colours of the menu's hour
+        static const QHash<QString, QPair<QString, QString>> esColors{
+            {QStringLiteral("day"), {QStringLiteral("#466123"), QStringLiteral("#9dcd55")}}, {QStringLiteral("night"), {QStringLiteral("#145644"), QStringLiteral("#3ccfa2")}},
+            {QStringLiteral("sunset"), {QStringLiteral("#69652f"), QStringLiteral("#dcd168")}}, {QStringLiteral("prologue"), {QStringLiteral("#496463"), QStringLiteral("#98d8da")}}};
+        const QString tod = esColors.contains(m.bgTime) ? m.bgTime : QStringLiteral("day");
+        const bool es = look == QLatin1String("es");
+        const QString ax = lay == QLatin1String("right") ? QStringLiteral(" xalign 1.0") : lay == QLatin1String("center") ? QStringLiteral(" xalign 0.5") : QString();
+        QString ind = QStringLiteral("        ");
+        // the title block (over the buttons; for «снизу» at the top of the screen)
+        auto titleBlock = [&](const QString& in) {
+            if (!m.logo.isEmpty()) s << in + QStringLiteral("add Transform(%1, fit=\"contain\", xysize=(460, 220)) at genry_menu_title(0.1)").arg(m.logo) + ax;
+            if (!m.title.isEmpty()) {
+                const QString typing = m.enter == QLatin1String("type") ? QStringLiteral(" slow_cps 18") : QString();
+                if (es) s << in + QStringLiteral("text %1 size 60 color \"%2\" font header_font at genry_menu_title(0.2)%3%4").arg(m.title, esColors[tod].second, typing, ax);
+                else s << in + QStringLiteral("text %1 size 70 color \"#ffffff\" outlines [(4, \"%2\", 0, 0)] font %3 at genry_menu_title(0.2)%4%5").arg(m.title, accent + QStringLiteral("55"), corbel, typing, ax);
+            }
+            if (!m.author.isEmpty())
+                s << in + QStringLiteral("text %1 size 22 color \"%2\" font \"fonts/calibri.ttf\" at genry_menu_fadein(0.5)%3").arg(m.author, es ? esColors[tod].first : QStringLiteral("#c8c8c8"), ax);
+        };
+        const bool bottom = lay == QLatin1String("bottom");
+        if (bottom) {                               // «снизу»: the title at the top, the buttons in a row below
+            s << QStringLiteral("    vbox:") << QStringLiteral("        xalign 0.5") << QStringLiteral("        ypos 150") << QStringLiteral("        spacing 6");
+            titleBlock(QStringLiteral("        "));
+        }
+        // where the button box stands (on ES's choice box for «как в БЛ»)
+        auto placeBox = [&](const QString& in) {
+            if (bottom) s << in + QStringLiteral("xalign 0.5") << in + QStringLiteral("yalign 0.93");
+            else if (lay == QLatin1String("right")) s << in + QStringLiteral("xanchor 1.0") << in + QStringLiteral("xpos 1810") << in + QStringLiteral("yalign 0.5");
+            else if (lay == QLatin1String("center")) s << in + QStringLiteral("xalign 0.5") << in + QStringLiteral("yalign 0.55");
+            else s << in + QStringLiteral("xpos %1").arg(es ? 90 : 110) << in + QStringLiteral("yalign 0.5");
+        };
+        if (es) {
+            s << QStringLiteral("    frame at %1:").arg(enter(0.3));
+            placeBox(QStringLiteral("        "));
+            s << QStringLiteral("        background Frame(\"images/gui/choice/%1/choice_box.png\", 50, 50)").arg(tod)
+              << QStringLiteral("        padding (70, 40)");
+        }
+        // the container: inside ES's box, or on the screen itself
+        const QString c0 = es ? QStringLiteral("        ") : QStringLiteral("    ");
+        s << c0 + (bottom ? QStringLiteral("hbox:") : QStringLiteral("vbox:"));
+        if (!es) placeBox(c0 + QStringLiteral("    "));
+        if (!bottom && !es) s << c0 + QStringLiteral("    xmaximum 560");
+        s << c0 + QStringLiteral("    spacing %1").arg(bottom ? 44 : look == QLatin1String("plates") ? 14 : 8);
+        ind = c0 + QStringLiteral("    ");
+        if (!bottom) {
+            titleBlock(ind);
+            s << ind + QStringLiteral("null height 30");
+        }
+        for (int i = 0; i < m.buttons.size(); ++i) {
+            const QString e = enter(0.45 + 0.08 * i);
+            if (look == QLatin1String("plates")) {
+                // a dark plate each, lit in the menu's colour under the cursor
+                s << ind + QStringLiteral("button at %1:").arg(e) << ind + QStringLiteral("    action ") + m.buttons[i].second
+                  << ind + QStringLiteral("    background Solid(\"#000000a8\")") << ind + QStringLiteral("    hover_background Solid(\"%1\")").arg(accent + QStringLiteral("55"))
+                  << ind + QStringLiteral("    padding (34, 14)") << ind + QStringLiteral("    xminimum 420") << ind + QStringLiteral("    ") + click;
+                if (!ax.isEmpty()) s << ind + QStringLiteral("    ") + ax.trimmed();
+                s << ind + QStringLiteral("    text %1 at genry_menu_hz size 40 color \"#ffffff\" hover_color \"%2\" font %3").arg(m.buttons[i].first, accent, corbel);
+                continue;
+            }
+            QString textLook;
+            if (es) textLook = QStringLiteral("size 44 color \"%1\" hover_color \"%2\" font header_font").arg(esColors[tod].first, esColors[tod].second);
+            else if (look == QLatin1String("neon"))
+                textLook = QStringLiteral("size 48 color \"#ffffff\" hover_color \"%1\" outlines [(3, \"%2\", 0, 0)] hover_outlines [(7, \"%3\", 0, 0)] font %4")
+                               .arg(accent, accent + QStringLiteral("55"), accent + QStringLiteral("aa"), corbel);
+            else textLook = QStringLiteral("size 46 color \"#eef6ff\" hover_color \"%1\" outlines [(2, \"#00000088\", 0, 0)] font %2").arg(accent, corbel);
+            btn(ind, i, e, textLook, ax.trimmed());
+        }
+        unveil();
+        return s;
+    }
+    if (st == QLatin1String("notebook")) {
+        // ES's settings notebook rises from below and settles; a leaf of the game's own settings marks the hovered line
+        s << QStringLiteral("    add Solid(\"#000\")") << QStringLiteral("    fixed at genry_menu_page:")
+          << QStringLiteral("        add \"images/gui/settings/preferences_bg.jpg\"")
+          << QStringLiteral("        vbox:") << QStringLiteral("            xcenter 960") << QStringLiteral("            ypos 250")
+          << QStringLiteral("            xmaximum 820") << QStringLiteral("            spacing 8");
+        if (!m.logo.isEmpty()) s << QStringLiteral("            add Transform(%1, fit=\"contain\", xysize=(600, 180)) xalign 0.5").arg(m.logo);
+        if (!m.title.isEmpty())
+            s << QStringLiteral("            text %1 size 62 color \"#64483c\" font header_font xalign 0.5 text_align 0.5 at genry_menu_title(0.7)").arg(m.title);
+        if (!m.author.isEmpty()) s << QStringLiteral("            text %1 size 24 color \"#8f7a68\" font \"fonts/calibri.ttf\" xalign 0.5 at genry_menu_fadein(0.9)").arg(m.author);
+        s << QStringLiteral("            null height 22");
+        for (int i = 0; i < m.buttons.size(); ++i) {
+            s << QStringLiteral("            hbox:") << QStringLiteral("                xalign 0.5") << QStringLiteral("                spacing 10")
+              << QStringLiteral("                if genry_hov == %1:").arg(i)
+              << QStringLiteral("                    add \"images/gui/settings/leaf.png\" zoom 1.3 yalign 0.5 at genry_menu_leaf")
+              << QStringLiteral("                else:") << QStringLiteral("                    null width 29");
+            btn(QStringLiteral("                "), i, QStringLiteral("genry_menu_rise(%1)").arg(delay(i, 0.95)),
+                QStringLiteral("size 46 color \"#64483c\" hover_color \"#b3001b\" font header_font"));
+        }
+        return s;
+    }
+    if (st == QLatin1String("diary")) {
+        // the history book turns in from the right; the entries write themselves in ink, the hovered one gets a red line
+        s << QStringLiteral("    add Solid(\"#000\")") << QStringLiteral("    fixed at genry_menu_turn:")
+          << QStringLiteral("        add \"images/gui/settings/history_bg.jpg\"")
+          << QStringLiteral("        vbox:") << QStringLiteral("            xpos 520") << QStringLiteral("            ypos 190")
+          << QStringLiteral("            xmaximum 1000") << QStringLiteral("            spacing 6");
+        if (!m.title.isEmpty())
+            s << QStringLiteral("            text %1 size 60 color \"#2d3f66\" font \"fonts/corbeli.ttf\" slow_cps 22 at genry_menu_fadein(0.8, 0.2)").arg(m.title);
+        if (!m.author.isEmpty()) s << QStringLiteral("            text %1 size 24 color \"#5d6b86\" font \"fonts/calibrii.ttf\" at genry_menu_fadein(1.3)").arg(m.author);
+        s << QStringLiteral("            null height 22");
+        for (int i = 0; i < m.buttons.size(); ++i) {
+            s << QStringLiteral("            vbox:") << QStringLiteral("                spacing 0");
+            s << QStringLiteral("                button at genry_menu_rise(%1):").arg(delay(i, 1.2))
+              << QStringLiteral("                    action ") + m.buttons[i].second << QStringLiteral("                    background None")
+              << QStringLiteral("                    hover_background None")
+              << QStringLiteral("                    hovered SetScreenVariable(\"genry_hov\", %1)").arg(i)
+              << QStringLiteral("                    unhovered SetScreenVariable(\"genry_hov\", -1)") << QStringLiteral("                    ") + click
+              << QStringLiteral("                    text u\"%1. \" + %2 at genry_menu_hz size 44 color \"#2d3f66\" hover_color \"#b3001b\" font \"fonts/corbeli.ttf\"")
+                     .arg(i + 1).arg(m.buttons[i].first)
+              << QStringLiteral("                if genry_hov == %1:").arg(i)
+              << QStringLiteral("                    add Solid(\"#b3001b\", xsize=360, ysize=3) at genry_menu_line")
+              << QStringLiteral("                else:") << QStringLiteral("                    null height 3");
+        }
+        return s;
+    }
+    if (st == QLatin1String("board")) {
+        // ES's in-game menu board (its day / evening / night / prologue look) falls onto the place and bounces
+        const int size = m.buttons.size() > 6 ? 32 : 38;
+        place(m.fxLeaf);
+        s << QStringLiteral("    add Solid(\"#00000040\")") << QStringLiteral("    fixed at genry_menu_drop:")
+          << QStringLiteral("        add \"images/gui/ingame_menu/%1/ingame_menu.png\" align (0.5, 0.5)").arg(m.bgTime)
+          << QStringLiteral("        vbox:") << QStringLiteral("            align (0.5, 0.5)") << QStringLiteral("            xmaximum 560")
+          << QStringLiteral("            spacing 0");
+        if (!m.title.isEmpty())
+            s << QStringLiteral("            text %1 size 44 color \"#64483c\" font header_font xalign 0.5 text_align 0.5").arg(m.title)
+              << QStringLiteral("            null height 12");
+        for (int i = 0; i < m.buttons.size(); ++i)
+            btn(QStringLiteral("            "), i, QStringLiteral("genry_menu_fadein(%1)").arg(delay(i, 1.0)),
+                QStringLiteral("size %1 color \"#64483c\" hover_color \"#b3001b\" font header_font").arg(size), QStringLiteral("xalign 0.5"));
+        unveil();
+        return s;
+    }
+    if (st == QLatin1String("monitor")) {
+        // the monitor of ES's day cards switches on like a kinescope: a line opens into the picture, the noise flickers,
+        // the title types itself under a blinking cursor
+        s << QStringLiteral("    add \"images/anim/backdrop/back.jpg\"")
+          << QStringLiteral("    add \"images/anim/backdrop/1.png\" at genry_menu_flicker")
+          << QStringLiteral("    fixed at genry_menu_crt:");
+        if (!m.title.isEmpty())
+            s << QStringLiteral("        hbox:") << QStringLiteral("            xcenter 0.455") << QStringLiteral("            ycenter 0.28")
+              << QStringLiteral("            text %1 size 88 color \"#d8d8d8b8\" font \"fonts/calibri.ttf\" slow_cps 16").arg(m.title)
+              << QStringLiteral("            text u\"_\" size 88 color \"#d8d8d8b8\" font \"fonts/calibri.ttf\" at genry_menu_cursor");
+        s << QStringLiteral("        vbox:") << QStringLiteral("            xcenter 0.455") << QStringLiteral("            ypos 0.36") << QStringLiteral("            spacing 0");
+        for (int i = 0; i < m.buttons.size(); ++i)
+            btn(QStringLiteral("            "), i, QStringLiteral("genry_menu_fadein(%1)").arg(delay(i, 1.3)),
+                QStringLiteral("size %1 color \"#cfd4dcb0\" hover_color \"#ffffff\" font \"fonts/calibri.ttf\"").arg(m.buttons.size() > 6 ? 26 : 32),
+                QStringLiteral("xalign 0.5"));
+        s << QStringLiteral("    add Solid(\"#ffffff\") at genry_menu_flash");
+        return s;
+    }
+    if (st == QLatin1String("noir")) {
+        // black and white in the rain: the place drained of colour and breathing, lightning every eleven seconds and the
+        // game's own thunder after it, the red line draws itself under the typewriter title
+        s << QStringLiteral("    add Solid(\"#000000\")");
+        if (!m.bg.isEmpty())
+            s << QStringLiteral("    add Transform(%1, matrixcolor=SaturationMatrix(0.0) * BrightnessMatrix(-0.1) * ContrastMatrix(1.25)) at genry_menu_kb")
+                     .arg(pyQ(QStringLiteral("bg ") + m.bg));
+        s << QStringLiteral("    add %1 at genry_menu_fadein(0.2, 1.5)").arg(m.fxRain)
+          << QStringLiteral("    add Solid(\"#ffffff\") at genry_menu_lightning")
+          << QStringLiteral("    timer 11.0 repeat True action Play(\"sound\", sfx_thunder_rumble)");
+        panelColumn(QStringLiteral("#000000"), 820, 18, 0xb8);
+        s << QStringLiteral("    vbox:") << QStringLiteral("        xpos 120") << QStringLiteral("        yalign 0.5") << QStringLiteral("        xmaximum 700")
+          << QStringLiteral("        spacing 6");
+        if (!m.title.isEmpty())
+            s << QStringLiteral("        text %1 size 80 color \"#f2f2f2\" font \"fonts/times.ttf\" slow_cps 24 at genry_menu_fadein(0.6, 0.3)").arg(m.title)
+              << QStringLiteral("        add Solid(\"#c0392b\", xsize=240, ysize=4) at genry_menu_line");
+        if (!m.author.isEmpty()) s << QStringLiteral("        text %1 size 24 color \"#9a9a9a\" font \"fonts/times.ttf\" at genry_menu_fadein(1.2)").arg(m.author);
+        s << QStringLiteral("        null height 30");
+        for (int i = 0; i < m.buttons.size(); ++i)
+            btn(QStringLiteral("        "), i, QStringLiteral("genry_menu_in(%1)").arg(delay(i, 1.1)),
+                QStringLiteral("size 44 color \"#d0d0d0\" hover_color \"#e74c3c\" font \"fonts/times.ttf\""));
+        unveil();
+        return s;
+    }
+    if (st == QLatin1String("cinema")) {
+        // the black bars close in, the title comes out of the dark and slowly grows, motes drift in the projector's light
+        place(m.fxDust);
+        s << QStringLiteral("    add Solid(\"#000000\", xsize=config.screen_width, ysize=140) at genry_menu_bar_top")
+          << QStringLiteral("    add Solid(\"#000000\", xsize=config.screen_width, ysize=140) ypos 940 at genry_menu_bar_bottom");
+        if (!m.logo.isEmpty()) s << QStringLiteral("    add Transform(%1, fit=\"contain\", xysize=(700, 260)) xalign 0.5 yalign 0.3 at genry_menu_title(0.8)").arg(m.logo);
+        if (!m.title.isEmpty())
+            s << QStringLiteral("    text %1 xalign 0.5 yalign 0.46 size 88 color \"#f5f5f5\" outlines [(3, \"#00000099\", 0, 0)] font %2 text_align 0.5 at genry_menu_film")
+                     .arg(m.title, corbel);
+        if (!m.author.isEmpty()) s << QStringLiteral("    text %1 xalign 0.5 yalign 0.555 size 24 color \"#cfcfcf\" font \"fonts/calibri.ttf\" at genry_menu_fadein(2.2)").arg(m.author);
+        s << QStringLiteral("    hbox:") << QStringLiteral("        xalign 0.5") << QStringLiteral("        ycenter 1010") << QStringLiteral("        spacing 56");
+        for (int i = 0; i < m.buttons.size(); ++i)
+            btn(QStringLiteral("        "), i, QStringLiteral("genry_menu_fadein(%1)").arg(delay(i, 1.6)),
+                QStringLiteral("size 34 color \"#cfcfcf\" hover_color \"#ffd27d\" font %1").arg(corbel));
+        unveil();
+        return s;
+    }
+    if (st == QLatin1String("map")) {
+        // the camp map opens up from a little closer; every button stands lit on its own place and breathes, the
+        // heroines' faces bob on the free places; the hovered place names itself at the top
+        const QVector<QString> zones = menuMapZones(m.buttons);
+        s << QStringLiteral("    add Solid(\"#000\")") << QStringLiteral("    fixed at genry_menu_mapin:") << QStringLiteral("        add genry_map_pic(\"bgpic\")");
+        for (int i = 0; i < m.buttons.size(); ++i) {
+            const EsMapZone* z = esMapZone(zones[i]);
+            if (!z) continue;
+            const int w = z->x2 - z->x1, h = z->y2 - z->y1;
+            s << QStringLiteral("        imagebutton at genry_menu_pulse(%1):").arg(pyRepr(0.1 * i))
+              << QStringLiteral("            idle im.Crop(genry_map_pic(\"available\"), %1, %2, %3, %4)").arg(z->x1).arg(z->y1).arg(w).arg(h)
+              << QStringLiteral("            hover im.Crop(genry_map_pic(\"selected\"), %1, %2, %3, %4)").arg(z->x1).arg(z->y1).arg(w).arg(h)
+              << QStringLiteral("            xpos %1").arg(z->x1) << QStringLiteral("            ypos %1").arg(z->y1)
+              << QStringLiteral("            hovered SetScreenVariable(\"genry_hov\", %1)").arg(i)
+              << QStringLiteral("            unhovered SetScreenVariable(\"genry_hov\", -1)")
+              << QStringLiteral("            action ") + m.buttons[i].second << QStringLiteral("            ") + click;
+        }
+        // the faces: on the places no button took
+        QStringList free;
+        for (const EsMapZone& z : esMapZones()) if (!zones.contains(z.id)) free << z.id;
+        for (int k = 0; k < m.chibis.size() && k < free.size(); ++k) {
+            const EsMapZone* z = esMapZone(free[k * 2 < free.size() ? k * 2 : k]);
+            if (z) s << QStringLiteral("        add %1 at genry_map_chibi(%2, %3)").arg(pyQ(m.chibis[k])).arg(z->cx).arg(z->cy);
+        }
+        for (int i = 0; i < m.buttons.size(); ++i) {
+            const EsMapZone* z = esMapZone(zones[i]);
+            if (!z) continue;
+            s << QStringLiteral("        text %1 xcenter %2 ycenter %3 size 30 color (\"#ffd27d\" if genry_hov == %4 else \"#ffffff\") outlines [(3, \"#000000cc\", 0, 0)] font %5")
+                     .arg(m.buttons[i].first).arg(z->cx).arg(z->cy).arg(i).arg(corbel);
+        }
+        s << QStringLiteral("    frame at genry_menu_fadein(0.9):") << QStringLiteral("        xalign 0.5") << QStringLiteral("        ypos 34")
+          << QStringLiteral("        background Solid(\"#000000b4\")") << QStringLiteral("        padding (34, 12)");
+        QString hovTitle = m.title.isEmpty() ? QStringLiteral("u\"\"") : m.title;
+        for (int i = int(m.buttons.size()) - 1; i >= 0; --i)
+            hovTitle = QStringLiteral("(%1 if genry_hov == %2 else %3)").arg(m.buttons[i].first).arg(i).arg(hovTitle);
+        s << QStringLiteral("        text %1 size 36 color (\"#ffd27d\" if genry_hov >= 0 else \"#f1ece0\") font %2").arg(hovTitle, corbel);
+        return s;
+    }
+    if (st == QLatin1String("live")) {
+        // the menu's place the way it is at the player's own hour (day, evening from 18, night from 22 to 5), and the
+        // air of that hour: dust in the sun, falling leaves in the evening, fireflies at night
+        if (!m.bg.isEmpty()) {
+            const QString day = bgAtTime(m.bg, QStringLiteral("day")), eve = bgAtTime(m.bg, QStringLiteral("sunset")),
+                          night = bgAtTime(m.bg, QStringLiteral("night"));
+            auto pic = [&](const QString& v) { return pyQ(QStringLiteral("bg ") + (v.isEmpty() ? m.bg : v)); };
+            s << QStringLiteral("    $ genry_h = genry_clock.localtime().tm_hour")
+              << QStringLiteral("    add (%1 if genry_h >= 22 or genry_h < 5 else (%2 if genry_h >= 18 else %3)) at genry_menu_kb").arg(pic(night), pic(eve), pic(day))
+              << QStringLiteral("    add (%1 if genry_h >= 22 or genry_h < 5 else (%2 if genry_h >= 18 else %3)) at genry_menu_fadein(0.4, 2.0)")
+                     .arg(m.fxSpark, m.fxLeaf, m.fxDust);
+        }
+        panel(QString(), false);
+        return s;
+    }
+    if (st == QLatin1String("7dl")) return s;   // built by compileStory (its own heroes / arrows)
+    panel(hourFx());
+    return s;
+}
+
+// V1 «Выбор 2.0»: the condition of an option in plain words -> Python.
+// «славя 3» = славя >= 3; «славя > 3», «славя = 3»; «ключ» = the flag is set; «не ссора»; «предмет фонарик»;
+// joined by «и» / «или»
+QString choiceCondExpr(const QString& raw, const Ctx& c)
+{
+    static const QRegularExpression join(U("\\s+(и|или|and|or)\\s+"), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption);
+    static const QRegularExpression op(QStringLiteral("^(.+?)\\s*(>=|<=|==|!=|=|>|<)\\s*(.+)$"));
+    static const QRegularExpression numTail(QStringLiteral("^(.+?)\\s+(-?\\d+(?:[.,]\\d+)?)\\+?$"));
+    auto name = [&](const QString& x) { return c.var(x.simplified().replace(QLatin1Char(' '), QLatin1Char('_'))); };
+    auto value = [&](QString v) {
+        v = pyStrip(v).replace(QLatin1Char(','), QLatin1Char('.'));
+        if (pyIsNumber(v) || v == QLatin1String("True") || v == QLatin1String("False")) return v;
+        const QString l = v.toLower();
+        if (l == U("да") || l == QLatin1String("true")) return QStringLiteral("True");
+        if (l == U("нет") || l == QLatin1String("false")) return QStringLiteral("False");
+        return name(v);
+    };
+    auto clause = [&](QString t) {
+        t = pyStrip(t);
+        bool neg = false;
+        const QString w0 = firstWord(t).toLower();
+        if (w0 == U("не") || w0 == QLatin1String("not")) { neg = true; t = pyStrip(t.mid(firstWord(t).size())); }
+        const QString w1 = firstWord(t).toLower();
+        QString e;
+        if (w1 == U("предмет") || w1 == QLatin1String("item")) {
+            const QString key = persistentKey(c.modId, QStringLiteral("item_") + pyStrip(t.mid(firstWord(t).size())), QStringLiteral("item"), c.opt);
+            e = QStringLiteral("getattr(persistent, %1, False)").arg(pyQ(key));
+        } else if (const QRegularExpressionMatch m = op.match(t); m.hasMatch()) {
+            e = name(m.captured(1)) + QLatin1Char(' ') + (m.captured(2) == QLatin1String("=") ? QStringLiteral("==") : m.captured(2)) + QLatin1Char(' ') + value(m.captured(3));
+        } else if (const QRegularExpressionMatch n = numTail.match(t); n.hasMatch()) {
+            e = name(n.captured(1)) + QStringLiteral(" >= ") + value(n.captured(2));
+        } else {
+            e = name(t);
+        }
+        return neg ? QStringLiteral("not (%1)").arg(e) : e;
+    };
+    QString out;
+    int last = 0;
+    for (auto it = join.globalMatch(raw); it.hasNext();) {
+        const auto m = it.next();
+        out += clause(raw.mid(last, m.capturedStart() - last));
+        const QString j = m.captured(1).toLower();
+        out += (j == U("и") || j == QLatin1String("and")) ? QStringLiteral(" and ") : QStringLiteral(" or ");
+        last = int(m.capturedEnd());
+    }
+    return out + clause(raw.mid(last));
+}
+
+// «нужно славя 3» without the writer's own hint -> «нужно: Славя 3» (the meter's own title when there is one)
+QString choiceNeedHint(const QString& need, const CompileState& st, const Ctx& c)
+{
+    static const QRegularExpression numTail(QStringLiteral("^(.+?)\\s+(-?\\d+(?:[.,]\\d+)?)\\+?$"));
+    const QRegularExpressionMatch m = numTail.match(pyStrip(need));
+    if (!m.hasMatch() || need.contains(U(" и ")) || need.contains(U(" или "))) return U("нужно: ") + pyStrip(need);
+    const QString v = m.captured(1).simplified();
+    const QStringList meter = st.meters.value(c.var(QString(v).replace(QLatin1Char(' '), QLatin1Char('_'))));
+    QString title = meter.value(0).isEmpty() ? QString(v).replace(QLatin1Char('_'), QLatin1Char(' ')) : meter.value(0);
+    if (!title.isEmpty()) title[0] = title[0].toUpper();
+    return U("нужно: %1 %2").arg(title, m.captured(2));
+}
+
+} // namespace
 
 QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const CompileOptions& opt, const QVector<CustomImage>& images, QString* error)
 {
@@ -2904,6 +3748,14 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             const QString s = pyStrip(raw);
             const QString w = firstWord(s);
             const QString cmd = normalizeCommand(w);
+            if (isChoiceItemLine(s)) {       // «[нужно славя 3]» reads славя: it exists (0) even if nothing added to it yet
+                const ChoiceItemSpec it = parseChoiceItem(s);
+                for (const QString& n : choiceConditionVars(it.cond) + choiceConditionVars(it.need)) {
+                    const QString v = slugOf(n, QStringLiteral("value"), opt);
+                    if (!modVars.contains(v)) { modVars.insert(v); varOrder << v; }
+                }
+                continue;
+            }
             if (cmd != QLatin1String("setvar") && cmd != QLatin1String("addvar") && cmd != QLatin1String("variable")) continue;
             const SL p = pySplit(pyStrip(s.mid(w.size())));
             if (p.isEmpty()) continue;
@@ -2919,7 +3771,9 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
     QVector<Meter> meterList;
     QVector<Item> itemList;
     QSet<QString> itemSeen;
-    QVector<QPair<QString, QString>> achList;
+    struct Ach { AchSpec spec; QString pkey; };     // Достижения 2.0: one per key, what any of its lines says
+    QVector<Ach> achList;
+    QHash<QString, int> achAt;
     SL cgList, menuLines, srcBody;
     QString menuStyle;
     struct Chapter { QString scene, title, image; };
@@ -2975,9 +3829,24 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
                 if (!icon.isEmpty() && (icon.contains(QLatin1Char('/')) || icon.contains(QLatin1Char('.')))) icon = relModPath(meta.modId, icon);
                 itemList.push_back({key, f.value(1).isEmpty() ? f[0] : f[1], icon, f.value(3)});
             } else if (cmd == QLatin1String("unlockachievement")) {
-                const SL f = fields(rest);
-                if (!f.value(0).isEmpty())
-                    achList.push_back({persistentKey(meta.modId, f[0], QStringLiteral("ach"), opt), f.value(1).isEmpty() ? f[0] : f[1]});
+                const AchSpec a = parseAchievement(rest);
+                if (a.key.isEmpty()) continue;
+                const QString pk = persistentKey(meta.modId, a.key, QStringLiteral("ach"), opt);
+                if (!achAt.contains(pk)) {
+                    achAt.insert(pk, int(achList.size()));
+                    achList.push_back({a, pk});
+                    continue;
+                }
+                AchSpec& m = achList[achAt.value(pk)].spec;       // opened in several places: what each line adds
+                auto fill = [](QString& to, const QString& from) { if (to.isEmpty()) to = from; };
+                if (m.title == m.key) m.title = a.title;
+                fill(m.icon, a.icon);
+                fill(m.desc, a.desc);
+                fill(m.section, a.section);
+                fill(m.image, a.image);
+                for (const QString& n : a.needs) if (!m.needs.contains(n)) m.needs << n;
+                m.hidden = m.hidden || a.hidden;
+                m.plat = m.plat || a.plat;
             } else if (cmd == QLatin1String("cg")) {
                 SL ww = pySplit(rest);
                 if (!ww.isEmpty() && isEffect(ww.last())) ww.removeLast();
@@ -3121,12 +3990,201 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         }
         return r;
     };
-    for (const QString& raw : body) {
-        QString line = raw;
+    // one story line -> Ren'Py lines at the scene's indentation (the options' own lines use it too)
+    auto emitLine = [&](const QString& lineIn, SL& dst) {
+        QString line = lineIn;
+        while (line.endsWith(QLatin1Char('\n')) || line.endsWith(QLatin1Char('\r'))) line.chop(1);
+        const QString stripped = pyStrip(line);
+        const QString cmd = cmdOf(stripped);
+        if (cmd == QLatin1String("screenmenu")) {
+            for (const QString& t : screenMenuTargets(pyStrip(stripped.mid(firstWord(stripped).size())), c)) {
+                if (!screenmenuTargets.contains(t)) screenmenuTargets << t;
+                choiceTargets.insert(t);
+            }
+        }
+        if ((cmd == QLatin1String("staticfx") || cmd == QLatin1String("noisefx") || cmd == QLatin1String("vhsfx")) && !dst.isEmpty()) {
+            static const QRegularExpression withRe(QStringLiteral("^(    .+?) with ([A-Za-z0-9_]+)$"));
+            const QString last = dst.last();
+            const auto m = withRe.match(last);
+            if (m.hasMatch() && (last.startsWith(QLatin1String("    scene ")) || last.startsWith(QLatin1String("    show bg ")))) {
+                dst.last() = m.captured(1);
+                st.activePrologueDream = true;
+                for (const QString& fx : compileMemoryEffect(cmd, pyStrip(stripped.mid(firstWord(stripped).size()))))
+                    if (!pyStrip(fx).startsWith(QLatin1String("with "))) dst << fx;
+                dst << QStringLiteral("    with ") + m.captured(2);
+                return;
+            }
+        }
+        dst << compileLine(line, modId, st, opt);
+    };
+    // V1 «Выбор 2.0»: a whole «выбор … конецвыбора» block -> the menu. The lines under an option are its branch, right
+    // there (no scene of its own needed), and the story goes on after the choice; options may lock, hide, give points,
+    // come back («по кругу»), and a choice may sit under an option of another one.
+    int choiceNo = 0;
+    std::function<SL(const QString&, const SL&)> choiceV1;
+    auto collectChoice = [](const SL& lines, int from, SL* block, bool* closed) {
+        // from the line after «выбор» up to its own «конецвыбора» (nested ones counted); a new scene closes it as well
+        int depth = 1, k = from;
+        *closed = false;
+        for (; k < lines.size(); ++k) {
+            const QString t = pyStrip(lines[k]);
+            const QString ck = cmdOf(t);
+            if (t.startsWith(QLatin1Char(':')) || ck == QLatin1String("label")) break;
+            if (ck == QLatin1String("choice")) ++depth;
+            else if (ck == QLatin1String("endchoice") && --depth == 0) { *closed = true; break; }
+            *block << lines[k];
+        }
+        return k;
+    };
+    auto compileBody = [&](const SL& lines) {
+        SL r;
+        for (int k = 0; k < lines.size(); ++k) {
+            const QString s = pyStrip(lines[k]);
+            if (cmdOf(s) == QLatin1String("choice")) {
+                SL block;
+                bool closed = false;
+                const int end = collectChoice(lines, k + 1, &block, &closed);
+                r << choiceV1(pyStrip(s.mid(firstWord(s).size())), block);
+                k = closed ? end : end - 1;
+                continue;
+            }
+            emitLine(lines[k], r);
+        }
+        return r;
+    };
+    choiceV1 = [&](const QString& headRest, const SL& lines) -> SL {
+        const ChoiceHead h = parseChoiceHead(headRest);
+        struct Opt { ChoiceItemSpec spec; SL body; };
+        QVector<Opt> items;
+        SL question;
+        QString late;
+        auto into = [&]() -> SL& { return items.isEmpty() ? question : items.last().body; };
+        for (int k = 0; k < lines.size(); ++k) {
+            const QString s = pyStrip(lines[k]);
+            if (s.isEmpty() || s.startsWith(QLatin1Char('#'))) continue;
+            if (cmdOf(s) == QLatin1String("choice")) {             // a choice under an option: all of it is that option's
+                int depth = 1;
+                into() << lines[k];
+                for (++k; k < lines.size(); ++k) {
+                    into() << lines[k];
+                    const QString c2 = cmdOf(pyStrip(lines[k]));
+                    if (c2 == QLatin1String("choice")) ++depth;
+                    else if (c2 == QLatin1String("endchoice") && --depth == 0) break;
+                }
+                continue;
+            }
+            if (isChoiceItemLine(s)) { items.push_back({parseChoiceItem(s), {}}); continue; }
+            if (s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0))) {
+                late = pyStrip(s.section(QStringLiteral("->"), 1));           // «время вышло -> молчание»
+                continue;
+            }
+            into() << lines[k];
+        }
+        SL pre = compileBody(question);
+        if (st.autoOpen) {                                     // the choice after «скачок»: the eyes open first
+            pre << compileEyesOpen(QStringLiteral("1.5"));
+            st.eyesClosed = st.autoOpen = false;
+        }
+        if (items.isEmpty()) return pre;                       // Ren'Py refuses a menu with no choices (lint says so)
+        const bool timed = h.style == QLatin1String("timed"), phone = h.style == QLatin1String("phone");
+        bool images = h.style == QLatin1String("images"), anyNeed = false;
+        for (const Opt& o : items) {
+            if (!o.spec.image.isEmpty()) images = true;
+            if (!o.spec.need.isEmpty()) anyNeed = true;
+        }
+        const bool needAsCond = phone || h.random;              // no lock there: a locked option is simply not offered
+        QString head = QStringLiteral("    menu:");
+        if (h.random) head = QStringLiteral("    menu (screen=\"genry_choice_random\"):");
+        else if (timed) head = QStringLiteral("    menu (screen=\"genry_choice_timed\", seconds=%1):").arg(h.secs);
+        else if (phone) head = QStringLiteral("    menu (screen=\"genry_phone_reply\"):");
+        else if (images) head = QStringLiteral("    menu (screen=\"genry_choice_img\"):");
+        else if (h.style == QLatin1String("buttons")) head = QStringLiteral("    menu (screen=\"genry_choice_btn\"):");
+        else if (anyNeed) head = QStringLiteral("    menu (screen=\"genry_choice_es\"):");
+        usedImageMenu = usedImageMenu || (images && !timed && !phone && !h.random);
+        // the question stays on screen while the player chooses (ES's menu and the buttons: the box is free below them)
+        QString sayItem;
+        if (h.style == QLatin1String("es") || h.style == QLatin1String("buttons")) {
+            static const QRegularExpression sayRe(QStringLiteral("^    (?:([A-Za-z_][A-Za-z0-9_]*) )?(u?)\"((?:[^\"\\\\]|\\\\.)*)\"$"));
+            int lastReal = int(pre.size()) - 1;
+            while (lastReal >= 0 && (pyStrip(pre[lastReal]).isEmpty() || pyStrip(pre[lastReal]).startsWith(QLatin1Char('#')))) --lastReal;
+            const QRegularExpressionMatch m = lastReal >= 0 ? sayRe.match(pre[lastReal]) : QRegularExpressionMatch();
+            static const QSet<QString> notSay{QStringLiteral("extend"), QStringLiteral("voice"), QStringLiteral("window"), QStringLiteral("nvl")};
+            if (m.hasMatch() && !notSay.contains(m.captured(1))) {
+                const QString who = m.captured(1).isEmpty() ? QStringLiteral("narrator") : m.captured(1);
+                const QStringList boxes = splitForBox(m.captured(3));
+                pre.removeAt(lastReal);
+                for (int b = 0; b + 1 < boxes.size(); ++b) pre.insert(lastReal + b, QStringLiteral("    %1 %2\"%3\"").arg(who, m.captured(2), boxes[b]));
+                sayItem = QStringLiteral("%1 %2\"%3\"").arg(who, m.captured(2), boxes.value(boxes.size() - 1));
+            }
+        }
+        ++choiceNo;
+        const QString seen = c.sys(QStringLiteral("seen%1").arg(choiceNo)), again = c.sys(QStringLiteral("again%1").arg(choiceNo));
+        SL m{head};
+        if (!sayItem.isEmpty()) m << QStringLiteral("        ") + sayItem;
+        if (h.loop) m << QStringLiteral("        set ") + seen;
+        for (const Opt& o : items) {
+            const ChoiceItemSpec& it = o.spec;
+            QStringList args;
+            if (!it.image.isEmpty() && !phone) {
+                QString kind;
+                const QString img = choiceImage(it.image, &kind, customNames);
+                args << QStringLiteral("img=") + pyQ(img) << QStringLiteral("kind=") + pyQ(kind);
+            }
+            QString cond = it.cond.isEmpty() ? QString() : choiceCondExpr(it.cond, c);
+            if (!it.need.isEmpty()) {
+                const QString need = choiceCondExpr(it.need, c);
+                if (needAsCond) cond = cond.isEmpty() ? need : QStringLiteral("(%1) and (%2)").arg(cond, need);
+                else args << QStringLiteral("ok=") + need << QStringLiteral("hint=") + pyUQ(it.hint.isEmpty() ? choiceNeedHint(it.need, st, c) : it.hint);
+            }
+            m << QStringLiteral("        ") + pyQ(it.caption.isEmpty() ? QStringLiteral("...") : it.caption) +
+                     (args.isEmpty() ? QString() : QStringLiteral(" (") + args.join(QStringLiteral(", ")) + QLatin1Char(')')) +
+                     (cond.isEmpty() ? QString() : QStringLiteral(" if ") + cond) + QLatin1Char(':');
+            SL b = compileBody(o.body);
+            if (!it.target.isEmpty()) {
+                choiceTargets.insert(c.lab(it.target));
+                b << QStringLiteral("    jump ") + c.lab(it.target);
+            } else if (h.loop) {
+                if (it.always) b << QStringLiteral("    $ %1.discard(%2)").arg(seen, pyUQ(it.caption));
+                if (!it.exit) b << QStringLiteral("    $ %1 = True").arg(again);
+            }
+            bool real = false;
+            for (const QString& l : b) if (!pyStrip(l).isEmpty() && !pyStrip(l).startsWith(QLatin1Char('#'))) real = true;
+            if (!real) b << QStringLiteral("    pass");
+            for (const QString& l : b) m << (l.isEmpty() ? l : QStringLiteral("        ") + l);
+        }
+        if (timed) {       // the timer picks this hidden option (the last: Ren'Py shows them in order)
+            m << QStringLiteral("        \"...\" (timeout=True):");
+            if (!late.isEmpty()) {
+                choiceTargets.insert(c.lab(late));
+                m << QStringLiteral("            jump ") + c.lab(late);
+            } else {
+                m << QStringLiteral("            pass");
+            }
+        }
+        SL r = pre;
+        if (h.loop) {      // questions: what was asked goes away, the menu comes back until «[выход]» or nothing is left
+            r << QStringLiteral("    $ %1 = set()").arg(seen) << QStringLiteral("    $ %1 = True").arg(again)
+              << QStringLiteral("    while %1:").arg(again) << QStringLiteral("        $ %1 = False").arg(again);
+            for (const QString& l : m) r << (l.isEmpty() ? l : QStringLiteral("    ") + l);
+        } else {
+            r << m;
+        }
+        return r;
+    };
+    for (int bi = 0; bi < body.size(); ++bi) {
+        QString line = body[bi];
         while (line.endsWith(QLatin1Char('\n')) || line.endsWith(QLatin1Char('\r'))) line.chop(1);
         const QString stripped = pyStrip(line);
         const QString cmd = cmdOf(stripped);
         if (stripped.startsWith(QLatin1Char(':')) || cmd == QLatin1String("label")) hasLabel = true;
+        if (!opt.legacy && cmd == QLatin1String("choice")) {
+            SL block;
+            bool closed = false;
+            const int end = collectChoice(body, bi + 1, &block, &closed);
+            out << choiceV1(pyStrip(stripped.mid(firstWord(stripped).size())), block);
+            bi = closed ? end : end - 1;
+            continue;
+        }
         if (inChoice) {
             if (stripped.isEmpty() || stripped.startsWith(QLatin1Char('#'))) continue;
             if (cmd == QLatin1String("endchoice")) {
@@ -3167,26 +4225,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             timeoutSet = false;
             continue;
         }
-        if (cmd == QLatin1String("screenmenu")) {
-            for (const QString& t : screenMenuTargets(pyStrip(stripped.mid(firstWord(stripped).size())), c)) {
-                if (!screenmenuTargets.contains(t)) screenmenuTargets << t;
-                choiceTargets.insert(t);
-            }
-        }
-        if ((cmd == QLatin1String("staticfx") || cmd == QLatin1String("noisefx") || cmd == QLatin1String("vhsfx")) && !out.isEmpty()) {
-            static const QRegularExpression withRe(QStringLiteral("^(    .+?) with ([A-Za-z0-9_]+)$"));
-            const QString last = out.last();
-            const auto m = withRe.match(last);
-            if (m.hasMatch() && (last.startsWith(QLatin1String("    scene ")) || last.startsWith(QLatin1String("    show bg ")))) {
-                out.last() = m.captured(1);
-                st.activePrologueDream = true;
-                for (const QString& fx : compileMemoryEffect(cmd, pyStrip(stripped.mid(firstWord(stripped).size()))))
-                    if (!pyStrip(fx).startsWith(QLatin1String("with "))) out << fx;
-                out << QStringLiteral("    with ") + m.captured(2);
-                continue;
-            }
-        }
-        out << compileLine(line, modId, st, opt);
+        emitLine(line, out);
     }
     if (inChoice) out << flushChoice();
     int declShift = 0;
@@ -3221,9 +4260,13 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         if (preludeFirst) out.insert(at, QStringLiteral("label %1__start:").arg(modId));
         QString title = meta.modName, logo, startLab;
         QString author = meta.author;                   // «автор Имя» renames it on the menu, «автор нет» hides it
+        const QString nameAction = QStringLiteral("Show(\"genry_ask_name\", ask_text=%1, start_name=(%2 or me_name), hero_var=%3, shown=True)")
+                                       .arg(pyUQ(U("Как тебя зовут?")), c.sys(QStringLiteral("hero")), pyQ(c.sys(QStringLiteral("hero"))));
         SL prelude, buttons, returns, heroes;
+        MenuParts parts;
         for (const QString& s : menuLines) {
             const QString w = firstWord(s), lw = w.toLower(), rest = pyStrip(s.mid(w.size()));
+            if (menuPartLine(lw, rest, &parts)) continue;          // «свой»: кнопки / вид / цвет / частицы / появление
             if (lw == U("заголовок") || lw == QLatin1String("title")) { title = rest; continue; }
             if (lw == U("лого") || lw == U("логотип") || lw == QLatin1String("logo")) { logo = rest; continue; }
             if (lw == U("автор") || lw == QLatin1String("author")) {
@@ -3250,7 +4293,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             QString action;
             if (key == U("галерея") || key == QLatin1String("gallery")) action = QStringLiteral("Show(\"genry_gallery\", cgs=%1)").arg(c.sys(QStringLiteral("cgs")));
             else if (key == U("достижения") || key == QLatin1String("achievements"))
-                action = QStringLiteral("Show(\"genry_achievements\", achs=%1)").arg(c.sys(QStringLiteral("achievements")));
+                action = QStringLiteral("Show(\"genry_achievements\", achs=%1, dates=%2)").arg(c.sys(QStringLiteral("achievements")), pyQ(c.sys(QStringLiteral("ach_dates"))));
             else if (key == U("шкалы") || key == U("отношения") || key == QLatin1String("meters"))
                 action = QStringLiteral("Show(\"genry_meters\", meters=%1)").arg(c.sys(QStringLiteral("meters")));
             else if (key == U("главы") || key == QLatin1String("chapters"))
@@ -3258,6 +4301,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             else if (key == U("настройки") || key == QLatin1String("settings")) action = QStringLiteral("ShowMenu(\"preferences\")");
             else if (key == U("загрузить") || key == U("продолжить") || key == QLatin1String("load")) action = QStringLiteral("ShowMenu(\"load\")");
             else if (key == U("выход") || key == U("выйти") || key == QLatin1String("exit")) action = QStringLiteral("Return(\"__exit\")");
+            else if (key == U("имя")) action = nameAction;
             else {
                 const QString lab = c.lab(target.isEmpty() ? QStringLiteral("start") : target);
                 action = QStringLiteral("Return(") + pyQ(lab) + QLatin1Char(')');
@@ -3272,6 +4316,14 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         if (startLab.isEmpty()) startLab = c.lab(QStringLiteral("start"));
         if (buttons.isEmpty()) buttons << U("u\"Начать\"") << QStringLiteral("Return(%1)").arg(pyQ(startLab)) << U("u\"Выход\"")
                                        << QStringLiteral("Return(\"__exit\")");
+        // «Название мода» → «Игрок вводит имя: в меню мода»: the button comes by itself, right before «Выход»
+        if (meta.heroAsk == QLatin1String("menu") && !buttons.contains(nameAction)) {
+            int put = int(buttons.size());
+            for (int i = 1; i < buttons.size(); i += 2)
+                if (buttons[i] == QLatin1String("Return(\"__exit\")")) { put = i - 1; break; }
+            buttons.insert(put, nameAction);
+            buttons.insert(put, U("u\"Имя: [me_name]\""));
+        }
         SL label{QStringLiteral("label %1:").arg(modId)};
         label << prelude << QStringLiteral("    call screen ") + c.sys(QStringLiteral("main_menu")) << QStringLiteral("    if _return == \"__exit\":")
               << QStringLiteral("        return") << returns
@@ -3280,8 +4332,47 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
               << QStringLiteral("    stop music fadeout 1.5") << QStringLiteral("    jump %1").arg(startLab) << QString();
         for (int i = int(label.size()) - 1; i >= 0; --i) out.insert(at, label[i]);
         hasLabel = true;
-        const bool esStyle = menuStyle == U("бл") || menuStyle == U("оригинал") || menuStyle == QLatin1String("es");
-        const bool sdlStyle = menuStyle == U("7дл") || menuStyle == QLatin1String("7dl");
+        MenuSpec spec;
+        spec.screen = c.sys(QStringLiteral("main_menu"));
+        spec.style = menuStyleKey(menuStyle);
+        if (!title.isEmpty()) spec.title = pyUQ(title);
+        if (!author.isEmpty()) spec.author = pyUQ(U("автор: ") + author);
+        if (!logo.isEmpty()) spec.logo = logo.contains(QLatin1Char('/')) || logo.contains(QLatin1Char('.')) ? pyQ(relModPath(modId, logo)) : pyQ(logo);
+        spec.heroes = heroes;
+        for (int i = 0; i + 1 < buttons.size(); i += 2) spec.buttons.push_back({buttons[i], buttons[i + 1]});
+        // the menu's own place (its «фон»): the styles that paint it grey, pick its hour or its day / night board
+        for (const QString& ml : menuLines) {
+            const QString w = firstWord(ml);
+            if (normalizeCommand(w) != QLatin1String("bg")) continue;
+            SL ww = words(pyStrip(ml.mid(w.size())));
+            if (!ww.isEmpty() && isEffect(ww.last())) ww.removeLast();
+            spec.bg = pyStrip(joinW(ww));
+            break;
+        }
+        {
+            const QString t = spec.bg.isEmpty() ? QString() : bgTimeOf(spec.bg);
+            spec.bgTime = t == QLatin1String("sunset") || t == QLatin1String("night") || t == QLatin1String("prologue") ? t : QStringLiteral("day");
+        }
+        spec.fxDust = c.sys(QStringLiteral("weather_dust_1"));
+        spec.fxSpark = c.sys(QStringLiteral("weather_spark_1"));
+        spec.fxLeaf = c.sys(QStringLiteral("weather_leaf_1"));
+        spec.fxRain = c.sys(QStringLiteral("weather_rain_2"));
+        spec.layout = parts.layout;
+        spec.look = parts.look;
+        spec.accent = parts.accent;
+        spec.enter = parts.enter;
+        {
+            static const QHash<QString, QString> fx{{QStringLiteral("dust"), QStringLiteral("weather_dust_1")}, {QStringLiteral("leaf"), QStringLiteral("weather_leaf_1")},
+                                                    {QStringLiteral("spark"), QStringLiteral("weather_spark_1")}, {QStringLiteral("rain"), QStringLiteral("weather_rain_2")},
+                                                    {QStringLiteral("snow"), QStringLiteral("weather_snow_1")}, {QStringLiteral("heart"), QStringLiteral("weather_heart_1")}};
+            if (parts.fx.isEmpty() || parts.fx == QLatin1String("hour")) spec.fxPick = QStringLiteral("hour");
+            else if (parts.fx == QLatin1String("none")) spec.fxPick.clear();
+            else spec.fxPick = c.sys(fx.value(parts.fx, QStringLiteral("weather_dust_1")));
+        }
+        for (const char* h : {"sl", "dv", "un", "us"})
+            spec.chibis << relModPath(modId, QStringLiteral("images/genry_chibi/") + esChibiFile(QLatin1String(h)) + QStringLiteral(".png"));
+        const bool esStyle = spec.style == QLatin1String("es");
+        const bool sdlStyle = spec.style == QLatin1String("7dl");
         const QString corbelFont = QStringLiteral("font \"fonts/corbel.ttf\"");
         const QString click = QStringLiteral("activate_sound \"sound/sfx/click_1.ogg\"");
         auto buttonAction = [&](const QString& word) {       // the action of a button written «кнопка Галерея»
@@ -3292,7 +4383,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         if (esStyle) {
             // ES's own board (screens.rpy main_menu imagemap): the same zones, leading into the mod
             const QString gallery = QStringLiteral("Show(\"genry_gallery\", cgs=%1)").arg(c.sys(QStringLiteral("cgs")));
-            const QString achs = QStringLiteral("Show(\"genry_achievements\", achs=%1)").arg(c.sys(QStringLiteral("achievements")));
+            const QString achs = QStringLiteral("Show(\"genry_achievements\", achs=%1, dates=%2)").arg(c.sys(QStringLiteral("achievements")), pyQ(c.sys(QStringLiteral("ach_dates"))));
             menuScreen << QString() << QStringLiteral("screen %1():").arg(c.sys(QStringLiteral("main_menu"))) << QStringLiteral("    modal True")
                        << QStringLiteral("    imagemap:")
                        << QStringLiteral("        auto (\"images/gui/title_menu/mainmenu_en_%s.jpg\" if _preferences.language == \"english\" else \"images/gui/title_menu/mainmenu_%s.jpg\")")
@@ -3303,6 +4394,9 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
                        << QStringLiteral("        hotspot (1459, 532, 149, 295) action Return(\"__exit\") hovered Play(\"sound\", \"sound/sfx/menu_gate.ogg\")")
                        << QStringLiteral("    imagebutton auto \"images/gui/title_menu/owl_%s.png\" xpos 135 ypos 606 action ") + achs +
                               QStringLiteral(" hovered Play(\"sound\", \"sound/test.ogg\")");
+            // the game's own board has no free zone: «Имя» stands under «Главы» in the corner
+            if (buttons.contains(nameAction))
+                menuScreen << QStringLiteral("    textbutton u\"Имя: [me_name]\" action ") + nameAction + QStringLiteral(" xpos 60 ypos 100 text_size 40 text_color \"#ffffff\" text_hover_color \"#ffd27d\" text_outlines [(3, \"#000000aa\", 0, 0)] background None hover_background None text_font \"fonts/corbel.ttf\" ") + click;
             const QString chapters = buttonAction(U("глав"));
             if (!chapters.isEmpty())
                 menuScreen << QStringLiteral("    textbutton u\"Главы\" action ") + chapters + QStringLiteral(" xpos 60 ypos 40 text_size 40 text_color \"#ffffff\" text_hover_color \"#ffd27d\" text_outlines [(3, \"#000000aa\", 0, 0)] background None hover_background None text_font \"fonts/corbel.ttf\" ") + click;
@@ -3317,11 +4411,16 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             menuScreen << QString() << QStringLiteral("screen %1():").arg(c.sys(QStringLiteral("main_menu"))) << QStringLiteral("    modal True")
                        << QStringLiteral("    $ genry_heroes = [%1]").arg(heroes.join(QStringLiteral(", ")))
                        << QStringLiteral("    $ genry_hi = (getattr(persistent, %1, 0) or 0) % max(1, len(genry_heroes))").arg(pyQ(key))
+                       << (spec.bg.isEmpty() ? QString() : QStringLiteral("    add %1 at genry_menu_kb").arg(pyQ(QStringLiteral("bg ") + spec.bg)))
+                       << QStringLiteral("    add %1 at genry_menu_fadein(0.4, 2.0)").arg(spec.bgTime == QLatin1String("night") ? spec.fxSpark : spec.fxDust)
                        << QStringLiteral("    add Solid(\"#00000038\")")
                        << QStringLiteral("    if genry_heroes:") << QStringLiteral("        add genry_heroes[genry_hi] xalign 0.8 yalign 1.0 at genry_waifu_in")
-                       << QStringLiteral("    add Solid(\"#0b0f0cb0\", xsize=560, ysize=config.screen_height)");
+                       << QStringLiteral("    fixed at genry_menu_column:")
+                       << QStringLiteral("        add Solid(\"#0b0f0cb0\", xsize=560, ysize=config.screen_height)");
+            menuScreen.removeAll(QString());          // the optional line above
+            menuScreen.prepend(QString());
             for (int k = 0; k < 10; ++k)
-                menuScreen << QStringLiteral("    add Solid(\"#0b0f0c%1\", xsize=16, ysize=config.screen_height) xpos %2")
+                menuScreen << QStringLiteral("        add Solid(\"#0b0f0c%1\", xsize=16, ysize=config.screen_height) xpos %2")
                                   .arg(int(0xb0 * (10 - k) / 11.0), 2, 16, QLatin1Char('0')).arg(560 + 16 * k);
             menuScreen << QStringLiteral("    vbox:") << QStringLiteral("        xpos 150") << QStringLiteral("        yalign 0.55")
                        << QStringLiteral("        xmaximum 520") << QStringLiteral("        spacing 6");
@@ -3334,35 +4433,12 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
                                   .arg(buttons[i], buttons[i + 1], pyRepr(0.15 + 0.08 * (i / 2)), click);
             menuScreen << QStringLiteral("    if len(genry_heroes) > 1:")
                        << QStringLiteral("        textbutton \"<\" action SetField(persistent, %1, (genry_hi - 1) % len(genry_heroes)) xalign 0.6 yalign 0.55 text_size 80 text_color \"#ffffff99\" text_hover_color \"#ffd27d\" background None hover_background None text_font \"fonts/corbel.ttf\" %2").arg(pyQ(key), click)
-                       << QStringLiteral("        textbutton \">\" action SetField(persistent, %1, (genry_hi + 1) % len(genry_heroes)) xalign 0.985 yalign 0.55 text_size 80 text_color \"#ffffff99\" text_hover_color \"#ffd27d\" background None hover_background None text_font \"fonts/corbel.ttf\" %2").arg(pyQ(key), click);
+                       << QStringLiteral("        textbutton \">\" action SetField(persistent, %1, (genry_hi + 1) % len(genry_heroes)) xalign 0.985 yalign 0.55 text_size 80 text_color \"#ffffff99\" text_hover_color \"#ffd27d\" background None hover_background None text_font \"fonts/corbel.ttf\" %2").arg(pyQ(key), click)
+                       << QStringLiteral("    add Solid(\"#000\") at genry_menu_unveil");
         }
-        // the panel: a dark column with a soft edge, the title (wraps), the author, then the
-        // buttons sliding in one after another; hovered = gold dash + a step to the right
-        const QString corbel = corbelFont;
-        if (!esStyle && !sdlStyle) menuScreen << QString() << QStringLiteral("screen %1():").arg(c.sys(QStringLiteral("main_menu"))) << QStringLiteral("    modal True")
-                   << QStringLiteral("    add Solid(\"#0b0f0cd8\", xsize=540, ysize=config.screen_height)");
-        for (int k = 0; k < 10; ++k)       // the soft edge: 10 steps of 16px fading out
-            menuScreen << QStringLiteral("    add Solid(\"#0b0f0c%1\", xsize=16, ysize=config.screen_height) xpos %2")
-                              .arg(int(0xd8 * (10 - k) / 11.0), 2, 16, QLatin1Char('0')).arg(540 + 16 * k);
-        menuScreen << QStringLiteral("    vbox:") << QStringLiteral("        xpos 90")
-                   << QStringLiteral("        yalign 0.5") << QStringLiteral("        xmaximum 500") << QStringLiteral("        spacing 8");
-        if (!logo.isEmpty()) {
-            const QString img = logo.contains(QLatin1Char('/')) || logo.contains(QLatin1Char('.')) ? pyQ(relModPath(modId, logo)) : pyQ(logo);
-            menuScreen << QStringLiteral("        add Transform(%1, fit=\"contain\", xysize=(460, 220))").arg(img);
-        }
-        if (!title.isEmpty())
-            menuScreen << QStringLiteral("        text ") + pyUQ(title) + QStringLiteral(" size 64 color \"#ffd27d\" outlines [(3, \"#00000088\", 0, 0)] ") + corbel + QStringLiteral(" at genry_menu_in(0.0)");
-        if (!author.isEmpty())
-            menuScreen << QStringLiteral("        text ") + pyUQ(U("автор: ") + author) + QStringLiteral(" size 22 color \"#a9b9a4\" font \"fonts/calibri.ttf\" at genry_menu_in(0.05)");
-        menuScreen << QStringLiteral("        null height 36");
-        for (int i = 0; i + 1 < buttons.size(); i += 2) {
-            menuScreen << QStringLiteral("        button at genry_menu_in(%1):").arg(pyRepr(0.15 + 0.08 * (i / 2)))
-                       << QStringLiteral("            action ") + buttons[i + 1] << QStringLiteral("            background None")
-                       << QStringLiteral("            hover_background None") << QStringLiteral("            activate_sound \"sound/sfx/click_1.ogg\"")
-                       << QStringLiteral("            hbox at genry_menu_btn:") << QStringLiteral("                spacing 12")
-                       << QStringLiteral("                text u\"—\" size 46 color \"#ffd27d00\" hover_color \"#ffd27d\" yalign 0.5 ") + corbel
-                       << QStringLiteral("                text ") + buttons[i] + QStringLiteral(" size 46 color \"#eef6ff\" hover_color \"#ffd27d\" yalign 0.5 ") + corbel;
-        }
+        // the other styles (панель, тетрадь, дневник, доска, монитор, нуар, живое, кино, карта); ES's board and
+        // 7ДЛ stand alone - they used to get the panel's column of the same buttons on top («меню двоится»)
+        if (!esStyle && !sdlStyle) menuScreen << menuScreenLines(spec);
     }
 
     int firstLabelIndex = -1;
@@ -3431,7 +4507,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         }
     }
     out = appendMissingTargetLabels(out, screenmenuTargets);
-    out = ensureLabelExits(out, choiceTargets);
+    out = ensureLabelExits(out, choiceTargets, !opt.legacy);
     out = collapseRedundantReturns(out);
     if (!opt.legacy) {
         // V1: the dialogue box the way ES itself shows it («window auto»): it melts away before a new background
@@ -3474,6 +4550,80 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             else if (out[i].startsWith(QLatin1String("label ")) && out[i].endsWith(QLatin1Char(':'))) out.insert(++i, QStringLiteral("    window auto"));
         }
     }
+    if (!opt.legacy) {
+        // V1: «[имя]» / «[игрок]» in any text = the name the player typed (ES's me_name, «Семён» until then);
+        // any other [Слово] in Russian would be a Ren'Py variable - NameError on that line - so it stays text
+        static const QRegularExpression br(QStringLiteral("(?<!\\[)\\[([^\\[\\]\"'(){}=,]*)\\]"));
+        static const QRegularExpression cyr(QStringLiteral("[\\x{0400}-\\x{04FF}]"));
+        SL* texts[] = {&out, &menuScreen};
+        for (SL* list : texts)
+        for (QString& l : *list) {
+            if (!l.contains(QLatin1Char('[')) || !l.contains(QLatin1Char('"'))) continue;
+            const QString t = l.trimmed();
+            if (t.startsWith(QLatin1Char('$')) || t.startsWith(QLatin1String("define ")) || t.startsWith(QLatin1String("default ")) ||
+                t.startsWith(QLatin1Char('#')))
+                continue;
+            QString res;
+            int last = 0;
+            for (auto it = br.globalMatch(l); it.hasNext();) {
+                const auto m = it.next();
+                const QString inner = m.captured(1).trimmed().toLower();
+                res += l.mid(last, m.capturedStart() - last);
+                const QString nameWord = inner.section(QLatin1Char(' '), 0, 0);
+                const int nameCase = (nameWord == U("имя") || nameWord == U("игрок")) ? nameCaseIn(inner.section(QLatin1Char(' '), 1), res) : -1;
+                if (inner == U("имя") || inner == U("игрок")) res += QStringLiteral("[me_name]");
+                else if (nameCase > 0) res += QStringLiteral("{genry_n=%1}").arg(nameCase);
+                else if (inner.count(QLatin1Char('/')) == 1 && inner.contains(cyr) && !inner.contains(QLatin1Char('{')))
+                    res += QStringLiteral("{genry_g=%1}").arg(m.captured(1).trimmed());     // «[проснулся/проснулась]»: by the hero's gender
+                else if (inner.contains(cyr)) res += QLatin1Char('[') + m.captured(0);
+                else res += m.captured(0);
+                last = m.capturedEnd();
+            }
+            if (last) l = res + l.mid(last);
+        }
+    }
+    if (!opt.legacy) {
+        // V1 hero name (@hero_name, «имяигрока», the menu's «Имя»): <mod>__hero holds it (the player's own one
+        // remembered in persistent), every scene puts it into ES's Семён - a jump from the app lands mid-mod too
+        const QString hero = c.sys(QStringLiteral("hero"));
+        const bool askAtStart = meta.heroAsk == QLatin1String("start") || (meta.heroAsk == QLatin1String("menu") && !modMenu);
+        const QString allText = (out + menuScreen).join(QLatin1Char('\n'));
+        const bool genders = allText.contains(QLatin1String("{genry_g="));
+        const bool heroUsed = !meta.heroName.isEmpty() || meta.heroShe || askAtStart || genders || allText.contains(QLatin1String("{genry_n=")) ||
+                              allText.contains(QLatin1String("genry_ask_name"));
+        if (heroUsed) {
+            for (int i = 0; i < out.size(); ++i)
+                if (out[i].startsWith(QLatin1String("label ")) && out[i].endsWith(QLatin1Char(':')))
+                    out.insert(++i, QStringLiteral("    $ genry_hero_apply(%1, %1_she)").arg(hero));
+            if (askAtStart) {
+                int i = int(out.indexOf(QStringLiteral("label %1:").arg(modMenu ? modId + QStringLiteral("__start") : modId)));
+                if (i >= 0) {
+                    ++i;
+                    while (i < out.size() && (out[i].startsWith(QLatin1String("    $ genry_hero_apply")) || out[i] == QLatin1String("    window auto"))) ++i;
+                    out.insert(i, QStringLiteral("    call screen genry_ask_name(%1, persistent.%2 or me_name, %3)").arg(pyUQ(U("Как тебя зовут?")), hero, pyQ(hero)));
+                    out.insert(i, QStringLiteral("    window auto hide"));
+                }
+            }
+            out << QString() << QStringLiteral("default %1 = (persistent.%1 or %2)").arg(hero, meta.heroName.isEmpty() ? QStringLiteral("None") : pyUQ(meta.heroName))
+                << QStringLiteral("default %1_she = (persistent.%1_she if persistent.%1_she is not None else %2)").arg(hero, meta.heroShe ? QStringLiteral("True") : QStringLiteral("False"))
+                << QStringLiteral("default %1_genders = %2").arg(hero, genders ? QStringLiteral("True") : QStringLiteral("False"));
+        }
+    }
+    if (!opt.legacy) {
+        // V1: a line longer than ES's dialogue box ran off the bottom of the screen; now it is the boxes a novel shows
+        static const QRegularExpression sayLine(QStringLiteral("^(\\s+(?:[A-Za-z_][A-Za-z0-9_]* )?)(u?)\"((?:[^\"\\\\]|\\\\.)*)\"$"));
+        for (int i = 0; i < out.size(); ++i) {
+            const QRegularExpressionMatch m = sayLine.match(out[i]);
+            if (!m.hasMatch() || m.captured(1).trimmed() == QLatin1String("extend") || m.captured(1).trimmed() == QLatin1String("voice")) continue;
+            // the question a menu keeps on screen: one line only (Ren'Py), the choice cut it into boxes already
+            if (i > 0 && out[i - 1].trimmed().startsWith(QLatin1String("menu")) && out[i - 1].endsWith(QLatin1Char(':'))) continue;
+            const QStringList boxes = splitForBox(m.captured(3));
+            if (boxes.size() < 2) continue;
+            out.removeAt(i);
+            for (int k = 0; k < boxes.size(); ++k) out.insert(i + k, m.captured(1) + m.captured(2) + QLatin1Char('"') + boxes[k] + QLatin1Char('"'));
+            i += int(boxes.size()) - 1;
+        }
+    }
     if (!opt.legacy) out << hentaiPatchFallback(out, meta.modId);
     if (usedImageMenu) out << imageMenuScreen();
     if (!opt.legacy) {
@@ -3482,8 +4632,14 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         auto block = [&](const char* rpy) { out << QString::fromUtf8(rpy).split(QLatin1Char('\n')); };
         const bool meters = all.contains(QLatin1String("genry_meter"));
         if (all.contains(QLatin1String("genry_choice_timed"))) block(kV1TimedChoice);
-        if (all.contains(QLatin1String("genry_camp_map"))) block(kV1Map);
+        if (all.contains(QLatin1String("genry_choice_es"))) block(kV1ChoiceEs);
+        if (all.contains(QLatin1String("genry_choice_btn"))) block(kV1ChoiceBtn);
+        if (all.contains(QLatin1String("genry_choice_random"))) block(kV1ChoiceRandom);
+        if (all.contains(QLatin1String("genry_codelock"))) block(kV2CodeLock);
+        if (all.contains(QLatin1String("genry_flashlight"))) block(kV2Flashlight);
+        if (all.contains(QLatin1String("genry_camp_map")) || all.contains(QLatin1String("genry_map_pic("))) block(kV1Map);
         if (all.contains(QLatin1String("genry_lids"))) block(kV1Lids);
+        if (all.contains(QLatin1String("genry_hero_apply"))) block(kV1Hero);
         if (all.contains(c.sys(QStringLiteral("map_seen")))) out << QString() << QStringLiteral("default %1 = {}").arg(c.sys(QStringLiteral("map_seen")));
         const bool memories = all.contains(QLatin1String("genry_remember(")) || all.contains(QLatin1String("genry_memories"));
         if (meters || memories) block(kV1Popups);
@@ -3509,10 +4665,25 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             for (const QString& cg : cgList) m << pyQ(cg);
             out << QString() << QStringLiteral("define %1 = [%2]").arg(c.sys(QStringLiteral("cgs")), m.join(QStringLiteral(", ")));
         }
-        if (all.contains(QLatin1String("genry_achievements"))) {
-            block(kV1Achievements);
+        if (!achList.isEmpty() || all.contains(QLatin1String("genry_achievements"))) {
+            // Достижения 2.0: ES's plate and a twin of ES's gallery; the list says what each one is, where it belongs,
+            // what comes first, what it shows
+            block(kV2Achievements);
             SL m;
-            for (const auto& a : achList) m << QStringLiteral("(%1, %2)").arg(pyQ(a.first), pyUQ(a.second));
+            for (const Ach& a : achList) {
+                SL needs;
+                for (const QString& n : a.spec.needs) needs << pyQ(persistentKey(modId, n, QStringLiteral("ach"), opt));
+                QString img = QStringLiteral("None"), kind = QStringLiteral("bg");
+                const QString pic = !a.spec.image.isEmpty() ? a.spec.image : a.spec.icon;
+                if (!pic.isEmpty()) {
+                    if (pic.contains(QLatin1Char('/')) || pic.contains(QLatin1Char('.'))) img = pyQ(relModPath(modId, pic));
+                    else img = pyQ(choiceImage(pic, &kind, customNames));
+                }
+                m << QStringLiteral("{\"k\": %1, \"t\": %2, \"d\": %3, \"s\": %4, \"h\": %5, \"n\": [%6], \"i\": %7, \"ik\": %8, \"p\": %9}")
+                         .arg(pyQ(a.pkey), pyUQ(a.spec.title), pyUQ(a.spec.desc), pyUQ(a.spec.section),
+                              a.spec.hidden ? QStringLiteral("True") : QStringLiteral("False"), needs.join(QStringLiteral(", ")), img, pyQ(kind),
+                              a.spec.plat ? QStringLiteral("True") : QStringLiteral("False"));
+            }
             out << QString() << QStringLiteral("define %1 = [%2]").arg(c.sys(QStringLiteral("achievements")), m.join(QStringLiteral(", ")));
         }
         if (all.contains(QLatin1String("genry_chapters"))) {

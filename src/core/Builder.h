@@ -4,6 +4,7 @@
 //   own save folder, through a temporary hook that is removed when the game closes.
 #pragma once
 #include "Compiler.h"
+#include "Lint.h"
 
 #include <QHash>
 #include <QString>
@@ -45,6 +46,8 @@ QString esExe(const QString& esRoot);
 // project images as Ren'Py names: "bg my_room.png" -> ("bg my_room", mods/<id>/images/bg my_room.png)
 QVector<CustomImage> customImages(const QString& assetsDir, const QString& modId);
 QHash<QString, QString> customImageFiles(const QString& assetsDir);    // name -> absolute file (for the preview)
+// the project's own files before «Играть»: broken pictures (the game dies on them), giants, «лже-буквы» in names
+QVector<LintIssue> checkAssets(const QString& assetsDir);
 
 BuildReport install(const BuildEnv& env, const QString& storyText, const CompileOptions& opt = {}, const BuildLog& log = {});
 // Start ES at `label` (empty = the mod's start) in a window with env.saveDir; returns the pid or 0.

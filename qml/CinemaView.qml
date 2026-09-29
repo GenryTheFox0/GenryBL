@@ -89,7 +89,8 @@ Popup {
         apply(Engine.cinemaNext(-1))
     }
     function pick(i) {
-        if (stop.kind !== "choice") return
+        if (stop.kind !== "choice" || i >= (stop.options || []).length) return
+        if (stop.optionHints && stop.optionHints[i]) return          // locked: «нужно …»
         Sfx.click()
         apply(Engine.cinemaNext(i))
     }
@@ -234,24 +235,37 @@ Popup {
                         required property var modelData
                         required property int index
                         readonly property bool ok: !cv.stop.optionOk || cv.stop.optionOk[index] !== false
+                        readonly property string lock: cv.stop.optionHints ? (cv.stop.optionHints[index] || "") : ""
                         width: 900 * cv.sc
-                        height: 66 * cv.sc
+                        height: (lock ? 88 : 66) * cv.sc
                         radius: 12 * cv.sc
-                        color: optArea.containsMouse ? "#e6182a3a" : "#c80e1822"
-                        border.color: optArea.containsMouse ? "#ffdd7d" : "#66ffffff"
+                        color: lock ? "#a0101418" : optArea.containsMouse ? "#e6182a3a" : "#c80e1822"
+                        border.color: !lock && optArea.containsMouse ? "#ffdd7d" : "#66ffffff"
                         border.width: Math.max(1, 2 * cv.sc)
-                        opacity: ok ? 1 : 0.55
-                        Text {
+                        opacity: ok && !lock ? 1 : 0.55
+                        Column {
                             anchors.centerIn: parent
                             width: parent.width - 30 * cv.sc
-                            horizontalAlignment: Text.AlignHCenter
-                            elide: Text.ElideRight
-                            text: (index + 1) + ".  " + modelData + (parent.ok ? "" : "   · сцены нет")
-                            color: optArea.containsMouse ? "#ffdd7d" : "#eef6ff"
-                            font.family: Engine.font()
-                            font.pixelSize: Math.max(9, 30 * cv.sc)
+                            Text {
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
+                                text: (index + 1) + ".  " + modelData + (parent.parent.ok ? "" : "   · сцены нет")
+                                color: optArea.containsMouse && !parent.parent.lock ? "#ffdd7d" : "#eef6ff"
+                                font.family: Engine.font()
+                                font.pixelSize: Math.max(9, 30 * cv.sc)
+                            }
+                            Text {
+                                visible: !!parent.parent.lock
+                                width: parent.width
+                                horizontalAlignment: Text.AlignHCenter
+                                text: "🔒 " + parent.parent.lock
+                                color: "#c8c8c8"
+                                font.family: Engine.font()
+                                font.pixelSize: Math.max(8, 20 * cv.sc)
+                            }
                         }
-                        MouseArea { id: optArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: cv.pick(index) }
+                        MouseArea { id: optArea; anchors.fill: parent; hoverEnabled: true; cursorShape: parent.lock ? Qt.ForbiddenCursor : Qt.PointingHandCursor; onClicked: cv.pick(index) }
                     }
                 }
             }

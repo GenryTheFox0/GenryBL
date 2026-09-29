@@ -267,7 +267,7 @@ static void testFixes()
     const QString r8 = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nвыбор кнопки\n- Да -> a\n- Нет -> b\nконецвыбора\n"
                                                      "выбор визуальный\n- Туда -> a | un shy pioneer\n- Сюда -> b | cg d1_food_normal\nконецвыбора\n"),
                                    es);
-    check(r8.contains(QStringLiteral("    menu (screen=\"genry_choice\"):\n")) &&
+    check(r8.contains(QStringLiteral("    menu (screen=\"genry_choice_btn\"):\n")) && r8.contains(QStringLiteral("screen genry_choice_btn(items):")) &&
               r8.contains(QString::fromUtf8("    menu (screen=\"genry_choice_img\"):\n        \"Туда\" (img=\"un shy pioneer\", kind=\"sprite\"):")) &&
               r8.contains(QString::fromUtf8("        \"Сюда\" (img=\"cg d1_food_normal\", kind=\"bg\"):")),
           "«выбор кнопки» = dark buttons, «выбор визуальный» = 7DL strips");
@@ -550,6 +550,180 @@ static void testForms()
     }
     check(n > 100 && badCompile == 0, QStringLiteral("%1 form lines compile cleanly").arg(n - badCompile));
     check(badRead == 0, QStringLiteral("form lines read back into their forms (%1 bad)").arg(badRead));
+    {
+        // «Новая сцена» with its start: only what was picked goes in; a transition without a background adds nothing
+        const QString full = forms.build(QStringLiteral("label"), {{QStringLiteral("name"), QStringLiteral("beach")}, {QStringLiteral("t"), QString::fromUtf8("вечер")},
+                                                                   {QStringLiteral("bg"), QStringLiteral("ext_beach_sunset")}, {QStringLiteral("music"), QStringLiteral("sunny_day")}});
+        const QString bare = forms.build(QStringLiteral("label"), {{QStringLiteral("name"), QStringLiteral("beach")}, {QStringLiteral("fx"), QStringLiteral("dissolve")}});
+        const QVariantMap back = forms.parse(QStringLiteral(": beach"));
+        check(full == QString::fromUtf8(": beach\nвремя вечер\nфон ext_beach_sunset fade\nмузыка sunny_day") && bare == QStringLiteral(": beach") &&
+                  back.value(QStringLiteral("id")) == QLatin1String("label") && back.value(QStringLiteral("values")).toMap().value(QStringLiteral("name")) == QLatin1String("beach"),
+              "«Новая сцена»: время / фон / музыка at the start only when picked, «: сцена» still opens in the form\n" + full + "\n" + bare);
+    }
+    {
+        // «имяигрока»: the player types the hero's name - Семён's lines and «[имя]» carry it; [Слово] stays text
+        const QString rpy = compileText(QString::fromUtf8("@mod_id genry_t\n@mod_name t\n\n: start\nимяигрока Как зовут? | Вася\n"
+                                                          "текст [имя] проснулся. На двери было написано [Алиса].\n[имя]: Где я?\nЯ: Ну и дела.\n[имя] открыл глаза.\nконецигры\n"), v1);
+        check(rpy.contains(QString::fromUtf8("call screen genry_ask_name(u\"Как зовут?\", persistent.genry_t__hero or u\"Вася\", \"genry_t__hero\")")) &&
+                  rpy.contains(QStringLiteral("label genry_t:\n    $ genry_hero_apply(genry_t__hero, genry_t__hero_she)")) &&
+                  rpy.contains(QStringLiteral("default genry_t__hero = (persistent.genry_t__hero or None)")) &&
+                  rpy.contains(QStringLiteral("    def genry_hero_apply(name, she=False):")) && rpy.contains(QStringLiteral("add get_image(\"gui/o_rly/base.png\")")) &&
+                  rpy.contains(QStringLiteral("screen genry_ask_name(ask_text, start_name, hero_var, shown=False):")) &&
+                  rpy.contains(QString::fromUtf8("\"[me_name] проснулся. На двери было написано [[Алиса].\"")) &&
+                  rpy.contains(QString::fromUtf8("me \"Где я?\"")) && rpy.contains(QString::fromUtf8("me \"Ну и дела.\"")) && rpy.contains(QString::fromUtf8("\"[me_name] открыл глаза.\"")) && !rpy.contains(QStringLiteral("genry_sp_")),
+              "«имяигрока»: the input screen, me_name + names['me'], «[имя]» -> [me_name], «[имя]:» = Семён, [Алиса] stays text\n" + rpy.right(1400));
+        const QString plain = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nтекст просто\nконецигры\n"), v1);
+        check(!plain.contains(QStringLiteral("genry_ask_name")) && !plain.contains(QStringLiteral("genry_hero_apply")), "no hero name anywhere - nothing of it in the mod");
+        // the author's hero (@hero_name, «Название мода» → Герой) and the player's own one from the mod menu's «Имя»
+        const QString rh = compileText(QString::fromUtf8("@mod_id genry_t\n@hero_name Вася\nменюмода\nкнопка Начать\nкнопка Имя: [имя]\nкнопка Выход\n"
+                                                         "конецменюмода\n: start\nЯ: Привет.\nконецигры\n"), v1);
+        check(rh.contains(QString::fromUtf8("default genry_t__hero = (persistent.genry_t__hero or u\"Вася\")")) &&
+                  rh.contains(QStringLiteral("label genry_t__start:\n    $ genry_hero_apply(genry_t__hero, genry_t__hero_she)")) &&
+                  rh.contains(QString::fromUtf8("Show(\"genry_ask_name\", ask_text=u\"Как тебя зовут?\", start_name=(genry_t__hero or me_name), hero_var=\"genry_t__hero\", shown=True)")) &&
+                  rh.contains(QString::fromUtf8("u\"Имя: [me_name]\"")),
+              "@hero_name = the hero from the start; the menu's «Имя: [имя]» opens the name plate and shows the name\n" + rh.right(1600));
+        // chosen in the app: «Игрок вводит имя» - в меню мода (the button comes by itself) / в начале (the plate first)
+        const QString rm = compileText(QString::fromUtf8("@mod_id genry_t\n@hero_ask menu\nменюмода\nкнопка Начать\nкнопка Выход\nконецменюмода\n"
+                                                         ": start\nЯ: Привет.\nконецигры\n"), v1);
+        const int nameAt = int(rm.indexOf(QString::fromUtf8("u\"Имя: [me_name]\""))), exitAt = int(rm.indexOf(QString::fromUtf8("u\"Выход\"")));
+        check(nameAt > 0 && exitAt > nameAt && rm.count(QStringLiteral("Show(\"genry_ask_name\"")) == 1,
+              "@hero_ask menu: «Имя: …» appears on the mod menu by itself, before «Выход»\n" + rm.right(1500));
+        const QString rs = compileText(QString::fromUtf8("@mod_id genry_t\n@hero_ask start\n: start\nЯ: Привет.\nконецигры\n"), v1);
+        check(rs.contains(QString::fromUtf8("label genry_t:\n    $ genry_hero_apply(genry_t__hero, genry_t__hero_she)\n    window auto\n    window auto hide\n"
+                                            "    call screen genry_ask_name(u\"Как тебя зовут?\", persistent.genry_t__hero or me_name, \"genry_t__hero\")\n")) &&
+                  rs.contains(QStringLiteral("def genry_hero_apply(name, she=False):")),
+              "@hero_ask start: the name plate before the first line\n" + rs.right(1500));
+        // «время вечер» mid-scene: the day square becomes the evening one behind the heroine (not a day picture under «вечер»)
+        const QString rt = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_square_day\nпоказать sl smile pioneer\nСлавя: Привет.\n"
+                                                         "время вечер\nСлавя: Уже вечер.\nконецигры\n"), v1);
+        const SceneState stt = sceneAt(QString::fromUtf8("@mod_id m\n: start\nфон ext_square_day\nпоказать sl smile pioneer\nвремя вечер\nСлавя: Уже вечер.\nконецигры\n"), 6);
+        check(rt.contains(QStringLiteral("    $ sunset_time()\n    show bg ext_square_sunset\n    with dissolve\n")) &&
+                  stt.bg == QStringLiteral("bg ext_square_sunset") && stt.sprites.size() == 1,
+              "«время вечер» after a day «фон»: the evening square melts in, the heroine stays: " + stt.bg + "\n" + rt.right(700));
+        {
+            // the project's own files: a broken picture = the game dies, «лже-буквы», a giant sprite, a photo background
+            const QString dir = QDir::tempPath() + QStringLiteral("/gb_assets_test");
+            QDir(dir).removeRecursively();
+            QDir().mkpath(dir + QStringLiteral("/images"));
+            QDir().mkpath(dir + QStringLiteral("/audio"));
+            auto put = [&](const QString& rel, const QByteArray& data) {
+                QFile f(dir + QLatin1Char('/') + rel);
+                f.open(QIODevice::WriteOnly);
+                f.write(data);
+            };
+            put(QStringLiteral("images/bg broken.png"), QByteArray("not a picture at all"));
+            QImage(3000, 2000, QImage::Format_RGB32).save(dir + QString::fromUtf8("/images/bg фото.jpg"));
+            QImage(800, 2600, QImage::Format_ARGB32).save(dir + QStringLiteral("/images/giant smile.png"));
+            QImage(10, 10, QImage::Format_RGB32).save(dir + QString::fromUtf8("/images/bg lеs.png"));      // Cyrillic «е» in «les»
+            put(QStringLiteral("audio/voice.m4a"), QByteArray("x"));
+            const QVector<LintIssue> iss = build::checkAssets(dir);
+            auto has = [&](int level, const char* part) {
+                for (const LintIssue& i : iss) if (i.level == level && i.msg.contains(QString::fromUtf8(part)) && !i.file.isEmpty()) return true;
+                return false;
+            };
+            check(has(LintIssue::Error, "bg broken.png") && has(LintIssue::Info, "3000×2000") && has(LintIssue::Warning, "800×2600") &&
+                      has(LintIssue::Warning, "лже-буквы") && has(LintIssue::Warning, ".m4a"),
+                  "checkAssets: broken picture = error, photo bg = fitted, giant sprite, mixed Latin/Cyrillic name, unplayable audio");
+            QDir(dir).removeRecursively();
+        }
+        {
+            // the hero's name in cases + «он/она» forms: the mod gets the tags, the preview shows the result
+            const QStringList want = QString::fromUtf8("Семёна Семёну Семёна Семёном Семёне|Васи Васе Васю Васей Васе|Саши Саше Сашу Сашей Саше|"
+                                                       "Никиты Никите Никиту Никитой Никите|Марии Марии Марию Марией Марии|Андрея Андрею Андрея Андреем Андрее|"
+                                                       "Игоря Игорю Игоря Игорем Игоре|Павла Павлу Павла Павлом Павле|Кэт Кэт Кэт Кэт Кэт").split(QLatin1Char('|'));
+            const QStringList names = QString::fromUtf8("Семён Вася Саша Никита Мария Андрей Игорь Павел Кэт").split(QLatin1Char(' '));
+            QString bad;
+            for (int k = 0; k < names.size(); ++k) {
+                QStringList got;
+                for (int c = 1; c <= 5; ++c) got << declineName(names[k], c, k >= names.size() - 1 || k == 4);
+                if (got.join(QLatin1Char(' ')) != want[k]) bad += got.join(QLatin1Char(' ')) + QStringLiteral(" | ");
+            }
+            check(bad.isEmpty(), "declineName: Семён/Вася/Саша/Никита/Мария/Андрей/Игорь/Павел/Кэт " + bad);
+            const QString rg = compileText(QString::fromUtf8("@mod_id genry_t\n@hero_gender она\n: start\nтекст Я [проснулся/проснулась]. Ольга звала [имя кого].\n"
+                                                             "Алиса: Эй, [имя кому] привет!\nконецигры\n"), v1);
+            check(rg.contains(QString::fromUtf8("\"Я {genry_g=проснулся/проснулась}. Ольга звала {genry_n=3}.\"")) &&
+                      rg.contains(QString::fromUtf8("\"Эй, {genry_n=2} привет!\"")) &&
+                      rg.contains(QStringLiteral("default genry_t__hero_she = (persistent.genry_t__hero_she if persistent.genry_t__hero_she is not None else True)")) &&
+                      rg.contains(QStringLiteral("default genry_t__hero_genders = True")) &&
+                      rg.contains(QStringLiteral("config.self_closing_custom_text_tags[\"genry_g\"] = genry_g_tag")) &&
+                      rg.contains(QStringLiteral("$ genry_hero_apply(genry_t__hero, genry_t__hero_she)")),
+                  "«[проснулся/проснулась]» / «[имя кого]» -> text tags, the hero's gender default + «Парень/Девушка» on the plate\n" + rg.right(900));
+            const SceneState sg = sceneAt(QString::fromUtf8("@mod_id m\n@hero_name Катя\n@hero_gender она\n: start\nАлиса: [имя], ты [пришёл/пришла] к [имя кому]?\nконецигры\n"), 5);
+            check(sg.text == QString::fromUtf8("Катя, ты пришла к Кате?"), "the preview: gender forms + cases: " + sg.text);
+            // a bare «кого»: «искала Катю», «у Кати»
+            const SceneState sk2 = sceneAt(QString::fromUtf8("@mod_id m\n@hero_name Катя\n@hero_gender она\n: start\nСлавя: Ольга искала [имя кого], а у [имя кого] всё хорошо?\nконецигры\n"), 5);
+            const QString rk = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nСлавя: Ольга искала [имя кого], а у [имя кого] всё хорошо?\nконецигры\n"), v1);
+            check(sk2.text == QString::fromUtf8("Ольга искала Катю, а у Кати всё хорошо?") &&
+                      rk.contains(QString::fromUtf8("\"Ольга искала {genry_n=3}, а у {genry_n=1} всё хорошо?\"")),
+                  "«кого» by the word before it: винительный after a verb, родительный after «у»: " + sk2.text);
+            // a mod's own background with no time: the heroines are day ones, not the last game's night
+            const QString rd = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nфон my_room\nСлавя: Привет.\nконецигры\n"), v1);
+            check(rd.contains(QStringLiteral("$ persistent.sprite_time = \"day\"")), "a timeless background at the start = day");
+        }
+        {
+            // «менюмода <стиль>»: every style is ONE menu (ES's board and 7ДЛ used to get the panel's column on top)
+            const QList<QPair<const char*, const char*>> styles{
+                {"панель", "genry_menu_btn"}, {"бл", "mainmenu_"}, {"7дл", "genry_waifu_in"}, {"тетрадь", "preferences_bg.jpg"},
+                {"дневник", "history_bg.jpg"}, {"доска", "ingame_menu/sunset/ingame_menu.png"}, {"монитор", "anim/backdrop/back.jpg"},
+                {"нуар", "SaturationMatrix(0.0)"}, {"живое", "genry_clock.localtime()"}, {"кино", "ypos 940"}, {"карта", "genry_map_pic(\"available\")"}};
+            QString bad;
+            for (const auto& st : styles) {
+                const QString rpy = compileText(QString::fromUtf8("@mod_id genry_t\n@mod_name Лето\nменюмода %1\nфон ext_beach_sunset\n"
+                                                                  "герои sl smile dress\nкнопка Начать -> start\nкнопка Галерея\nкнопка Выход\n"
+                                                                  "конецменюмода\n: start\nтекст а\nконецигры\n").arg(QString::fromUtf8(st.first)), v1);
+                const int screenAt = int(rpy.indexOf(QStringLiteral("screen genry_t__main_menu():")));
+                const QString screen = screenAt < 0 ? QString() : rpy.mid(screenAt, rpy.indexOf(QStringLiteral("\n\n"), screenAt) - screenAt);
+                const bool es = QByteArray(st.first) == QByteArray("бл");
+                const int starts = int(screen.count(QStringLiteral("Return(\"genry_t__start\")")));
+                const bool column = screen.contains(QStringLiteral("#0b0f0cd8"));
+                const bool ok = screen.contains(QString::fromUtf8(st.second)) && starts == 1 &&
+                                (column == (QByteArray(st.first) == QByteArray("панель") || QByteArray(st.first) == QByteArray("живое"))) && rpy.count(QStringLiteral("screen genry_t__main_menu():")) == 1 &&
+                                (!QString::fromUtf8(st.first).startsWith(QString::fromUtf8("карт")) || rpy.contains(QStringLiteral("def genry_map_pic(kind):")));
+                if (!ok) bad += QString::fromUtf8(st.first) + QStringLiteral(" (starts=%1 column=%2 es=%3) ").arg(starts).arg(column).arg(es);
+            }
+            check(bad.isEmpty(), "every «менюмода» style is one menu of its own look: " + bad);
+            check(menuStyleKey(QString::fromUtf8("Карта лагеря")) == QLatin1String("map") && menuStyleKey(QString::fromUtf8("ЧБ")) == QLatin1String("noir") &&
+                      menuStyleKey(QString()) == QLatin1String("panel"),
+                  "menuStyleKey: Russian words and the default");
+            {
+                // splitForBox: whole sentences, never inside a {tag}…{/tag} or [x], no box over the limit
+                QString t;
+                for (int k = 1; k <= 9; ++k) t += QString::fromUtf8("Предложение %1 {i}с курсивом внутри, который нельзя резать{/i} и [me_name] рядом. ").arg(k);
+                const QStringList boxes = splitForBox(t.trimmed(), 250);
+                bool ok = boxes.size() >= 3 && boxes.join(QLatin1Char(' ')) == t.trimmed();
+                for (const QString& b : boxes) {
+                    int vis = 0;
+                    for (int i = 0; i < b.size(); ++i) { if (b.at(i) == QLatin1Char('{')) { i = int(b.indexOf(QLatin1Char('}'), i)); continue; } ++vis; }
+                    ok = ok && vis <= 250 && b.count(QStringLiteral("{i}")) == b.count(QStringLiteral("{/i}")) && b.endsWith(QLatin1Char('.'));
+                }
+                check(ok, QStringLiteral("splitForBox: %1 boxes of whole sentences, tags kept whole").arg(boxes.size()));
+                const QString rl = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nСлавя: %1\n+ А это дописано.\nконецигры\n").arg(t.trimmed()), v1);
+                check(rl.count(QStringLiteral("    sl \"")) == boxes.size() && rl.contains(QString::fromUtf8("    extend \" А это дописано.\"")) && !rl.contains(QStringLiteral("extend u\"")),
+                      "a long line = one «sl» line per box; «+ …» = ES extend with its space");
+                const QString rm = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nмузыка free_love\nмузыка kostry\nтекст а\nконецигры\n"), v1);
+                check(rm.contains(QStringLiteral("play music \"zhenya/sounds/free_love.mp3\"")) && rm.contains(QStringLiteral("play music \"sound/music/kostry.ogg\"")),
+                      "the game's tracks outside music_list (es-doc: Free Love, Kostry…) play by their files");
+            }
+            const QStringList places = menuMapPlaces({QString(), QString::fromUtf8("галерея"), QString::fromUtf8("выход"), QString()});
+            check(places == QStringList{QStringLiteral("square"), QStringLiteral("library"), QStringLiteral("camp_entrance"), QStringLiteral("beach")},
+                  "«карта»: the start on the square, the gallery in the library, the exit at the gates: " + places.join(QLatin1Char(' ')));
+        }
+        const SceneState sh = sceneAt(QString::fromUtf8("@mod_id m\n@hero_name Вася\n: start\nЯ: Меня зовут [имя].\nконецигры\n"), 4);
+        check(sh.playerName == QString::fromUtf8("Вася") && sh.text == QString::fromUtf8("Меня зовут Вася."), "the preview knows @hero_name: " + sh.text);
+        const SceneState sa = sceneAt(QString::fromUtf8("@mod_id m\n: start\nимяигрока | Вася\nЯ: Меня зовут [имя].\nконецигры\n"), 4);
+        check(sa.playerName == QString::fromUtf8("Вася") && sa.text == QString::fromUtf8("Меня зовут Вася.") && sa.cardKind.isEmpty(),
+              "the preview: after «имяигрока» Семён is the typed name, «[имя]» too: " + sa.speakerName + " / " + sa.text);
+        const SceneState sk = sceneAt(QString::fromUtf8("@mod_id m\n: start\nимяигрока | Вася\nконецигры\n"), 3);
+        check(sk.cardKind == QLatin1String("askname") && sk.cardText == QString::fromUtf8("Как тебя зовут?") && sk.cardSub == QString::fromUtf8("Вася"),
+              "the preview on «имяигрока»: the input panel with the default question and name");
+    }
+    {
+        // no @author = no «автор:» line on the mod menu (it used to say GenryTheFox for everybody)
+        const QString rpy = compileText(QString::fromUtf8("@mod_id genry_t\n@mod_name Общага\nменюмода\nкнопка Начать\nконецменюмода\n: start\nтекст а\n"), v1);
+        const SceneState sm = sceneAt(QString::fromUtf8("@mod_id genry_t\n@author Вахтёр\nменюмода\nкнопка Начать\nконецменюмода\n: start\nтекст а\n"), 4);
+        check(!rpy.contains(QString::fromUtf8("автор: ")) && sm.modMenuAuthor == QString::fromUtf8("Вахтёр"),
+              "no @author - no author line; the preview shows the story's own author");
+    }
     // hand-written lines open in their form with the right values
     auto parsed = [&](const QString& line) { return forms.parse(line); };
     const QVariantMap a = parsed(QString::fromUtf8("показать  dv smile pioneer   left"));
@@ -904,7 +1078,8 @@ static void testCinema()
     check(b.first == QStringLiteral("7:0 8:1 23:1 28:1 30:0 34:0 36:0 36:6"),
           "timed choice: time runs out -> «время вышло»; the call not answered -> «нет ответа», then «переход»: " + b.first);
     const auto c = walk({2});
-    check(c.first == QStringLiteral("7:0 8:1 12:6") && c.second.note.contains(QString::fromUtf8("nowhere")), "a jump to a missing scene ends with the reason");
+    check(c.first == QStringLiteral("7:0 8:1 11:6") && c.second.note.contains(QString::fromUtf8("nowhere")),
+          "a jump to a missing scene ends with the reason, at the option that leads there: " + c.first);
     const auto d = walk({}, 16);
     check(d.first.startsWith(QStringLiteral("16:0 ")), "from the cursor line: the story goes on right there: " + d.first);
     Cinema e;
@@ -912,6 +1087,253 @@ static void testCinema()
     const CinemaStop first = e.start(0);
     check(first.scene.bg == QStringLiteral("bg ext_camp_entrance_day") && first.scene.speakerName == QString::fromUtf8("Славя"),
           "the frame of a stop is the game's picture of that route");
+    {
+        // a line longer than the box: the cinema turns its boxes one per click, like the game, then goes on
+        QString longLine;
+        for (int k = 1; k <= 12; ++k) longLine += QString::fromUtf8("Это предложение номер %1, и оно довольно длинное для проверки. ").arg(k);
+        Cinema p;
+        p.load(QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_square_day\nСлавя: %1\nСлавя: Всё.\nконецигры\n").arg(longLine.trimmed()), &es);
+        CinemaStop s1 = p.start(0);
+        QStringList seen{s1.scene.text};
+        int pages = s1.scene.textPages;
+        CinemaStop s2 = p.next();
+        while (s2.scene.textPage > 1 && seen.size() < 10) { seen << s2.scene.text; s2 = p.next(); }
+        check(pages >= 3 && seen.size() == pages && s2.scene.text == QString::fromUtf8("Всё.") && seen.join(QLatin1Char(' ')) == longLine.trimmed() &&
+                  s1.scene.speakerName == QString::fromUtf8("Славя"),
+              QStringLiteral("the cinema turns the boxes of a long line: %1 boxes, then the next line").arg(pages));
+    }
+}
+
+// [9] Выбор 2.0: the lines under an option are its branch, points / locks / conditions in brackets, «по кругу», «наугад»,
+// a choice under an option; the same in the compiler, the preview, the cinema and the lint
+static void testChoice2()
+{
+    out << "[9] choice 2.0\n";
+    CompileOptions v1;
+    v1.knownSpeakers = {QStringLiteral("sl"), QStringLiteral("dv"), QStringLiteral("me"), QStringLiteral("un")};
+    const QString story = QString::fromUtf8(
+        "@mod_id genry_t\n"                              // 1
+        "шкала славя | Славя | #ff7a00 | 0 | 10\n"       // 2
+        ": start\n"                                      // 3
+        "фон ext_square_day\n"                           // 4
+        "выбор\n"                                        // 5
+        "Славя: Куда пойдём?\n"                          // 6
+        "- На площадь [+1 Славя] [запомнит Славя]\n"     // 7
+        "    Славя: Отлично!\n"                          // 8
+        "- Поцеловать [нужно славя 5]\n"                 // 9
+        "    Славя: Ой.\n"                               // 10
+        "- Секрет [если ключ]\n"                         // 11
+        "- На пляж -> beach\n"                           // 12
+        "конецвыбора\n"                                  // 13
+        "Славя: Идём дальше.\n"                          // 14
+        "выбор по кругу\n"                               // 15
+        "- Про лагерь\n"                                 // 16
+        "    Славя: Это Совёнок.\n"                      // 17
+        "- Про тебя [всегда]\n"                          // 18
+        "    Славя: Я Славя.\n"                          // 19
+        "- Хватит [выход]\n"                             // 20
+        "конецвыбора\n"                                  // 21
+        "выбор наугад\n"                                 // 22
+        "- Дождь\n"                                      // 23
+        "- Солнце\n"                                     // 24
+        "конецвыбора\n"                                  // 25
+        "выбор кнопки\n"                                 // 26
+        "- Спросить\n"                                   // 27
+        "    выбор\n"                                    // 28
+        "    - Да\n"                                     // 29
+        "        Славя: Да.\n"                           // 30
+        "    - Нет\n"                                    // 31
+        "    конецвыбора\n"                              // 32
+        "- Молчать\n"                                    // 33
+        "конецвыбора\n"                                  // 34
+        "Славя: Всё.\n"                                  // 35
+        "конецигры\n"                                    // 36
+        ": beach\n"                                      // 37
+        "фон ext_beach_day\n"                            // 38
+        "выбор\n"                                        // 39
+        "- Купаться\n"                                   // 40
+        "    Славя: Холодно!\n"                          // 41
+        "- Уйти -> start\n"                              // 42
+        ": after\n"                                      // 43
+        "текст Конец.\n");                               // 44
+    QString err;
+    const QString rpy = compileText(story, v1, &err);
+    check(err.isEmpty() && !rpy.isEmpty(), "the whole story compiles: " + err);
+    const QString var = v1.legacy ? QString() : QStringLiteral("genry_t_") + slugOf(QString::fromUtf8("славя"), QStringLiteral("value"), v1);
+    check(rpy.contains(QStringLiteral("    menu (screen=\"genry_choice_es\"):\n        sl \"")) && rpy.contains(QStringLiteral("screen genry_choice_es(items):")),
+          "a locked option: ES's own menu look (genry_choice_es), the question stays on screen as the menu's line");
+    check(rpy.contains(QStringLiteral("        \"") + QString::fromUtf8("На площадь") + QStringLiteral("\":\n            $ ") + var + QStringLiteral(" += 1")) &&
+              rpy.contains(QStringLiteral("genry_remember(")) && rpy.contains(QString::fromUtf8("            sl \"Отлично!\"")),
+          "[+1 Славя] [запомнит Славя]: points, the popup, then the option's own lines - all inside the option");
+    check(rpy.contains(QString::fromUtf8("        \"Поцеловать\" (ok=%1 >= 5, hint=u\"нужно: Славя 5\"):").arg(var)),
+          "[нужно славя 5]: locked with the meter's own title as the hint");
+    const QString key = QStringLiteral("genry_t_") + slugOf(QString::fromUtf8("ключ"), QStringLiteral("value"), v1);
+    check(rpy.contains(QString::fromUtf8("        \"Секрет\" if %1:\n            pass").arg(key)) && rpy.contains(QStringLiteral("default ") + key + QStringLiteral(" = 0")),
+          "[если ключ]: hidden until true; ключ exists (0) even though nothing sets it - no NameError");
+    check(rpy.contains(QString::fromUtf8("        \"На пляж\":\n            jump genry_t__beach")) &&
+              rpy.contains(QString::fromUtf8("\n    sl \"Идём дальше.\"")),
+          "an option with a scene jumps; the others go on after the choice");
+    const QString seen = QStringLiteral("genry_t__seen2"), again = QStringLiteral("genry_t__again2");
+    check(rpy.contains(QStringLiteral("    $ %1 = set()\n    $ %2 = True\n    while %2:\n        $ %2 = False\n        menu:\n            set %1\n").arg(seen, again)) &&
+              rpy.contains(QStringLiteral("                $ %1.discard(u\"%2\")\n                $ %3 = True").arg(seen, QString::fromUtf8("Про тебя"), again)) &&
+              rpy.contains(QString::fromUtf8("            \"Хватит\":\n                pass")),
+          "«по кругу»: asked questions go away, [всегда] stays, [выход] ends it");
+    check(rpy.contains(QStringLiteral("    menu (screen=\"genry_choice_random\"):")) && rpy.contains(QStringLiteral("screen genry_choice_random(items):")),
+          "«наугад»: the game picks");
+    check(rpy.contains(QString::fromUtf8("        \"Спросить\":\n            menu:\n                \"Да\":\n                    sl \"Да.\"")),
+          "a choice under an option nests inside it");
+    const int beach = int(rpy.indexOf(QStringLiteral("label genry_t__beach:"))), after = int(rpy.indexOf(QStringLiteral("label genry_t__after:")));
+    check(beach > 0 && after > beach && rpy.mid(beach, after - beach).contains(QStringLiteral("\n    return\n")),
+          "a choice not closed before the next scene closes itself; a scene that ends with it still ends (no run into the next label)");
+    // lint: a lock nothing opens, a condition nothing sets
+    EsAssets es;
+    if (!es.load(QStringLiteral(GB_SOURCE_DIR "/data/es_catalog.json"), esRootForTests(), &err)) {
+        check(false, "ES for choice 2.0 " + err);
+        return;
+    }
+    LintContext ctx;
+    ctx.es = &es;
+    ctx.opt = v1;
+    bool keyWarn = false, bad = false;
+    for (const LintIssue& i : lintStory(story, ctx)) {
+        if (i.msg.contains(QString::fromUtf8("«ключ» нигде не задаётся"))) keyWarn = true;
+        else if (i.level == LintIssue::Error) { bad = true; out << "    lint: " << i.line << " " << i.msg << "\n"; }
+    }
+    check(keyWarn && !bad, "lint: the lines under options are fine; «ключ» that nothing sets is named");
+    {
+        // a mistake in an option's brackets is shown under its own words, once
+        const QString line = QString::fromUtf8("- Пойти [нужно Слава много] [нужн Славя 3]");
+        const QString st2 = QString::fromUtf8("@mod_id genry_t\n: start\nвыбор\n") + line + QString::fromUtf8("\n- Уйти\nконецвыбора\nконецигры\n");
+        int numErr = 0, almost = 0, extra = 0;
+        for (const LintIssue& i : lintStory(st2, ctx)) {
+            if (i.line != 4) continue;
+            if (i.msg.contains(QString::fromUtf8("нужно число")) && i.col == line.indexOf(QString::fromUtf8("много")) && i.len == 5) ++numErr;
+            else if (i.msg.contains(QString::fromUtf8("не команда")) && i.col == line.indexOf(QString::fromUtf8("нужн ")) && i.len == 4) ++almost;
+            else { ++extra; out << "    lint: " << i.msg << " @" << i.col << "\n"; }
+        }
+        check(numErr == 1 && almost == 1, QStringLiteral("lint: «нужно Слава много» under «много», «[нужн …]» under «нужн» (%1 %2 %3)").arg(numErr).arg(almost).arg(extra));
+    }
+    // the preview: the cursor on an option lights it; in its lines - that branch
+    const SceneState onItem = sceneAt(story, 9, &es);
+    check(onItem.choices.size() == 4 && onItem.choiceHover == 1 && !onItem.choiceHints.value(1).isEmpty() && onItem.text == QString::fromUtf8("Куда пойдём?"),
+          "preview: the cursor on «Поцеловать» - the menu with it lit and locked, the question under it");
+    const SceneState inBranch = sceneAt(story, 8, &es);
+    check(inBranch.choices.isEmpty() && inBranch.text == QString::fromUtf8("Отлично!"), "preview: the cursor in an option's lines - that branch");
+    const SceneState past = sceneAt(story, 14, &es);
+    check(past.choices.isEmpty() && past.text == QString::fromUtf8("Идём дальше."), "preview: after the choice - no branch leaks into it");
+    // the cinema: the branch, then on; «по кругу» comes back without the asked one
+    Cinema c;
+    c.load(story, &es);
+    CinemaStop s = c.start(0);                        // 6: the question with the menu
+    const bool locked = s.kind == CinemaStop::Choice && s.options.size() == 3 && !s.optionHints.value(1).isEmpty();   // «Секрет» hidden
+    s = c.next(1);                                    // locked: nothing happens
+    const bool stays = s.kind == CinemaStop::Choice;
+    s = c.next(0);                                    // «На площадь»
+    const bool branch = s.kind == CinemaStop::Say && s.scene.text == QString::fromUtf8("Отлично!") && !s.popups.isEmpty();
+    s = c.next();
+    const bool onward = s.scene.text == QString::fromUtf8("Идём дальше.");
+    s = c.next();                                     // «по кругу»
+    const int first = int(s.options.size());
+    s = c.next(0);                                    // «Про лагерь»
+    s = c.next();                                     // back to the menu
+    const bool back = s.kind == CinemaStop::Choice && s.options.size() == first - 1 && !s.options.contains(QString::fromUtf8("Про лагерь"));
+    s = c.next(int(s.options.indexOf(QString::fromUtf8("Хватит"))));
+    const bool out2 = s.kind == CinemaStop::Say || s.kind == CinemaStop::Choice;      // «наугад» picks by itself -> «выбор кнопки»
+    check(locked && stays && branch && onward && first == 3 && back && out2 && s.kind == CinemaStop::Choice && s.options.size() == 2,
+          QStringLiteral("cinema: locked/hidden options, the branch then on, «по кругу» comes back without the asked one, «наугад» picks itself (%1 %2 %3 %4 %5 %6 %7)")
+              .arg(locked).arg(stays).arg(branch).arg(onward).arg(first).arg(back).arg(out2));
+    s = c.next(0);                                    // «Спросить» -> the nested choice
+    const bool nested = s.kind == CinemaStop::Choice && s.options == QStringList{QString::fromUtf8("Да"), QString::fromUtf8("Нет")};
+    s = c.next(0);
+    const bool nestedSay = s.scene.text == QString::fromUtf8("Да.");
+    s = c.next();
+    check(nested && nestedSay && s.scene.text == QString::fromUtf8("Всё."), "cinema: a choice under an option, then out of both");
+}
+
+// [10] Достижения 2.0: ES's plate, the list as ES's gallery, hidden / «сначала» / платина, one entry per key
+static void testAchievements2()
+{
+    out << "[10] achievements 2.0\n";
+    CompileOptions v1;
+    v1.knownSpeakers = {QStringLiteral("sl"), QStringLiteral("me")};
+    const QString story = QString::fromUtf8(
+        "@mod_id genry_t\n"
+        ": start\n"                                                                                   // 2
+        "ачивка help | Добрая душа | описание=Помог Славе | раздел=Славя | картинка=sl smile pioneer\n"   // 3
+        "ачивка secret | Тайна | скрытое | нужно=help\n"                                             // 4
+        "ачивка all | Все достижения | платина\n"                                                     // 5
+        "ачивка help | Добрая душа\n"                                                                 // 6
+        "достижения\n"                                                                                // 7
+        "конецигры\n");
+    QString err;
+    const QString rpy = compileText(story, v1, &err);
+    const QString help = persistentKey(QStringLiteral("genry_t"), QStringLiteral("help"), QStringLiteral("ach"), v1);
+    check(err.isEmpty() && rpy.contains(QString::fromUtf8("    $ genry_ach_unlock(genry_t__achievements, \"genry_t__ach_dates\", \"%1\", u\"Добрая душа\")").arg(help)),
+          "«ачивка» opens it with ES's plate, the day it came is kept");
+    check(rpy.contains(QString::fromUtf8("# «Все достижения» — платина")) && !rpy.contains(QString::fromUtf8("u\"Все достижения\")")),
+          "«платина» is never opened by its line");
+    check(rpy.count(QStringLiteral("{\"k\": ")) == 3 && rpy.contains(QStringLiteral("\"h\": True, \"n\": [\"%1\"]").arg(help)) &&
+              rpy.contains(QStringLiteral("\"ik\": \"sprite\"")) && rpy.contains(QStringLiteral("\"p\": True}")) &&
+              rpy.contains(QString::fromUtf8("\"d\": u\"Помог Славе\", \"s\": u\"Славя\"")),
+          "one entry per key: description, section, hidden, «сначала», picture, платина");
+    check(rpy.contains(QStringLiteral("screen genry_achievements(achs, called=False, dates=None):")) &&
+              rpy.contains(QStringLiteral("call screen genry_achievements(genry_t__achievements, called=True, dates=\"genry_t__ach_dates\")")) &&
+              rpy.contains(QStringLiteral("at_list=[achievement_trans], layer=\"overlay\"")) && !rpy.contains(QStringLiteral("default genry_ach")),
+          "the list as ES's gallery, the plate on ES's achievement_trans, nothing two mods would both `default`");
+    const SceneState at = sceneAt(story, 3, nullptr);
+    const SceneState all = sceneAt(story, 7, nullptr);            // both opened -> «платина» came by itself
+    const QStringList head = story.split(QLatin1Char('\n')).mid(0, 3);
+    const SceneState early = sceneAt(head.join(QLatin1Char('\n')) + QString::fromUtf8("\nдостижения\nачивка secret | Тайна | скрытое\nачивка all | Все | платина\n"), 4, nullptr);
+    check(at.achievementPlate == QString::fromUtf8("Добрая душа") &&
+              all.achievements == QStringList{QString::fromUtf8("Добрая душа|1||sl smile pioneer"), QString::fromUtf8("Тайна|1|h|"), QString::fromUtf8("Все достижения|1||")} &&
+              early.achievements.value(1) == QString::fromUtf8("Тайна|0|h|") && early.achievements.value(2) == QString::fromUtf8("Все|0||"),
+          "preview: ES's plate slides in; hidden until it comes; «платина» when the rest are there: [" + at.achievementPlate + "] " +
+              all.achievements.join(QStringLiteral(" / ")) + " || " + early.achievements.join(QStringLiteral(" / ")));
+    LintContext ctx;
+    ctx.opt = v1;
+    bool unknownNeed = false;
+    for (const LintIssue& i : lintStory(story + QString::fromUtf8("ачивка x | X | нужно=nothing\n"), ctx))
+        if (i.msg.contains(QString::fromUtf8("«nothing» нигде нет")) && i.col > 0) unknownNeed = true;
+    check(unknownNeed, "lint: «нужно=» names an achievement that is nowhere");
+
+    // «менюмода свой»: the menu from its parts
+    const QString menu = QString::fromUtf8("@mod_id genry_t\nменюмода свой\nзаголовок Лето\nкнопки справа\nвид таблички\nцвет #8be9fd\n"
+                                           "частицы снег\nпоявление снизу\nфон ext_square_night\nгерои sl smile pioneer\nкнопка Начать\nкнопка Выход\n"
+                                           "конецменюмода\n: start\nтекст а\nконецигры\n");
+    const QString mr = compileText(menu, v1);
+    check(mr.contains(QStringLiteral("xanchor 1.0")) && mr.contains(QStringLiteral("hover_background Solid(\"#8be9fd55\")")) &&
+              mr.contains(QStringLiteral("genry_menu_rise(")) && mr.contains(QStringLiteral("image genry_t__weather_snow_1 = ")) &&
+              mr.contains(QStringLiteral("xalign 0.2 yalign 1.0 at genry_waifu_in")) && !mr.contains(QString::fromUtf8("Unknown command")),
+          "«свой» menu: right, plates in its colour, rising in, snow, the heroine on the free side");
+    const QString mes = compileText(QString(menu).replace(QString::fromUtf8("вид таблички"), QString::fromUtf8("вид бл")), v1);
+    check(mes.contains(QStringLiteral("background Frame(\"images/gui/choice/night/choice_box.png\", 50, 50)")) && mes.contains(QStringLiteral("hover_color \"#3ccfa2\"")),
+          "«свой», «вид бл»: ES's choice box and colours of the menu's hour (night)");
+    const SceneState ms = sceneAt(menu, 12, nullptr);
+    check(ms.modMenuOpen && ms.modMenuStyle == QStringLiteral("custom") && ms.modMenuParts.layout == QStringLiteral("right") &&
+              ms.modMenuParts.look == QStringLiteral("plates") && ms.modMenuParts.accent == QStringLiteral("#8be9fd"),
+          "preview knows the «свой» parts");
+    bool badWord = false;
+    for (const LintIssue& i : lintStory(QString(menu).replace(QString::fromUtf8("вид таблички"), QString::fromUtf8("вид блестящий")), ctx))
+        if (i.msg.contains(QString::fromUtf8("не знаю — можно: текст, таблички, бл, неон"))) badWord = true;
+    check(badWord, "lint: a word of «свой» it does not know says what it knows");
+
+    // «кодовыйзамок» and «фонарик»
+    const QString mech = QString::fromUtf8("@mod_id genry_t\n: start\nфон ext_square_night\nфонарик\nФонарик погас.\n"
+                                           "кодовыйзамок 1968 | Год, когда открыли лагерь? | верно -> safe | неверно -> lost | попыток=3\n"
+                                           "фонарик выкл\n: safe\nтекст Открыто.\nконецигры\n: lost\nтекст Не вышло.\nконецигры\n");
+    const QString mk = compileText(mech, v1);
+    check(mk.contains(QString::fromUtf8("    call screen genry_codelock(u\"1968\", u\"Год, когда открыли лагерь?\", 3)\n    if _return:\n        jump genry_t__safe\n    jump genry_t__lost")) &&
+              mk.contains(QStringLiteral("screen genry_codelock(code, hint=u\"\", tries=0):")),
+          "«кодовыйзамок»: ES's o_rly plate, the right / wrong code go to their scenes");
+    check(mk.contains(QStringLiteral("    show screen genry_flashlight(\"mods/genry_t/images/genry_fx/flashlight.png\", \"#050810\", 1.5)")) &&
+              mk.contains(QStringLiteral("    hide screen genry_flashlight")) && mk.contains(QString::fromUtf8("\"Фонарик погас.\"")),
+          "«фонарик» on / off; «Фонарик погас.» stays a sentence");
+    const SceneState dark = sceneAt(mech, 4, nullptr), lock = sceneAt(mech, 6, nullptr);
+    check(dark.flashlight && lock.codeLock == QString::fromUtf8("Год, когда открыли лагерь?|4|3"), "preview: the dark with the light, the code plate");
+    bool notDigits = false;
+    for (const LintIssue& i : lintStory(QString(mech).replace(QStringLiteral("1968"), QStringLiteral("19a8")), ctx))
+        if (i.msg.contains(QString::fromUtf8("только цифры")) && i.len == 4) notDigits = true;
+    check(notDigits, "lint: a code the digits cannot type");
 }
 
 int main(int argc, char** argv)
@@ -928,6 +1350,8 @@ int main(int argc, char** argv)
     testScreenplay();
     testWardrobe();
     testCinema();
+    testChoice2();
+    testAchievements2();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

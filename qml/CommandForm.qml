@@ -25,7 +25,8 @@ Popup {
     readonly property string by: form.by || ""
     readonly property string variant: by ? String(values[by] === undefined ? "" : values[by]) : ""
     readonly property var byField: (form.fields || []).find(f => f.k === by) || null
-    readonly property var shownFields: (form.fields || []).filter(f => f.k !== by && (!f.on || f.on.indexOf(variant) >= 0))
+    readonly property var shownFields: (form.fields || []).filter(f => f.k !== by && (!f.on || f.on.indexOf(variant) >= 0) &&
+                                                                   (!f.needs || String(values[f.needs] === undefined ? "" : values[f.needs]) !== ""))
     readonly property color accentColor: Theme.categoryColor(form.cat || "")
 
     parent: Overlay.overlay
@@ -147,6 +148,12 @@ Popup {
                 spacing: 10
                 Rectangle { width: 12; height: 12; radius: 6; color: cf.accentColor }
                 InkText { text: cf.form.title || ""; size: 30; color: Theme.gold }
+                PillButton {
+                    visible: !!cf.form.dice
+                    dark: true
+                    text: "🎲 Удиви меня"
+                    onClicked: { cf.values = Engine.diceForm(cf.formId, cf.values); cf.rebuild() }
+                }
                 Text {
                     visible: cf.editing
                     text: "строка " + cf.storyLine

@@ -147,6 +147,8 @@ struct Scope {
     bool isSet(const QString& k) const
     {
         const QVariantMap f = fields.value(k);
+        const QString need = f.value(S("needs")).toString();
+        if (!need.isEmpty() && need != k && !isSet(need)) return false;
         const QString t = f.value(S("t")).toString();
         const QVariant v = value(k);
         if (t == QLatin1String("bool")) return v.toBool();
@@ -463,7 +465,11 @@ QVariantMap Forms::parse(const QString& lineIn) const
         const Fields fields = fieldsOf(form.value(S("fields")).toList());
         const QString by = form.value(S("by")).toString();
         for (const QString& variant : variantsOf(form)) {
-            const QString templ = templateOf(form, variant);
+            QString templ = templateOf(form, variant);
+            // «: {name}[\nвремя {t}]…»: the extra lines are optional commands of their own - the line reads back by
+            // its first part; a template that needs several lines (a whole «выбор» block) never matches one line
+            const int nl = int(templ.indexOf(QLatin1Char('\n')));
+            if (nl > 0 && templ.at(nl - 1) == QLatin1Char('[')) templ = templ.left(nl - 1);
             if (templ.isEmpty() || templ.contains(QLatin1Char('\n'))) continue;
             const QString tw = templateWord(templ);
             QString rest, restT;
