@@ -338,6 +338,21 @@ static void testFixes()
                   body.contains(QStringLiteral("    show blinking zorder 90\n    $ renpy.pause(3.5, hard=True)\n    hide blinking\n")),
               "eyes on the master layer like ES (a line with shut eyes is seen), still lids after a «фон», «моргнуть» = ES blinking");
     }
+    {
+        // «менюмода» in a mod's own words: «Дни» = chapters, «Фотографии» = gallery, «Выселиться» = exit (old: all of them
+        // started the mod); «автор нет» hides the author line, «автор Имя» renames it
+        const QString rm = compileText(QString::fromUtf8("@mod_id genry_t\n@mod_name Общага\n@author Вахтёр\n\nменюмода\nавтор нет\n"
+                                                         "кнопка Начать запись -> start\nкнопка Дни\nкнопка Фотографии\nкнопка Настройки\n"
+                                                         "кнопка Выселиться\nконецменюмода\n\n: start\nтекст а\n"), es);
+        check(rm.contains(QStringLiteral("Show(\"genry_chapters\"")) && rm.contains(QStringLiteral("Show(\"genry_gallery\"")) &&
+                  rm.contains(QStringLiteral("ShowMenu(\"preferences\")")) && rm.contains(QStringLiteral("Return(\"__exit\")")) &&
+                  rm.count(QStringLiteral("action Return(\"genry_t__start\")")) == 1 && !rm.contains(QString::fromUtf8("автор: ")),
+              "менюмода: Дни/Фотографии/Выселиться understood, «автор нет» hides the author");
+        const QString ra = compileText(QString::fromUtf8("@mod_id genry_t\n@author Вахтёр\nменюмода\nавтор Студия «Общага»\nкнопка Начать\n"
+                                                         "конецменюмода\n: start\nтекст а\n"), es);
+        check(ra.contains(QString::fromUtf8("автор: Студия «Общага»")) && !ra.contains(QString::fromUtf8("автор: Вахтёр")),
+              "менюмода: «автор Имя» renames the author line");
+    }
     // every V1 feature at once: meters, timed choice, «запомнит», inventory, gallery, achievements, the mod's menu
     QFile ft(QStringLiteral(GB_SOURCE_DIR "/work/featuretest/story.txt"));
     if (ft.open(QIODevice::ReadOnly)) {

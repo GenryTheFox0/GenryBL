@@ -57,6 +57,8 @@ struct CustomImage {
 ModMeta parseMeta(const QStringList& lines, QStringList* body, const CompileOptions& opt = {});
 bool hasPlayableBody(const QStringList& body, const CompileOptions& opt = {});
 QStringList compileLine(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt = {});
+// «менюмода»: a button's kind by its target or caption (Дни -> главы, Фотографии -> галерея, Выселиться -> выход…)
+QString menuButtonKind(const QString& word);
 // Returns the .rpy text; on a malformed choice block returns {} and sets *error ("ValueError: ...").
 QString compileStory(const ModMeta& meta, const QStringList& body, const CompileOptions& opt = {},
                      const QVector<CustomImage>& images = {}, QString* error = nullptr);

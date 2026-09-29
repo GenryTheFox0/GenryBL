@@ -65,6 +65,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
     labels.insert(meta.modId, 0);
     QVector<Ref> targets;
     int choiceOpen = 0, phoneOpen = 0, menuOpen = 0;
+    int menuStarts = 0;                     // «менюмода»: buttons that start the mod
     bool timedChoice = false;
     QSet<QString> meterVars;              // «шкала» declarations (anywhere in the story)
     for (const QString& raw : lines) {
@@ -166,7 +167,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             if (cmd == QLatin1String("endmodmenu") || cmd == QLatin1String("endchoice")) { menuOpen = 0; continue; }
             const QString lw = first.toLower();
             if (lw == U("заголовок") || lw == QLatin1String("title") || lw == U("лого") || lw == U("логотип") || lw == QLatin1String("logo") ||
-                lw == U("стиль") || lw == QLatin1String("style"))
+                lw == U("стиль") || lw == QLatin1String("style") || lw == U("автор") || lw == QLatin1String("author"))
                 continue;
             if (lw == U("герои") || lw == U("героини") || lw == U("вайфу") || lw == QLatin1String("heroes")) {
                 for (const QString& h : rest.split(QLatin1Char('|'))) {
@@ -177,18 +178,22 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                 continue;
             }
             if (lw == U("кнопка") || lw == QLatin1String("button")) {
+                // the kinds the menu knows by word (menuButtonKind: «Дни» = главы, «Выселиться» = выход…)
+                static const QSet<QString> special{U("галерея"), U("достижения"), U("шкалы"), U("главы"), U("настройки"), U("загрузить"), U("выход")};
                 if (rest.contains(QLatin1String("->"))) {
                     const QString t = pyStrip(rest.section(QStringLiteral("->"), 1));
-                    static const QSet<QString> special{U("галерея"), U("достижения"), U("шкалы"), U("отношения"), U("загрузить"), U("продолжить"),
-                                                       U("выход"), U("выйти")};
-                    if (!special.contains(t.toLower())) targets.push_back({ln, t});
+                    if (!special.contains(menuButtonKind(t))) targets.push_back({ln, t});
                 } else if (rest.isEmpty()) {
                     add(ln, LintIssue::Warning, U("Кнопка без текста: «кнопка Начать -> start» или «кнопка Галерея»"));
+                } else if (!special.contains(menuButtonKind(rest)) && ++menuStarts > 1) {
+                    // a second button with no target and no known word: it starts the mod too - most likely not meant
+                    add(ln, LintIssue::Info, U("Кнопка «%1» тоже начинает мод с начала. Другое нужно — «кнопка %1 -> главы» "
+                                               "(или галерея, настройки, загрузить, выход, имя сцены)").arg(rest));
                 }
                 continue;
             }
         }
-        if (cmd == QLatin1String("modmenu")) { menuOpen = ln; continue; }
+        if (cmd == QLatin1String("modmenu")) { menuOpen = ln; menuStarts = 0; continue; }
         if (cmd == QLatin1String("meter")) {
             const QString v = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
             if (v.isEmpty()) add(ln, LintIssue::Error, U("Шкала: «шкала симпатия_алисы | Алиса | #ff7a00 | 0 | 10»"));

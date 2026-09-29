@@ -2870,6 +2870,28 @@ QStringList compileLine(const QString& line, const QString& modId, CompileState&
     return compileEyesOpen(QStringLiteral("1.5")) + compileLineCore(line, modId, st, opt);
 }
 
+// «менюмода»: what a button is, by its target or - with none - by its caption. A mod dresses its menu in its own words
+// («Дни», «Фотографии», «Выселиться» in a dormitory mod): the old exact-word match sent every such button to the start.
+QString menuButtonKind(const QString& word)
+{
+    QString w = pyStrip(word).toLower();
+    w.replace(QChar(0x0451), QChar(0x0435));                // ё -> е
+    struct Kind { const char* key; std::initializer_list<const char*> words; };
+    static const Kind kinds[] = {
+        {"галерея", {"галерея", "фотографии", "фото", "фотки", "альбом", "фотоальбом", "картинки", "воспоминания", "gallery", "photos", "cg"}},
+        {"достижения", {"достижения", "ачивки", "награды", "трофеи", "achievements"}},
+        {"шкалы", {"шкалы", "отношения", "симпатии", "meters"}},
+        {"главы", {"главы", "дни", "эпизоды", "части", "сцены", "chapters", "days", "episodes"}},
+        {"настройки", {"настройки", "опции", "параметры", "settings", "options", "preferences"}},
+        {"загрузить", {"загрузить", "продолжить", "сохранения", "загрузка", "load", "continue"}},
+        {"выход", {"выход", "выйти", "выселиться", "уйти", "покинуть", "закрыть", "назад в игру", "exit", "quit", "leave"}},
+    };
+    for (const Kind& k : kinds)
+        for (const char* x : k.words)
+            if (w == QString::fromUtf8(x)) return QString::fromUtf8(k.key);
+    return w;
+}
+
 QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const CompileOptions& opt, const QVector<CustomImage>& images, QString* error)
 {
     // V1 «пиши как сценарий»: headings, «Алиса (злая, слева): …», prose -> ordinary commands first
@@ -3198,11 +3220,17 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         }
         if (preludeFirst) out.insert(at, QStringLiteral("label %1__start:").arg(modId));
         QString title = meta.modName, logo, startLab;
+        QString author = meta.author;                   // «автор Имя» renames it on the menu, «автор нет» hides it
         SL prelude, buttons, returns, heroes;
         for (const QString& s : menuLines) {
             const QString w = firstWord(s), lw = w.toLower(), rest = pyStrip(s.mid(w.size()));
             if (lw == U("заголовок") || lw == QLatin1String("title")) { title = rest; continue; }
             if (lw == U("лого") || lw == U("логотип") || lw == QLatin1String("logo")) { logo = rest; continue; }
+            if (lw == U("автор") || lw == QLatin1String("author")) {
+                static const QSet<QString> none{U("нет"), U("скрыть"), U("убрать"), U("без"), QStringLiteral("-"), QStringLiteral("none"), QStringLiteral("no")};
+                author = none.contains(rest.toLower()) ? QString() : rest;
+                continue;
+            }
             if (lw == U("стиль") || lw == QLatin1String("style")) { menuStyle = rest.toLower(); continue; }
             if (lw == U("герои") || lw == U("героини") || lw == U("вайфу") || lw == QLatin1String("heroes")) {
                 for (const QString& h : rest.split(QLatin1Char('|'))) {
@@ -3218,7 +3246,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
                 cap = pyStrip(rest.section(QStringLiteral("->"), 0, 0));
                 target = pyStrip(rest.section(QStringLiteral("->"), 1));
             }
-            const QString key = (target.isEmpty() ? cap : target).toLower();
+            const QString key = menuButtonKind(target.isEmpty() ? cap : target);
             QString action;
             if (key == U("галерея") || key == QLatin1String("gallery")) action = QStringLiteral("Show(\"genry_gallery\", cgs=%1)").arg(c.sys(QStringLiteral("cgs")));
             else if (key == U("достижения") || key == QLatin1String("achievements"))
@@ -3324,8 +3352,8 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         }
         if (!title.isEmpty())
             menuScreen << QStringLiteral("        text ") + pyUQ(title) + QStringLiteral(" size 64 color \"#ffd27d\" outlines [(3, \"#00000088\", 0, 0)] ") + corbel + QStringLiteral(" at genry_menu_in(0.0)");
-        if (!meta.author.isEmpty())
-            menuScreen << QStringLiteral("        text ") + pyUQ(U("автор: ") + meta.author) + QStringLiteral(" size 22 color \"#a9b9a4\" font \"fonts/calibri.ttf\" at genry_menu_in(0.05)");
+        if (!author.isEmpty())
+            menuScreen << QStringLiteral("        text ") + pyUQ(U("автор: ") + author) + QStringLiteral(" size 22 color \"#a9b9a4\" font \"fonts/calibri.ttf\" at genry_menu_in(0.05)");
         menuScreen << QStringLiteral("        null height 36");
         for (int i = 0; i + 1 < buttons.size(); i += 2) {
             menuScreen << QStringLiteral("        button at genry_menu_in(%1):").arg(pyRepr(0.15 + 0.08 * (i / 2)))
