@@ -16,6 +16,10 @@ endif()
 
 if(MSVC)
     add_compile_options(/utf-8 /W3 /permissive- /Zc:__cplusplus)
+    # a PDB for the release too: the crash catcher (src/app/CrashCatcher.cpp) turns addresses into GenryBL's own
+    # function names and lines; /OPT:REF/ICF keep the exe as lean as without it
+    add_compile_options($<$<CONFIG:Release>:/Zi>)
+    add_link_options($<$<CONFIG:Release>:/DEBUG> $<$<CONFIG:Release>:/OPT:REF> $<$<CONFIG:Release>:/OPT:ICF>)
 endif()
 
 # ---- core: compiler, ES assets, preview, builder (no UI) ----
@@ -105,11 +109,12 @@ qt_add_qml_module(GenryBL
         src/app/Highlighter.h src/app/Highlighter.cpp
         src/app/Installer.cpp
         src/app/Updater.cpp
+        src/app/CrashCatcher.h src/app/CrashCatcher.cpp
 )
 target_include_directories(GenryBL PRIVATE src/app)
 target_link_libraries(GenryBL PRIVATE gb_core Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Concurrent Qt6::Network)
 if(WIN32)
-    target_link_libraries(GenryBL PRIVATE ole32 shell32 uuid)
+    target_link_libraries(GenryBL PRIVATE ole32 shell32 uuid dbghelp)
 endif()
 
 # ---- GenryBL_Setup.exe: the one-file installer (plain Win32, the zipped program is appended by make_release.py)

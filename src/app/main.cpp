@@ -2,6 +2,7 @@
 //   GenryBL.exe                         normal start (launcher)
 //   GenryBL.exe --shot   <page> <png>   render one screen to a PNG and quit (UI self-check)
 //     page: launcher | projects | editor
+#include "CrashCatcher.h"
 #include "Engine.h"
 #include "Images.h"
 
@@ -90,6 +91,7 @@ int main(int argc, char** argv)
         QDir().mkpath(engine.appRoot() + QStringLiteral("/work"));
         g_log = new QFile(engine.appRoot() + QStringLiteral("/work/genrybl.log"));
         if (g_log->open(QIODevice::WriteOnly | QIODevice::Truncate)) qInstallMessageHandler(logHandler);
+        crash::install(engine.appRoot() + QStringLiteral("/work/crash"), engine.appRoot() + QStringLiteral("/work/genrybl.log"), engine.version());
     }
     if (engine.ready()) QGuiApplication::setWindowIcon(QIcon(QPixmap::fromImage(engine.providerImage(QStringLiteral("file/images/gui/title_menu/owl_idle.png"), QSize(256, 256)))));
     QQmlApplicationEngine qml;
@@ -105,6 +107,9 @@ int main(int argc, char** argv)
     qml.loadFromModule("GenryBL", "Main");
     if (qml.rootObjects().isEmpty()) return 3;
 
+    // GenryBL.exe --crash-test: fall on purpose after 3 s (the crash catcher's own check)
+    if (args.contains(QStringLiteral("--crash-test")))
+        QTimer::singleShot(3000, &app, [] { volatile int* nowhere = nullptr; *nowhere = 1; });
     if (shot) {
         auto* win = qobject_cast<QQuickWindow*>(qml.rootObjects().first());
         const QString out = args[shotAt + 2];

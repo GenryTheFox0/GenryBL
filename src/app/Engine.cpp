@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "CrashCatcher.h"
 #include "Screenplay.h"
 #include "Compiler.h"
 #include "Lint.h"
@@ -633,7 +634,10 @@ QVariantList Engine::cast() const
                            {QStringLiteral("color"), m_es.characterColor(tag, QStringLiteral("day"))}, {QStringLiteral("count"), names.size()},
                            {QStringLiteral("pose"), def}};
     }
-    for (auto it = m_renderer.customImages().begin(); it != m_renderer.customImages().end(); ++it) {
+    // ONE copy: customImages() returns a new hash each call - begin() of one copy and end() of another walked freed
+    // memory, and GenryBL fell as soon as a project had a picture of its own (the «свои задники» / Miguel PNG crash)
+    const QHash<QString, QString> custom = m_renderer.customImages();
+    for (auto it = custom.constBegin(); it != custom.constEnd(); ++it) {
         const QString name = it.key();
         if (name.startsWith(QLatin1String("bg ")) || name.startsWith(QLatin1String("cg "))) continue;
         const QString tag = name.section(QLatin1Char(' '), 0, 0);
@@ -742,6 +746,7 @@ QVariantMap Engine::expandScreenplayLine(const QString& storyText, int line) con
 
 QString Engine::screenplayKind(const QString& lineText) const { return gb::screenplayKind(lineText); }
 QString Engine::clipboardText() const { return QGuiApplication::clipboard()->text(); }
+void Engine::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }
 
 QVariantMap Engine::sceneInfo(const QString& text, int line) const
 {
@@ -1622,6 +1627,25 @@ void Engine::exportMod(const QString& id, const QString& text, const QString& ki
         res.ok = true;
         return res;
     }));
+}
+
+QString Engine::lastCrash() const
+{
+    const QString r = crash::newestReport(m_root + QStringLiteral("/work/crash"));
+    return !r.isEmpty() && QFileInfo(r).fileName() != m_settings.value(QStringLiteral("crashSeen")).toString() ? r : QString();
+}
+
+void Engine::crashSeen()
+{
+    const QString r = crash::newestReport(m_root + QStringLiteral("/work/crash"));
+    m_settings.setValue(QStringLiteral("crashSeen"), QFileInfo(r).fileName());
+    emit lastCrashChanged();
+}
+
+QString Engine::crashText() const
+{
+    QFile f(lastCrash());
+    return f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.read(60000)) : QString();
 }
 
 void Engine::restartApp()

@@ -536,7 +536,8 @@ QVariantList Forms::paletteRows() const
             ar.insert(S("category"), a.value(S("cat")));
             ar.insert(S("also"), true);
             QString key = id;
-            for (auto it = a.value(S("preset")).toMap().begin(); it != a.value(S("preset")).toMap().end(); ++it) key += QLatin1Char('/') + it.value().toString();
+            const QVariantMap preset = a.value(S("preset")).toMap();     // one copy to walk (toMap() makes a new one each call)
+            for (auto it = preset.constBegin(); it != preset.constEnd(); ++it) key += QLatin1Char('/') + it.value().toString();
             ar.insert(S("key"), key);
             add(a.value(S("cat")).toString(), ar);
         }

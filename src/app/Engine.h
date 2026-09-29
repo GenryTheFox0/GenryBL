@@ -52,6 +52,8 @@ class Engine : public QObject {
     Q_PROPERTY(QString esRoot READ esRoot NOTIFY readyChanged)
     // «Обновить»: {state: ""|checking|latest|available|downloading|starting|error|dev, text, version, source: github|steam, progress 0..1}
     Q_PROPERTY(QVariantMap updateInfo READ updateInfo NOTIFY updateChanged)
+    // the report the crash catcher wrote last time (work/crash/GenryBL_*.txt) if nobody has seen it yet, else ""
+    Q_PROPERTY(QString lastCrash READ lastCrash NOTIFY lastCrashChanged)
     Q_PROPERTY(QString version READ version CONSTANT)
     Q_PROPERTY(int libraryState READ libraryState NOTIFY libraryChanged)   // 0 not scanned, 1 scanning, 2 ready
     Q_PROPERTY(int wardrobeState READ wardrobeState NOTIFY wardrobeChanged) // 0 / 1 loading / 2 ready
@@ -123,7 +125,7 @@ public:
     QVariantList ambience() const;
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
-    QString version() const { return QStringLiteral("V1.0.4"); }
+    QString version() const { return QStringLiteral("V1.0.5"); }
 
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;
@@ -226,7 +228,11 @@ public:
     Q_INVOKABLE QString font() const { return m_renderer.fontFamily(); }
     Q_INVOKABLE QVariant setting(const QString& key, const QVariant& def = QVariant()) const;
     Q_INVOKABLE void setSetting(const QString& key, const QVariant& value);
-    Q_INVOKABLE void restartApp();                   // «Масштаб интерфейса» takes effect at start
+    Q_INVOKABLE void restartApp();
+    QString lastCrash() const;
+    Q_INVOKABLE void crashSeen();                    // the plate is closed: this report is not shown again
+    Q_INVOKABLE QString crashText() const;           // the report, to copy into a message
+    Q_INVOKABLE void copyText(const QString& text) const;                   // «Масштаб интерфейса» takes effect at start
 
     QImage providerImage(const QString& id, const QSize& requested);
 
@@ -248,6 +254,7 @@ signals:
     void engineCheckFinished(bool clean, const QStringList& lines);
     void audioImported(const QStringList& rels, bool ok);
     void updateChanged();
+    void lastCrashChanged();
     void exportFinished(bool ok, const QString& message, const QString& path);
 
 private:

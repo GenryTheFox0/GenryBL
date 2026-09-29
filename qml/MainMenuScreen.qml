@@ -307,6 +307,39 @@ Item {
 
     Component.onCompleted: Engine.checkUpdates(false)       // once a session (Updater.cpp), quietly
 
+    // ---- the last run fell: the crash catcher's report, one click to send it
+    Rectangle {
+        visible: Engine.lastCrash !== ""
+        z: 20
+        x: 40; y: 150
+        width: 560; height: crashCol.implicitHeight + 36
+        radius: 10
+        color: "#f7e7e2"; border.color: "#b3261e"; border.width: 2
+        Column {
+            id: crashCol
+            x: 18; y: 18
+            width: parent.width - 36
+            spacing: 10
+            Text { text: "В прошлый раз GenryBL вылетел"; color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 26; font.bold: true }
+            Text {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: "Прости. Отчёт о вылете сохранён — там видно, где именно. Скопируй его и кинь в Discord или GitHub: " +
+                      "по нему вылет чинится наверняка, а не наугад."
+                color: Theme.ink; font.family: Theme.ui; font.pixelSize: 17
+            }
+            Flow {
+                width: parent.width
+                spacing: 8
+                LinkChip { label: "Скопировать отчёт"; tint: "#b3261e"; action: function() { Engine.copyText(Engine.crashText()); Engine.toast("Отчёт скопирован — вставь его в сообщение", 0) } }
+                LinkChip { label: "Открыть папку"; tint: "#7a6440"; action: function() { Engine.revealFile(Engine.lastCrash) } }
+                LinkChip { label: "Discord"; url: "https://discord.gg/2Yy45gJap3"; tint: "#5865f2" }
+                LinkChip { label: "GitHub"; url: "https://github.com/GenryTheFox0/GenryBL/issues/new"; tint: "#2d333b" }
+                LinkChip { label: "Закрыть"; tint: "#8b8b8b"; action: function() { Engine.crashSeen() } }
+            }
+        }
+    }
+
     // ---- support: a note pinned over the gate - donations, the community, reviews
     component LinkChip: Rectangle {
         id: chip

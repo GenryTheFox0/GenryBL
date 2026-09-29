@@ -125,6 +125,9 @@ def main():
     app = os.path.join(STAGE, 'app')
     os.makedirs(app)
     shutil.copy2(os.path.join(BUILD, 'GenryBL.exe'), app)
+    # the symbols ride along: a crash report (work/crash) then names GenryBL's own functions and lines, not bare addresses
+    if os.path.isfile(os.path.join(BUILD, 'GenryBL.pdb')):
+        shutil.copy2(os.path.join(BUILD, 'GenryBL.pdb'), app)
     subprocess.check_call([os.path.join(QT, 'bin', 'windeployqt.exe'), '--release', '--qmldir', os.path.join(ROOT, 'qml'), '--no-translations',
                            '--no-system-d3d-compiler', '--no-opengl-sw', os.path.join(app, 'GenryBL.exe')],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
