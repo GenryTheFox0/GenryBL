@@ -123,7 +123,7 @@ public:
     QVariantList ambience() const;
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
-    QString version() const { return QStringLiteral("V1.0.3"); }
+    QString version() const { return QStringLiteral("V1.0.4"); }
 
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;
@@ -273,6 +273,11 @@ private:
     qint64 m_updSize = 0;
     void setUpdate(const QString& state, const QString& text, double progress = 0);
     void runUpdater(const QString& setup);
+    // the download itself: resumable (Range), a watchdog instead of a total timeout, HTTP/1.1 (Updater.cpp)
+    QString m_dlPath, m_dlUrl;
+    int m_dlTries = 0;
+    void downloadChunk();
+    void downloadDone();
     bool m_ready = false;
     QString m_startupError;
     bool m_busy = false;
