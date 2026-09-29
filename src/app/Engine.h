@@ -171,6 +171,8 @@ public:
     Q_INVOKABLE bool openProject(const QString& id);
     Q_INVOKABLE QString loadStory(const QString& id) const;
     Q_INVOKABLE bool saveStory(const QString& id, const QString& text);
+    // --shot: screens type demo text into the editor - it must never land in the user's real project
+    void setShotMode(bool on) { m_shotMode = on; }
     Q_INVOKABLE bool renameProject(const QString& id, const QString& name);
     Q_INVOKABLE QString duplicateProject(const QString& id);
     Q_INVOKABLE bool trashProject(const QString& id);
@@ -298,6 +300,7 @@ private:
 
     static Engine* s_instance;
     QString m_root;
+    bool m_shotMode = false;
     QVariantMap m_update;
     QNetworkAccessManager* m_net = nullptr;
     QString m_updUrl, m_updSums, m_updLocal;            // GitHub setup + SHA256SUMS.txt / the Workshop's setup

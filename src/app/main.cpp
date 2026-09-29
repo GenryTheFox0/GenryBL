@@ -87,6 +87,7 @@ int main(int argc, char** argv)
     const bool shot = shotAt > 0 && args.size() > shotAt + 2;
 
     Engine& engine = *Engine::boot();
+    engine.setShotMode(shot);
     if (!engine.appRoot().isEmpty()) {
         QDir().mkpath(engine.appRoot() + QStringLiteral("/work"));
         g_log = new QFile(engine.appRoot() + QStringLiteral("/work/genrybl.log"));

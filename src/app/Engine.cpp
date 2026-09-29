@@ -1567,6 +1567,7 @@ QString Engine::loadStory(const QString& id) const { return stripBom(QString::fr
 bool Engine::saveStory(const QString& id, const QString& text)
 {
     if (id.isEmpty()) return false;
+    if (m_shotMode) return true;
     const QString path = projectDir(id) + QStringLiteral("/story.txt");
     if (loadStory(id) == text) return true;
     const bool ok = writeFile(path, text.toUtf8());
