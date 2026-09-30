@@ -98,6 +98,8 @@ Item {
         if (shotPage === "editor-find") Qt.callLater(() => { code.gotoLine(1); code.openFindWith(shotArg || "Славя", false); code.replaceOpen = true })
         if (shotPage === "editor-search") Qt.callLater(() => searchAll.openWith(shotArg || "Славя"))
         if (shotPage === "editor-break") Qt.callLater(() => breakDialog.openFor(code.text))
+        if (shotPage === "editor-publish") Qt.callLater(() => { exportDialog.openFor(projectId, code.text); exportDialog.startPublish() })
+        if (shotPage === "editor-crash") Qt.callLater(() => Engine.shotCrash(projectId, code.text))
         if (startLine > 0) Qt.callLater(() => { code.gotoLine(startLine); if (startFind) code.openFindWith(startFind, false) })
         refreshPreview()
     }
@@ -178,6 +180,7 @@ Item {
                      qsTr(". Прежний текст — в «Истории»"), 0)
     }
     function save() { Engine.saveStory(projectId, code.text) }
+    function gotoStoryLine(n) { code.gotoLine(n) }
     function play() { Engine.play(projectId, code.text, code.currentLine) }
     // «кино-режим»: the mod plays in the constructor from the cursor line (above the first scene: from the start)
     function cinema() { ed.save(); cinemaView.begin(code.text, code.currentLine) }

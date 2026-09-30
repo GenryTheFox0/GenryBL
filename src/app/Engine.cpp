@@ -8,6 +8,7 @@
 #include "Graph.h"
 #include "Timeline.h"
 #include "Fuzz.h"
+#include "Crash.h"
 #include "Py.h"
 #include "Text.h"
 
@@ -15,6 +16,7 @@
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QDateTime>
+#include <QTemporaryDir>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
@@ -32,6 +34,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QProcess>
+#include <memory>
 #include <QQmlEngine>
 #include <QRegularExpression>
 #include <QSaveFile>
@@ -214,7 +217,9 @@ bool Engine::start(const QString& esRoot)
     build::removeGate(esRoot);            // … or from a check GenryBL was closed in the middle of
     m_watch.setInterval(1500);
     connect(&m_watch, &QTimer::timeout, this, [this] {
+        checkCrash();                     // Ren'Py shows its error screen and keeps running: tell it at once
         if (m_gamePid && !build::isRunning(m_gamePid)) {
+            checkCrash();
             m_gamePid = 0;
             m_watch.stop();
             build::removeHook(m_es.esRoot());
@@ -2346,6 +2351,8 @@ void Engine::play(const QString& id, const QString& storyText, int line)
     if (!saveStory(id, storyText)) return;                // the story is not on disk: nothing is built from a guess
     const QString text = claimModId(id, storyText);
     stopGame();
+    m_playProject = id;
+    m_playSince = 0;
     const BuildEnv env = envFor(id);
     const CompileOptions opt = options();
     QString label = labelAtLine(text, line);
@@ -2360,8 +2367,12 @@ void Engine::play(const QString& id, const QString& storyText, int line)
         QString target = label;
         if (target == QLatin1String("start") || !r.labels.contains(target)) target = r.meta.modId;
         QString err;
+        const qint64 since = QDateTime::currentMSecsSinceEpoch() - 1000;
         m_gamePid = build::runAt(env, r.meta.modId, target, &err);
         if (!m_gamePid) { emit buildFinished(false, err); return; }
+        m_playModId = r.meta.modId;
+        m_playSince = since;
+        m_crashTold = false;
         m_watch.start();
         emit gameRunningChanged();
         emit buildFinished(true, target == r.meta.modId ? gbTr("БЛ запускается с начала мода") : gbTr("БЛ запускается со сцены «") + target + U("»"));
@@ -2370,6 +2381,51 @@ void Engine::play(const QString& id, const QString& storyText, int line)
         waitForWardrobe(log);
         return build::install(env, text, opt, log);
     }));
+}
+
+void Engine::checkCrash()
+{
+    if (m_crashTold || !m_playSince) return;
+    const QString story = m_playProject.isEmpty() ? QString() : loadStory(m_playProject);
+    const CrashReport c = readCrash(m_es.esRoot(), m_playSince, m_playModId, story, options());
+    if (!c.found) return;
+    m_crashTold = true;
+    tellCrash(c, m_playProject, story);
+}
+
+void Engine::tellCrash(const CrashReport& c, const QString& project, const QString& story)
+{
+    const QStringList lines = pySplitLines(story);
+    emit gameCrashed({{QStringLiteral("project"), project}, {QStringLiteral("kind"), c.kind}, {QStringLiteral("what"), c.what},
+                      {QStringLiteral("arg"), c.arg}, {QStringLiteral("error"), c.error}, {QStringLiteral("raw"), c.raw},
+                      {QStringLiteral("file"), c.file}, {QStringLiteral("rpyLine"), c.rpyLine}, {QStringLiteral("rpyCode"), c.rpyCode},
+                      {QStringLiteral("mod"), c.mod}, {QStringLiteral("workshopId"), c.workshopId}, {QStringLiteral("ours"), c.ours},
+                      {QStringLiteral("line"), c.storyLine}, {QStringLiteral("scene"), c.scene},
+                      {QStringLiteral("text"), c.storyLine > 0 ? pyStrip(lines.value(c.storyLine - 1)) : QString()}});
+}
+
+void Engine::shotCrash(const QString& id, const QString& storyText)
+{
+    if (!m_shotMode) return;
+    const QString modId = parseMeta(pySplitLines(stripBom(storyText)), nullptr, options()).modId;
+    const QString rpy = compile(storyText);
+    const QStringList lines = rpy.split(QLatin1Char('\n'));
+    int at = -1;
+    for (int i = 0; i < lines.size() && at < 0; ++i)
+        if (lines[i].startsWith(QLatin1String("    show sl smile"))) at = i;
+    if (at < 0) return;
+    static QTemporaryDir dir;
+    QDir().mkpath(dir.path() + QStringLiteral("/game/mods/") + modId);
+    writeFile(dir.path() + QStringLiteral("/game/mods/") + modId + QLatin1Char('/') + modId + QStringLiteral(".rpy"), rpy.toUtf8());
+    QString code = pyStrip(lines[at]);
+    code.replace(QStringLiteral(" smile "), QStringLiteral(" smle "));
+    const QString image = code.mid(5).section(QStringLiteral(" at "), 0, 0).section(QStringLiteral(" with "), 0, 0).trimmed();
+    const QString tb = QStringLiteral("I'm sorry, but an uncaught exception occurred.\n\nWhile running game code:\n  File \"game/mods/%1/%1.rpy\", line %2, in script\n"
+                                      "    %3\nException: Image '%4' not found.\n\n-- Full Traceback ------\n")
+                           .arg(modId).arg(at + 1).arg(code, image);
+    writeFile(dir.path() + QStringLiteral("/traceback.txt"), tb.toUtf8());
+    const CrashReport c = readCrash(dir.path(), 0, modId, storyText, options());
+    if (c.found) tellCrash(c, id, storyText);
 }
 
 void Engine::stopGame()
@@ -2491,6 +2547,197 @@ void Engine::exportMod(const QString& id, const QString& storyText, const QStrin
         res.ok = true;
         return res;
     }));
+}
+
+namespace {
+QString steamDll(const QString& esRoot)
+{
+    for (const char* sub : {"/lib/windows-x86_64/steam_api64.dll", "/lib/py3-windows-x86_64/steam_api64.dll", "/lib/py2-windows-x86_64/steam_api64.dll"})
+        if (QFileInfo::exists(esRoot + QString::fromLatin1(sub))) return esRoot + QString::fromLatin1(sub);
+    return {};
+}
+bool asciiPath(const QString& p)
+{
+    for (const QChar c : p) if (c.unicode() > 126) return false;
+    return true;
+}
+bool copyTree(const QString& from, const QString& to)
+{
+    QDir().mkpath(to);
+    QDirIterator it(from, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString f = it.next();
+        const QString rel = QDir(from).relativeFilePath(f);
+        if (rel.endsWith(QLatin1Char('~')) || rel.endsWith(QLatin1String(".bak"))) continue;
+        QDir().mkpath(QFileInfo(to + QLatin1Char('/') + rel).absolutePath());
+        if (!QFile::copy(f, to + QLatin1Char('/') + rel)) return false;
+    }
+    return true;
+}
+} // namespace
+
+// the Workshop tags a story shows by itself: whom it has on stage and in the dialogue, whether the player chooses
+static QStringList workshopTags(const QString& storyText)
+{
+    static const QHash<QString, QString> bySprite{{QStringLiteral("dv"), QStringLiteral("Alisa")}, {QStringLiteral("un"), QStringLiteral("Lena")},
+        {QStringLiteral("sl"), QStringLiteral("Slavya")}, {QStringLiteral("us"), QStringLiteral("Ulyana")}, {QStringLiteral("uv"), QStringLiteral("Yulya")},
+        {QStringLiteral("mi"), QStringLiteral("Miku")}, {QStringLiteral("mz"), QStringLiteral("Zhenya")}, {QStringLiteral("od"), QStringLiteral("Olga Dmitrievna")},
+        {QStringLiteral("el"), QStringLiteral("Electronik")}, {QStringLiteral("sh"), QStringLiteral("Shurik")}, {QStringLiteral("cs"), QStringLiteral("Viola")},
+        {QStringLiteral("me"), QStringLiteral("Semyon")}, {QStringLiteral("pi"), QStringLiteral("Pioneer")}};
+    static const QHash<QString, QString> byName{{U("алиса"), QStringLiteral("Alisa")}, {U("лена"), QStringLiteral("Lena")}, {U("славя"), QStringLiteral("Slavya")},
+        {U("ульяна"), QStringLiteral("Ulyana")}, {U("юля"), QStringLiteral("Yulya")}, {U("мику"), QStringLiteral("Miku")}, {U("женя"), QStringLiteral("Zhenya")},
+        {U("ольга дмитриевна"), QStringLiteral("Olga Dmitrievna")}, {U("вожатая"), QStringLiteral("Olga Dmitrievna")}, {U("семён"), QStringLiteral("Semyon")},
+        {U("семен"), QStringLiteral("Semyon")}, {U("электроник"), QStringLiteral("Electronik")}, {U("шурик"), QStringLiteral("Shurik")},
+        {U("маша"), QStringLiteral("Masha")}, {U("виола"), QStringLiteral("Viola")}};
+    QStringList chars;
+    bool choice = false, own = false;
+    for (const QString& raw : pySplitLines(stripBom(storyText))) {
+        const QString s = pyStrip(raw);
+        const QString cmd = normalizeCommand(firstWord(s));
+        QString tag;
+        if (cmd == QLatin1String("show")) tag = bySprite.value(pySplit(pyStrip(s.mid(firstWord(s).size()))).value(0).toLower());
+        else if (cmd == QLatin1String("choice") || cmd == QLatin1String("screenmenu") || cmd == QLatin1String("map")) choice = true;
+        else if (cmd == QLatin1String("character")) own = true;
+        else if (const int colon = int(s.indexOf(QLatin1Char(':'))); colon > 0 && colon < 40 && !s.startsWith(QLatin1Char(':')))
+            tag = byName.value(s.left(colon).section(QLatin1Char('('), 0, 0).trimmed().toLower());
+        if (!tag.isEmpty() && !chars.contains(tag)) chars << tag;
+    }
+    if (own) chars << QStringLiteral("New character");
+    chars << (choice ? QStringLiteral("Variative") : QStringLiteral("Linear"));
+    return chars;
+}
+
+QVariantMap Engine::workshopInfo(const QString& id, const QString& storyText) const
+{
+    const ModMeta meta = parseMeta(pySplitLines(stripBom(storyText)), nullptr, options());
+    // the game's own uploader (ESCU) keeps what it put up: {item: {localPath: ".../mods/<mod>"}}
+    QString escuItem;
+    const QJsonObject escu = QJsonDocument::fromJson(readFile(m_es.esRoot() + QStringLiteral("/game/mods/cache/items.json"))).object();
+    for (auto it = escu.begin(); it != escu.end() && escuItem.isEmpty(); ++it)
+        if (QDir::fromNativeSeparators(it.value().toObject().value(QStringLiteral("localPath")).toString()).endsWith(QStringLiteral("/mods/") + meta.modId))
+            escuItem = it.key();
+    const QJsonObject pj = QJsonDocument::fromJson(readFile(projectDir(id) + QStringLiteral("/project.json"))).object();
+    const QString folder = exportDir() + QString::fromUtf8("/Мастерская/") + meta.modId;
+    QString desc = pj.value(QStringLiteral("workshopDesc")).toString();
+    if (desc.isEmpty())
+        desc = meta.modName + QStringLiteral("\n\n") + gbTr("Мод для «Бесконечного лета». Сделан в GenryBL — конструкторе модов БЛ.");
+    QStringList tags;
+    for (const QJsonValue& v : pj.value(QStringLiteral("workshopTags")).toArray()) tags << v.toString();
+    return {{QStringLiteral("item"), pj.value(QStringLiteral("workshopItem")).toString()},
+            {QStringLiteral("escuItem"), escuItem},
+            {QStringLiteral("tags"), pj.contains(QStringLiteral("workshopTags")) ? tags : workshopTags(storyText)},
+            {QStringLiteral("title"), pj.value(QStringLiteral("workshopTitle")).toString(meta.modName)},
+            {QStringLiteral("desc"), desc},
+            {QStringLiteral("folder"), folder},
+            {QStringLiteral("ready"), QFileInfo::exists(folder + QStringLiteral("/mods/") + meta.modId)},
+            {QStringLiteral("preview"), QFileInfo::exists(folder + QStringLiteral("/preview.jpg")) ? folder + QStringLiteral("/preview.jpg") : QString()},
+            {QStringLiteral("steam"), !steamDll(m_es.esRoot()).isEmpty()}};
+}
+
+void Engine::publishWorkshop(const QString& id, const QString& storyText, const QString& itemGiven, const QString& title, const QString& desc,
+                             int visibility, const QString& note, const QStringList& tags)
+{
+    if (m_upload) return;
+    const QVariantMap info = workshopInfo(id, storyText);
+    const QString modId = parseMeta(pySplitLines(stripBom(storyText)), nullptr, options()).modId;
+    auto fail = [this](const QString& m) { emit workshopFinished(false, QString(), m, false); };
+    if (!info.value(QStringLiteral("ready")).toBool()) { fail(gbTr("Сначала собери «Папку для Мастерской» — выкладывается она")); return; }
+    const QString dll = steamDll(m_es.esRoot());
+    if (dll.isEmpty()) { fail(gbTr("В папке игры нет её Steam-библиотеки (steam_api64.dll) — проверь файлы игры в Steam")); return; }
+    const QString helper = QCoreApplication::applicationDirPath() + QStringLiteral("/gb_workshop.exe");
+    if (!QFileInfo::exists(helper)) { fail(gbTr("Нет gb_workshop.exe рядом с GenryBL — переустанови GenryBL")); return; }
+    // Steam reads the content by a plain path: a copy in a folder without Russian letters
+    QString stage;
+    for (const QString& c : {QDir::tempPath() + QStringLiteral("/genrybl_ws"), m_root + QStringLiteral("/work/ws_upload"),
+                             QStringLiteral("C:/ProgramData/GenryBL/ws_upload")})
+        if (asciiPath(QDir::toNativeSeparators(c)) && QDir().mkpath(c)) { stage = c; break; }
+    if (stage.isEmpty()) { fail(gbTr("Не нашёл папку без русских букв в пути, куда положить мод для Steam")); return; }
+    QDir(stage + QStringLiteral("/content")).removeRecursively();
+    const QString folder = info.value(QStringLiteral("folder")).toString();
+    if (!copyTree(folder + QStringLiteral("/mods/") + modId, stage + QStringLiteral("/content/mods/") + modId)) {
+        fail(gbTr("Не удалось скопировать мод для загрузки"));
+        return;
+    }
+    QFile::remove(stage + QStringLiteral("/preview.jpg"));
+    const bool preview = QFile::copy(folder + QStringLiteral("/preview.jpg"), stage + QStringLiteral("/preview.jpg"));
+    writeFile(stage + QStringLiteral("/desc.txt"), desc.toUtf8());
+    writeFile(stage + QStringLiteral("/note.txt"), note.toUtf8());
+    // remembered for the next time: the item, its title and words
+    {
+        const QString p = projectDir(id) + QStringLiteral("/project.json");
+        QJsonObject pj = QJsonDocument::fromJson(readFile(p)).object();
+        pj.insert(QStringLiteral("workshopTitle"), title);
+        pj.insert(QStringLiteral("workshopDesc"), desc);
+        pj.insert(QStringLiteral("workshopTags"), QJsonArray::fromStringList(tags));
+        writeFile(p, QJsonDocument(pj).toJson(QJsonDocument::Indented));
+    }
+    QStringList args{QStringLiteral("--dll"), QDir::toNativeSeparators(dll), QStringLiteral("--content"), QDir::toNativeSeparators(stage + QStringLiteral("/content")),
+                     QStringLiteral("--title"), title, QStringLiteral("--desc-file"), QDir::toNativeSeparators(stage + QStringLiteral("/desc.txt")),
+                     QStringLiteral("--note-file"), QDir::toNativeSeparators(stage + QStringLiteral("/note.txt"))};
+    if (preview) args << QStringLiteral("--preview") << QDir::toNativeSeparators(stage + QStringLiteral("/preview.jpg"));
+    // a link or a number given: that item (the mod was put up before, by hand or by the game's uploader)
+    static const QRegularExpression digits(QStringLiteral("(\\d{6,})"));
+    const QString given = digits.match(itemGiven).captured(1);
+    const QString item = given.isEmpty() ? info.value(QStringLiteral("item")).toString() : given;
+    if (!item.isEmpty()) args << QStringLiteral("--item") << item;
+    args << QStringLiteral("--tags") << tags.join(QLatin1Char(','));
+    if (visibility >= 0) args << QStringLiteral("--visibility") << QString::number(visibility);
+    auto* p = new QProcess(this);
+    m_upload = p;
+    emit uploadingChanged();
+    auto state = std::make_shared<QVariantMap>();
+    (*state)[QStringLiteral("item")] = item;
+    p->setProgram(helper);
+    p->setArguments(args);
+    p->setWorkingDirectory(stage);
+    connect(p, &QProcess::readyReadStandardOutput, this, [this, p, id, state] {
+        while (p->canReadLine()) {
+            const QString l = QString::fromUtf8(p->readLine()).trimmed();
+            const QString head = l.section(QLatin1Char(' '), 0, 0);
+            if (head == QLatin1String("ITEM")) {
+                (*state)[QStringLiteral("item")] = l.section(QLatin1Char(' '), 1, 1);
+                const QString pp = projectDir(id) + QStringLiteral("/project.json");
+                QJsonObject pj = QJsonDocument::fromJson(readFile(pp)).object();
+                pj.insert(QStringLiteral("workshopItem"), (*state)[QStringLiteral("item")].toString());
+                writeFile(pp, QJsonDocument(pj).toJson(QJsonDocument::Indented));
+                emit workshopProgress(QStringLiteral("created"), 0);
+            } else if (head == QLatin1String("LEGAL")) {
+                (*state)[QStringLiteral("legal")] = true;
+            } else if (head == QLatin1String("PROGRESS")) {
+                const int st = l.section(QLatin1Char(' '), 1, 1).toInt();
+                const double done = l.section(QLatin1Char(' '), 2, 2).toDouble(), total = l.section(QLatin1Char(' '), 3, 3).toDouble();
+                static const char* const stages[] = {"wait", "config", "content", "upload", "preview", "commit"};
+                emit workshopProgress(QString::fromLatin1(stages[qBound(0, st, 5)]), total > 0 ? done / total : 0);
+            } else if (head == QLatin1String("DONE")) {
+                (*state)[QStringLiteral("done")] = true;
+            } else if (head == QLatin1String("ERROR")) {
+                (*state)[QStringLiteral("error")] = l.section(QLatin1Char(' '), 1);
+            }
+        }
+    });
+    connect(p, &QProcess::finished, this, [this, p, state](int code) {
+        p->deleteLater();
+        m_upload = nullptr;
+        emit uploadingChanged();
+        const QString it = (*state)[QStringLiteral("item")].toString();
+        const bool legal = (*state)[QStringLiteral("legal")].toBool();
+        if (code == 0 && (*state)[QStringLiteral("done")].toBool()) {
+            emit workshopFinished(true, it, gbTr("Мод в Мастерской Steam"), legal);
+            return;
+        }
+        const QString err = (*state)[QStringLiteral("error")].toString();
+        const QString kind = err.section(QLatin1Char(' '), 0, 0);
+        QString msg;
+        if (kind == QLatin1String("steam")) msg = gbTr("Steam не отвечает: он должен быть запущен, ты — в своём аккаунте, и «Бесконечное лето» должно быть в библиотеке");
+        else if (kind == QLatin1String("timeout")) msg = gbTr("Steam перестал отвечать посреди загрузки — проверь интернет и выключи VPN, потом ещё раз");
+        else if (kind == QLatin1String("update")) msg = gbTr("Steam не дал обновить этот предмет Мастерской — он точно твой?");
+        else if (err.contains(QLatin1String("EResult 25"))) msg = gbTr("Steam говорит «слишком большой» — обложка должна быть меньше 1 МБ");
+        else if (err.contains(QLatin1String("EResult 15"))) msg = gbTr("Steam не пускает: в аккаунте нельзя выкладывать в Мастерскую (новый или ограниченный аккаунт)");
+        else msg = gbTr("Steam не принял загрузку: ") + err;
+        emit workshopFinished(false, it, msg, legal);
+    });
+    emit workshopProgress(QStringLiteral("start"), 0);
+    p->start();
 }
 
 void Engine::breakMod(const QString& storyText)

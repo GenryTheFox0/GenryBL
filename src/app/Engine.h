@@ -6,6 +6,7 @@
 #include "I18n.h"
 #include "Builder.h"
 #include "Cinema.h"
+#include "Crash.h"
 #include "EsAssets.h"
 #include "Forms.h"
 #include "Library.h"
@@ -25,6 +26,7 @@
 #include <functional>
 
 class QJSEngine;
+class QProcess;
 class QNetworkAccessManager;
 class QQmlEngine;
 
@@ -36,6 +38,7 @@ class Engine : public QObject {
     Q_PROPERTY(bool ready READ ready NOTIFY readyChanged)
     Q_PROPERTY(QString startupError READ startupError NOTIFY readyChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
+    Q_PROPERTY(bool uploading READ uploading NOTIFY uploadingChanged)
     Q_PROPERTY(QString busyText READ busyText NOTIFY busyChanged)
     Q_PROPERTY(bool gameRunning READ gameRunning NOTIFY gameRunningChanged)
     Q_PROPERTY(QVariantList projects READ projects NOTIFY projectsChanged)
@@ -284,6 +287,8 @@ public:
     // ---- build / run ----
     Q_INVOKABLE void play(const QString& id, const QString& text, int line);
     Q_INVOKABLE void stopGame();
+    // --shot «editor-crash»: the story compiled into a scratch «game», a made-up fall on one of its sprites, told as a real one
+    Q_INVOKABLE void shotCrash(const QString& id, const QString& storyText);
     Q_INVOKABLE void engineCheck(const QString& id, const QString& text);     // ES's own Ren'Py lint
     // «Экспорт»: build -> the game's own lint (also makes the .rpyc) -> every file the mod needs is inside it ->
     // "zip" = the archive for players, "workshop" = the folder for the game's Workshop uploader (+ preview.jpg),
@@ -296,6 +301,17 @@ public:
     // clicksMax, clicksAvg, minutesMin, minutesMax, scenes, scenesSeen, choices, endings, problems, locked, unseen, never});
     // every find: {kind, line, scene, detail, hint, count, share (% of the walks), route (the cinema replays it)}
     Q_INVOKABLE void breakMod(const QString& storyText);
+    // «Выложить в Мастерскую Steam» (tools/gb_workshop.exe, the game's own steam_api64.dll): what the upload starts from -
+    // {item (this project's Workshop item, "" = a new one), escuItem (the game's own uploader put this mod up before),
+    // title, desc, tags (what the story shows: its characters, «Variative» / «Linear»), ready (the Workshop folder is
+    // exported), folder, preview, steam (the game's Steam library is there)}
+    Q_INVOKABLE QVariantMap workshopInfo(const QString& id, const QString& storyText) const;
+    // the exported folder goes up: visibility -1 = leave as it is, 0 public, 1 friends, 2 only me, 3 by link ->
+    // workshopProgress(stage, share) … workshopFinished(ok, item, message, legal)
+    // item: "" = this project's own (or a new one), else that item (a link or its number); tags: the Workshop's own
+    Q_INVOKABLE void publishWorkshop(const QString& id, const QString& storyText, const QString& item, const QString& title,
+                                     const QString& desc, int visibility, const QString& note, const QStringList& tags);
+    bool uploading() const { return m_upload != nullptr; }
     // the project's files nobody uses go to projects/<id>/_unused (out of the mod, not deleted); how many moved
     Q_INVOKABLE int tidyUnused(const QString& id, const QStringList& paths);
     Q_INVOKABLE void revealFile(const QString& path) const;
@@ -333,6 +349,9 @@ signals:
     void esArtChanged();
     void toast(const QString& text, int level);
     void buildFinished(bool ok, const QString& message);
+    // «Играть» -> the game fell (src/core/Crash): {project, kind, what, arg, error, raw, file, rpyLine, rpyCode, mod,
+    // workshopId, ours, line (the story line, 0 = not found), scene, text (that story line)}
+    void gameCrashed(const QVariantMap& crash);
     void engineCheckFinished(bool clean, const QStringList& lines);
     void audioImported(const QStringList& rels, bool ok);
     void updateChanged();
@@ -340,6 +359,9 @@ signals:
     void exportFinished(bool ok, const QString& message, const QString& path);
     void modFilesReady(const QVariantMap& report);
     void breakModReady(const QVariantMap& report);
+    void uploadingChanged();
+    void workshopProgress(const QString& stage, double share);
+    void workshopFinished(bool ok, const QString& item, const QString& message, bool legal);
     // the story was changed by GenryBL itself (a free @mod_id): the editor takes the new text
     void storyRewritten(const QString& id, const QString& text);
     void languageChanged();
@@ -421,4 +443,11 @@ private:
     int m_sceneKey = 0;
     qint64 m_gamePid = 0;
     QTimer m_watch;
+    // the run «Играть» started: whose it is, since when (a traceback older than that is not this run's)
+    QString m_playProject, m_playModId;
+    qint64 m_playSince = 0;
+    bool m_crashTold = false;
+    QProcess* m_upload = nullptr;
+    void checkCrash();
+    void tellCrash(const gb::CrashReport& c, const QString& project, const QString& story);
 };

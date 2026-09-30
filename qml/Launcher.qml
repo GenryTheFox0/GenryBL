@@ -68,6 +68,13 @@ Item {
                 onOpen: (id) => launcher.open(id)
                 onPlay: (id) => launcher.playProject(id)
                 onCreate: launcher.dialog = "new"
+                // «⇪ В Мастерскую Steam»: the Workshop folder is built (the game checks the mod), then the upload form
+                onPublish: (id) => {
+                    Engine.openProject(id)
+                    publishDialog.openFor(id, Engine.loadStory(id))
+                    publishDialog.autoPublish = true
+                    publishDialog.run("workshop")
+                }
             }
         }
         Screen {
@@ -218,4 +225,5 @@ Item {
 
     Keys.onEscapePressed: { if (dialog !== "") dialog = ""; else if (screen !== "menu") screen = "menu" }
     focus: true
+    ExportDialog { id: publishDialog }
 }

@@ -143,8 +143,18 @@ ApplicationWindow {
     }
 
     Toasts { id: toasts; anchors.fill: parent; z: 60 }
+    // «Играть» -> the game fell: where, in the writer's words; «К строке» opens that line (the editor, or the project)
+    CrashDialog {
+        id: crashDialog
+        onGotoLine: (project, line) => {
+            const ed = stack.currentItem
+            if (ed && ed.objectName === "editor" && ed.projectId === project) ed.gotoStoryLine(line)
+            else win.openEditor(project, true, line)
+        }
+    }
     Connections {
         target: Engine
+        function onGameCrashed(c) { crashDialog.show(c) }
         function onToast(text, level) { toasts.show(text, level) }
         function onBuildFinished(ok, message) {
             toasts.show(message, ok ? 0 : 2)

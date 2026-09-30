@@ -14,6 +14,7 @@
 #include "Graph.h"
 #include "Timeline.h"
 #include "Fuzz.h"
+#include "Crash.h"
 #include "Forms.h"
 #include "Library.h"
 #include "Lint.h"
@@ -27,6 +28,8 @@
 
 #include <QGuiApplication>
 #include <QDir>
+#include <QDateTime>
+#include <QThread>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -1639,6 +1642,69 @@ static void testBreakMod()
               .arg(first.join(','), second.join(',')).arg(st.line));
 }
 
+// [16] the game fell: which mod, which scene, which line of the story, in plain words
+static void testCrash()
+{
+    out << "[16] crash -> story line\n";
+    CompileOptions opt;
+    opt.knownSpeakers = {QStringLiteral("sl"), QStringLiteral("dv"), QStringLiteral("me")};
+    const QString story = QString::fromUtf8(
+        "@mod_id genry_crash\n"                          // 1
+        ": start\n"                                      // 2
+        "фон ext_square_day\n"                           // 3
+        "Славя: Привет!\n"                               // 4
+        "переход park\n"                                 // 5
+        ": park\n"                                       // 6
+        "фон ext_park_day\n"                             // 7
+        "показать dv smile pioneer left\n"               // 8
+        "Алиса: Ну?\n"                                   // 9
+        "показать sl smle pioneer center\n"              // 10
+        "Славя: Ой.\n"                                   // 11
+        "конецигры\n");                                  // 12
+    const QString rpy = compileText(story, opt);
+    const QStringList rl = rpy.split(QLatin1Char('\n'));
+    int at = -1;
+    for (int i = 0; i < rl.size() && at < 0; ++i) if (rl[i].contains(QStringLiteral("show sl smle pioneer"))) at = i;
+    QTemporaryDir root;
+    QDir().mkpath(root.path() + QStringLiteral("/game/mods/genry_crash"));
+    auto write = [](const QString& path, const QString& text) {
+        QFile f(path);
+        if (f.open(QIODevice::WriteOnly)) f.write(text.toUtf8());
+    };
+    write(root.path() + QStringLiteral("/game/mods/genry_crash/genry_crash.rpy"), rpy);
+    const qint64 before = QDateTime::currentMSecsSinceEpoch() - 5000;
+    write(root.path() + QStringLiteral("/traceback.txt"),
+          QStringLiteral("I'm sorry, but an uncaught exception occurred.\r\n\r\nWhile running game code:\r\n"
+                         "  File \"game/mods/genry_crash/genry_crash.rpy\", line %1, in script\r\n    %2\r\n"
+                         "Exception: Image 'sl smle pioneer' not found.\r\n\r\n-- Full Traceback --\r\n  File \"renpy/ast.py\", line 1, in x\r\n")
+              .arg(at + 1).arg(pyStrip(rl.value(at))));
+    CrashReport c = readCrash(root.path(), before, QStringLiteral("genry_crash"), story, opt);
+    check(at >= 0 && c.found && c.kind == QLatin1String("runtime") && c.ours && c.what == QLatin1String("image") &&
+              c.arg == QStringLiteral("sl smle pioneer"),
+          QStringLiteral("crash: our mod, a missing image named (%1 / %2)").arg(c.what, c.arg));
+    check(c.scene == QStringLiteral("park") && c.storyLine == 10,
+          QStringLiteral("crash: the scene by the label, the line by its words (scene %1, line %2)").arg(c.scene).arg(c.storyLine));
+    check(!readCrash(root.path(), QDateTime::currentMSecsSinceEpoch() + 60000, QStringLiteral("genry_crash"), story, opt).found,
+          "crash: a report older than the run is not this run's");
+    // somebody else's Workshop mod
+    write(root.path() + QStringLiteral("/traceback.txt"),
+          QStringLiteral("I'm sorry, but an uncaught exception occurred.\n\nWhile running game code:\n"
+                         "  File \"../../workshop/content/331470/1234567/mods/foo/foo.rpy\", line 7, in script\n    $ foo_bar()\n"
+                         "NameError: name 'foo_bar' is not defined\n"));
+    c = readCrash(root.path(), before, QStringLiteral("genry_crash"), story, opt);
+    check(c.found && !c.ours && c.workshopId == QStringLiteral("1234567") && c.mod == QStringLiteral("foo") && c.what == QLatin1String("name") &&
+              c.arg == QStringLiteral("foo_bar") && c.storyLine == 0,
+          "crash: a Workshop mod's fall is named as somebody else's");
+    // a script the game could not read (errors.txt, newer than the traceback)
+    QThread::msleep(20);
+    write(root.path() + QStringLiteral("/errors.txt"),
+          QStringLiteral("I'm sorry, but errors were detected in your script.\n\n\nFile \"game/mods/bar/bar.rpy\", line 430: expected ':' not found.\n    label foo\n         ^\n"));
+    c = readCrash(root.path(), before, QStringLiteral("genry_crash"), story, opt);
+    check(c.found && c.kind == QLatin1String("parse") && c.what == QLatin1String("syntax") && c.mod == QStringLiteral("bar") && c.rpyLine == 430 &&
+              c.error == QStringLiteral("expected ':' not found."),
+          "crash: errors.txt - the mod whose script the game could not read");
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -1660,6 +1726,7 @@ int main(int argc, char** argv)
     test7dl();
     testTimelineAndroid();
     testBreakMod();
+    testCrash();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

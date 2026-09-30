@@ -12,6 +12,7 @@ Item {
     signal open(string id)
     signal play(string id)
     signal create()
+    signal publish(string id)
 
     Image { anchors.fill: parent; source: "image://gb/file/images/gui/save_load/load_bg.jpg"; asynchronous: true }
     Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.0 }
@@ -123,6 +124,7 @@ Item {
         MenuItem { text: qsTr("Переименовать"); onTriggered: { renameField.text = menu.project.name; renameDialog.open() } }
         MenuItem { text: qsTr("Сделать копию"); onTriggered: Engine.duplicateProject(menu.project.id) }
         MenuItem { text: qsTr("Открыть папку"); onTriggered: Engine.openFolder(Engine.projectDir(menu.project.id)) }
+        MenuItem { text: qsTr("⇪ В Мастерскую Steam"); enabled: !Engine.busy && !Engine.uploading; onTriggered: album.publish(menu.project.id) }
         MenuSeparator {}
         MenuItem { text: qsTr("В корзину"); onTriggered: trashDialog.open() }
     }

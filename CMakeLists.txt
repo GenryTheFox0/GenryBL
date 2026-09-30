@@ -46,6 +46,7 @@ add_library(gb_core STATIC
     src/core/Graph.cpp
     src/core/Timeline.cpp
     src/core/Fuzz.cpp
+    src/core/Crash.cpp
 )
 target_include_directories(gb_core PUBLIC src/core)
 target_link_libraries(gb_core PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent PRIVATE Qt6::CorePrivate)
@@ -103,6 +104,7 @@ qt_add_qml_module(GenryBL
         qml/LabDialog.qml
         qml/SearchAllDialog.qml
         qml/BreakDialog.qml
+        qml/CrashDialog.qml
         qml/Timeline.qml
         qml/Editor.qml
         qml/CodeEditor.qml
@@ -145,4 +147,10 @@ if(WIN32)
     target_link_libraries(GenryBL_Setup PRIVATE comctl32 shell32)
     # the static C runtime: the one file people download starts on a clean Windows (no VC++ Redistributable)
     set_property(TARGET GenryBL_Setup PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+endif()
+
+# ---- gb_workshop.exe: «Выложить в Мастерскую Steam» - a child process with the game's own steam_api64.dll (plain Win32)
+if(WIN32)
+    add_executable(gb_workshop tools/gb_workshop.cpp)
+    set_property(TARGET gb_workshop PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 endif()
