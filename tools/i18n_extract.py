@@ -65,13 +65,23 @@ def forms_strings():
     return out
 
 
+def lab_strings():
+    """the lab's pieces (data/lab/*.txt): their title, group and what they do - the scene lines stay Russian"""
+    out = set()
+    rx = re.compile(r'^# (title|group|about): (.*)$', re.M)
+    for f in glob.glob(os.path.join(ROOT, 'data', 'lab', '*.txt')):
+        for m in rx.finditer(io.open(f, encoding='utf-8').read()):
+            out.add(m.group(2).strip())
+    return out
+
+
 if __name__ == '__main__':
-    q, c, f = qml_strings(), cpp_strings(), forms_strings()
-    src = sorted(q | c | f)
+    q, c, f, l = qml_strings(), cpp_strings(), forms_strings(), lab_strings()
+    src = sorted(q | c | f | l)
     d = os.path.join(ROOT, 'data', 'i18n')
     os.makedirs(d, exist_ok=True)
     json.dump(src, io.open(os.path.join(d, '_source.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
-    print(f'qml {len(q)}  cpp {len(c)}  forms {len(f)}  -> {len(src)} strings, {sum(len(s) for s in src)} chars')
+    print(f'qml {len(q)}  cpp {len(c)}  forms {len(f)}  lab {len(l)}  -> {len(src)} strings, {sum(len(s) for s in src)} chars')
     for p in sorted(glob.glob(os.path.join(d, '*.json'))):
         name = os.path.basename(p)
         if name.startswith('_'):

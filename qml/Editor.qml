@@ -71,6 +71,7 @@ Item {
         if (shotPage === "editor-map") Qt.callLater(() => { mapEditor.openNew(code.text, code.currentLine); mapEditor.toggle("dining_hall"); mapEditor.setField("dining_hall", "chibi", "dv"); mapEditor.hoverId = "beach" })
         if (shotPage === "editor-form-edit") Qt.callLater(() => { code.gotoLine(Number(shotArg) || 14); ed.editLine() })
         if (shotPage === "editor-storymap") Qt.callLater(() => storyMap.openFor(code.text))
+        if (shotPage === "editor-lab") Qt.callLater(() => { labDialog.openLab(); labDialog.pick(Number(shotArg) || 0) })
         if (shotPage === "editor-history") Qt.callLater(() => historyDialog.openFor(projectId, code.text))
         // «живое кино»: shotArg = "line clicks"
         if (shotPage === "editor-live") Qt.callLater(() => {
@@ -319,6 +320,18 @@ Item {
         code.insertAfterLine(n, (last.trim() === "" ? "" : "\n") + ": " + name + "\nтекст ")
         Engine.toast(qsTr("Сцена «") + name + qsTr("» добавлена в конец — пиши"), 0)
     }
+    ModFilesDialog { id: modFilesDialog; onClosed: code.focusEditor() }
+    LabDialog {
+        id: labDialog
+        // a piece with scenes of its own goes to the end of the story; a plain one under the cursor
+        onInsertPiece: (body, atEnd) => {
+            if (!atEnd) { ed.insert(body); return }
+            const last = code.starts.length
+            code.insertAfterLine(last, (code.lineText(last).trim() === "" ? "" : "\n") + body)
+        }
+        onWatch: (story) => cinemaView.begin(story, 1)
+        onClosed: code.focusEditor()
+    }
     HistoryDialog {
         id: historyDialog
         onRestored: (text) => { code.setText(text); ed.issues = Engine.lint(code.text); ed.badges = Engine.choiceBadges(code.text); ed.refreshPreview() }
@@ -466,6 +479,21 @@ Item {
                     PillButton { dark: true; text: qsTr("Папка мода"); onClicked: Engine.openFolder(Engine.projectDir(ed.projectId)) }
                     PillButton {
                         dark: true
+                        text: qsTr("📦 Файлы мода")
+                        enabled: !Engine.busy
+                        onClicked: modFilesDialog.openFor(ed.projectId, code.text)
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Что реально уедет к игрокам: размер по файлам, чего не хватает, что лежит зря")
+                    }
+                    PillButton {
+                        dark: true
+                        text: qsTr("🧪 Лаборатория")
+                        onClicked: labDialog.openLab()
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Готовые куски сцен: скример, гроза, выбор на время, кодовый замок, звонок… — каждый проверен самой игрой")
+                    }
+                    PillButton {
+                        dark: true
                         text: qsTr("🗺 Карта сюжета")
                         onClicked: storyMap.openFor(code.text)
                         ToolTip.visible: hovered
@@ -506,7 +534,9 @@ Item {
                     MenuItem { text: qsTr("Библиотека картинок"); onTriggered: libraryBrowser.open() }
                     MenuSeparator {}
                     MenuItem { text: qsTr("Папка мода"); onTriggered: Engine.openFolder(Engine.projectDir(ed.projectId)) }
+                    MenuItem { text: qsTr("Лаборатория механик"); onTriggered: labDialog.openLab() }
                     MenuItem { text: qsTr("Карта сюжета"); onTriggered: storyMap.openFor(code.text) }
+                    MenuItem { text: qsTr("Файлы мода — что уедет к игрокам"); enabled: !Engine.busy; onTriggered: modFilesDialog.openFor(ed.projectId, code.text) }
                     MenuItem { text: qsTr("История версий"); onTriggered: { ed.save(); historyDialog.openFor(ed.projectId, code.text) } }
                     MenuItem { text: qsTr("Проверить движком игры"); enabled: !Engine.busy; onTriggered: Engine.engineCheck(ed.projectId, code.text) }
                 }

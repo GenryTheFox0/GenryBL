@@ -1,0 +1,11 @@
+# title: Светлячки
+# group: Атмосфера
+# icon: ✨
+# about: Ночная поляна, искры над травой и «Танец светлячков».
+# preview: 5
+время ночь
+фон ext_polyana_night fade
+погода искры слабо
+музыка dance_of_fireflies
+атмосфера ambience_forest_night
+мысль Светлячки. Только мы, ночь и тишина.

@@ -1,0 +1,13 @@
+# title: Помехи-откровение
+# group: Хоррор
+# icon: 📺
+# about: Картинка сыплется помехами, а когда они уходят — перед тобой тот, кого не ждал.
+# preview: 6
+время ночь
+фон ext_old_building_night_moonlight fade
+помехи 0.7
+звук sfx_radio_squelch_1
+пауза 1.5
+выключитьпомехи
+крупно un scared pioneer center
+Лена: Ты тоже это видел?

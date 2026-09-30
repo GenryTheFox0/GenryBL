@@ -97,6 +97,8 @@ qt_add_qml_module(GenryBL
         qml/ExportDialog.qml
         qml/HistoryDialog.qml
         qml/StoryMap.qml
+        qml/ModFilesDialog.qml
+        qml/LabDialog.qml
         qml/Editor.qml
         qml/CodeEditor.qml
         qml/Palette.qml

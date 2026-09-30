@@ -149,6 +149,10 @@ public:
     // «Карта сюжета» (src/core/Graph): {nodes: [{name, line, lastLine, lines, words, bg, kind, ending, start, reachable,
     // chapter, col, row}], edges: [{from, to, kind, text, line}], cols, rows}
     Q_INVOKABLE QVariantMap storyGraph(const QString& text) const;
+    // «Лаборатория механик» (data/lab/*.txt): ready pieces of scenes, each checked by the game in the gate -
+    // [{id, title, group, icon, about, body, preview, atEnd}] (atEnd: it has scenes of its own - goes to the story's end)
+    Q_INVOKABLE QVariantList labPieces() const;
+    Q_INVOKABLE QString labStory(const QString& body) const;     // a piece as a whole little mod (preview, cinema)
     Q_INVOKABLE QVariantMap sceneInfo(const QString& text, int line) const;
     // choiceHover: which option of a 7DL picture menu is drawn lit
     // the characters on the preview frame, to drag: [{tag, image, x, y, w, h (in 1920x1080), line (the «показать»
@@ -275,6 +279,11 @@ public:
     // "zip" = the archive for players, "workshop" = the folder for the game's Workshop uploader (+ preview.jpg),
     // both in Documents\GenryBL -> exportFinished; the file is shown selected in Explorer
     Q_INVOKABLE void exportMod(const QString& id, const QString& text, const QString& kind);
+    // «Файлы мода»: the mod is built and every file that goes to players is counted -> modFilesReady({files: [{path,
+    // size, kind}], total, missing: [...], unused: [{path, size}]}); kind: code images audio video fonts wardrobe patch genrybl
+    Q_INVOKABLE void modFiles(const QString& id, const QString& text);
+    // the project's files nobody uses go to projects/<id>/_unused (out of the mod, not deleted); how many moved
+    Q_INVOKABLE int tidyUnused(const QString& id, const QStringList& paths);
     Q_INVOKABLE void revealFile(const QString& path) const;
     Q_INVOKABLE QString exportDir() const;
     Q_INVOKABLE void openFolder(const QString& path) const;
@@ -315,6 +324,7 @@ signals:
     void updateChanged();
     void lastCrashChanged();
     void exportFinished(bool ok, const QString& message, const QString& path);
+    void modFilesReady(const QVariantMap& report);
     // the story was changed by GenryBL itself (a free @mod_id): the editor takes the new text
     void storyRewritten(const QString& id, const QString& text);
     void languageChanged();

@@ -1224,6 +1224,41 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
             {QStringLiteral("moment"), c.moment}, {QStringLiteral("note"), c.note}, {QStringLiteral("time"), st.timeOfDay}};
 }
 
+QVariantList Engine::labPieces() const
+{
+    QVariantList out;
+    const QString dir = m_root + QStringLiteral("/data/lab");
+    for (const QFileInfo& fi : QDir(dir).entryInfoList({QStringLiteral("*.txt")}, QDir::Files, QDir::Name)) {
+        const QString text = stripBom(QString::fromUtf8(readFile(fi.absoluteFilePath())));
+        QVariantMap m{{QStringLiteral("id"), fi.completeBaseName()}};
+        QStringList body;
+        for (const QString& line : text.split(QLatin1Char('\n'))) {
+            static const QRegularExpression head(QStringLiteral("^# (title|group|icon|about|preview): (.*)$"));
+            const QRegularExpressionMatch h = head.match(line.trimmed());
+            if (h.hasMatch()) {
+                const QString key = h.captured(1), value = h.captured(2).trimmed();
+                // the words people read come through the translation (tools/i18n_extract.py collects them)
+                m.insert(key, key == QLatin1String("icon") || key == QLatin1String("preview") ? value
+                                                                                               : QCoreApplication::translate("GenryBL", value.toUtf8().constData()));
+                continue;
+            }
+            body << line;
+        }
+        while (!body.isEmpty() && body.last().trimmed().isEmpty()) body.removeLast();
+        m.insert(QStringLiteral("body"), body.join(QLatin1Char('\n')));
+        bool scenes = false;
+        for (const QString& l : body) if (l.trimmed().startsWith(QLatin1Char(':'))) scenes = true;
+        m.insert(QStringLiteral("atEnd"), scenes);
+        out << m;
+    }
+    return out;
+}
+
+QString Engine::labStory(const QString& body) const
+{
+    return QStringLiteral("@mod_id genry_lab\n@mod_name Lab\n: start\n") + body + QStringLiteral("\nконецигры\n");
+}
+
 QVariantMap Engine::storyGraph(const QString& text) const
 {
     const StoryGraph g = gb::storyGraph(text, options());
@@ -2398,6 +2433,85 @@ void Engine::exportMod(const QString& id, const QString& storyText, const QStrin
         res.ok = true;
         return res;
     }));
+}
+
+void Engine::modFiles(const QString& id, const QString& storyText)
+{
+    if (m_busy) { emit toast(gbTr("Уже собираю, секунду"), 1); return; }
+    saveStory(id, storyText);
+    const QString text = claimModId(id, storyText);
+    const BuildEnv env = envFor(id);
+    const CompileOptions opt = options();
+    setBusy(true, gbTr("Собираю мод, чтобы посчитать его файлы…"));
+    auto* w = new QFutureWatcher<QVariantMap>(this);
+    connect(w, &QFutureWatcher<QVariantMap>::finished, this, [this, w] {
+        const QVariantMap r = w->result();
+        w->deleteLater();
+        setBusy(false);
+        emit modFilesReady(r);
+    });
+    w->setFuture(QtConcurrent::run([this, env, text, opt]() -> QVariantMap {
+        waitForWardrobe({});
+        const BuildReport r = build::install(env, text, opt, {});
+        if (!r.ok) return {{QStringLiteral("error"), r.error}};
+        QVariantList files;
+        qint64 total = 0;
+        QDirIterator it(r.modDir, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            const QFileInfo fi(it.next());
+            const QString rel = QDir(r.modDir).relativeFilePath(fi.filePath());
+            if (rel == QLatin1String(".genrybl_owner") || rel.endsWith(QLatin1Char('~')) || rel.endsWith(QLatin1String(".bak")) ||
+                rel.endsWith(QLatin1String(".rpyc")))
+                continue;
+            QString kind;
+            if (rel.endsWith(QLatin1String(".rpy"))) kind = QStringLiteral("code");
+            else if (rel.startsWith(QLatin1String("images/genry_wardrobe/"))) kind = QStringLiteral("wardrobe");
+            else if (rel.startsWith(QLatin1String("images/genry_patch/"))) kind = QStringLiteral("patch");
+            else if (rel.startsWith(QLatin1String("images/genry_")) || rel == QLatin1String("images/genry_phone_body.png")) kind = QStringLiteral("genrybl");
+            else if (rel.startsWith(QLatin1String("images/"))) kind = QStringLiteral("images");
+            else if (rel.startsWith(QLatin1String("audio/"))) kind = QStringLiteral("audio");
+            else if (rel.startsWith(QLatin1String("video/"))) kind = QStringLiteral("video");
+            else if (rel.startsWith(QLatin1String("fonts/"))) kind = QStringLiteral("fonts");
+            else kind = QStringLiteral("other");
+            files << QVariantMap{{QStringLiteral("path"), rel}, {QStringLiteral("size"), fi.size()}, {QStringLiteral("kind"), kind}};
+            total += fi.size();
+        }
+        // the project's own files the story never names: they ride along for nothing
+        QVariantList unused;
+        const QString low = text.toLower();
+        QDirIterator pit(env.assetsDir, QDir::Files, QDirIterator::Subdirectories);
+        while (pit.hasNext()) {
+            const QFileInfo fi(pit.next());
+            const QString rel = QDir(env.assetsDir).relativeFilePath(fi.filePath());
+            if (rel.startsWith(QLatin1Char('_')) || fi.fileName().startsWith(QLatin1Char('.'))) continue;
+            QString stem = fi.completeBaseName().toLower();
+            if (stem.startsWith(QLatin1String("bg ")) || stem.startsWith(QLatin1String("cg "))) stem = stem.mid(3);
+            const bool used = low.contains(rel.toLower()) || low.contains(fi.fileName().toLower()) ||
+                              (rel.startsWith(QLatin1String("images/")) && low.contains(stem));
+            if (!used) unused << QVariantMap{{QStringLiteral("path"), rel}, {QStringLiteral("size"), fi.size()}};
+        }
+        return {{QStringLiteral("files"), files}, {QStringLiteral("total"), total}, {QStringLiteral("modId"), r.meta.modId},
+                {QStringLiteral("missing"), build::missingModFiles(r.modDir, r.meta.modId)}, {QStringLiteral("unused"), unused}};
+    }));
+}
+
+int Engine::tidyUnused(const QString& id, const QStringList& paths)
+{
+    int moved = 0;
+    const QString from = assetsDir(id), to = projectDir(id) + QStringLiteral("/_unused");
+    for (const QString& rel : paths) {
+        if (rel.contains(QLatin1String(".."))) continue;
+        const QString src = from + QLatin1Char('/') + rel, dst = to + QLatin1Char('/') + rel;
+        QDir().mkpath(QFileInfo(dst).absolutePath());
+        QFile::remove(dst);
+        if (QFile::rename(src, dst)) ++moved;
+    }
+    if (moved) {
+        m_renderer.setCustomImages(build::customImageFiles(assetsDir(id)));
+        emit assetsChanged();
+        emit toast(gbTr("Убрал из мода файлов: %1 — они лежат в папке проекта «_unused», не удалены").arg(moved), 0);
+    }
+    return moved;
 }
 
 QString Engine::lastCrash() const

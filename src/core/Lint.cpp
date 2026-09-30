@@ -738,6 +738,17 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                 const CodeLockSpec k = parseCodeLock(pyStrip(s.mid(s.section(QLatin1Char(' '), 0, 0).size())));
                 if (!k.okTarget.isEmpty() && !k.badTarget.isEmpty()) continue;
             }
+            // «звонок … | принять -> a | сбросить -> b»: both answers lead away
+            if (ch == -1 && word == QLatin1String("phonecall")) {
+                bool accept = false, decline = false;
+                for (const QString& x : s.split(QLatin1Char('|'))) {
+                    if (!x.contains(QLatin1String("->"))) continue;
+                    const QString k = pyStrip(x.section(QStringLiteral("->"), 0, 0)).toLower();
+                    if (k.startsWith(U("прин")) || k.startsWith(U("ответ")) || k == QLatin1String("accept")) accept = true;
+                    else if (k.startsWith(U("сброс")) || k.startsWith(U("откл")) || k == QLatin1String("decline")) decline = true;
+                }
+                if (accept && decline) continue;
+            }
             if (word == QLatin1String("renpy") && (s.contains(QLatin1String("jump ")) || s.endsWith(QLatin1String("return")))) continue;
             const QString jump = U("переход ") + heads[k + 1].name;
             if (ch == 0)

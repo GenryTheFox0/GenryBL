@@ -1,0 +1,16 @@
+# title: Гроза
+# group: Кино
+# icon: ⛈
+# about: Ливень, гром, молния со вспышкой и тряской — и Славя, которая тянет тебя под крышу.
+# preview: 10
+время вечер
+фон ext_square_sunset fade
+погода дождь сильно
+атмосфера ambience_cold_wind_loop
+звук sfx_thunder_rumble
+пауза 1.0
+вспышка
+звук sfx_thunder_crack
+тряска 0.4 обычно
+показать sl scared pioneer center
+Славя: Бежим в столовую, пока не промокли!

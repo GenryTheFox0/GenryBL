@@ -1,0 +1,11 @@
+# title: Дискотека
+# group: Атмосфера
+# icon: 🪩
+# about: Ночная площадь с огнями, громкая музыка и Мику, которая зовёт танцевать.
+# preview: 6
+время ночь
+фон ext_square_night_party fade
+музыка that_s_our_madhouse
+погода сердца слабо
+показать mi smile pioneer center
+Мику: Ну же, танцуй со мной!

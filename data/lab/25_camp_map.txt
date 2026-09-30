@@ -1,0 +1,14 @@
+# title: Карта лагеря
+# group: Связь
+# icon: 🗺
+# about: Родная карта БЛ: мордочки героинь на местах, клик — сцена с ней.
+# preview: 1
+карта площадь: lab_square @sl, пляж: lab_beach @dv
+: lab_square
+фон ext_square_day
+Славя: Ты меня нашёл!
+конецигры
+: lab_beach
+фон ext_beach_day
+Алиса: Чего пришёл?
+конецигры

@@ -69,7 +69,9 @@ QVector<GateStory> gateStories(const QString& root, const QString& only)
     auto addDir = [&](const QString& dir, const QString& prefix) {
         for (const QFileInfo& fi : QDir(dir).entryInfoList({QStringLiteral("*.txt")}, QDir::Files, QDir::Name)) {
             if (QFileInfo::exists(fi.absolutePath() + QLatin1Char('/') + fi.completeBaseName() + QStringLiteral(".error"))) continue;
-            const QString text = readText(fi.absoluteFilePath());
+            QString text = readText(fi.absoluteFilePath());
+            // a lab piece is a piece of a scene: it plays as the whole little mod the lab shows (Engine::labStory)
+            if (prefix == QLatin1String("lab/")) text = QStringLiteral("@mod_name Lab\n: start\n") + text + QStringLiteral("\nконецигры\n");
             if (!text.trimmed().isEmpty()) all.push_back({prefix + fi.completeBaseName(), text, fi.absolutePath() + QStringLiteral("/assets")});
         }
     };
