@@ -10,7 +10,9 @@ ApplicationWindow {
     // a 1920x1080 laptop at 150 % Windows zoom leaves ~1280x688 for a window: the old 1180x700 minimum stuck out
     minimumWidth: 1000
     minimumHeight: 600
-    visible: true
+    // main.cpp shows the window, at its final size, and keeps it off the screen until its first frame is done
+    visible: false
+    property bool bootMaximized: false
     color: Theme.bg
     // a developer build says so in the title (the public one does not)
     readonly property string edition: Engine.editionBadge ? "  ·  " + Engine.editionBadge : ""
@@ -27,14 +29,36 @@ ApplicationWindow {
         }
         if (!shotPage && Engine.mode === "") applyWindowSize(Engine.setting("windowSize", ""))
         if (!Engine.ready) return
-        win.start()
+        if (shotPage === "boot") { win.booting = true; win.bootStarted = true; return }
+        if ((shotPage && shotPage !== "boot-flow") || Engine.mode !== "") { win.start(); return }
+        win.booting = true          // the loading screen is the first frame; the launcher is built right after it
     }
+    // the loading screen: up for at least a moment (a flash of it looks like a glitch), gone when the menu is there
+    property bool booting: false
+    property bool bootStarted: false
+    function bootGo() {
+        if (bootStarted) return
+        bootStarted = true
+        bootMin.start()
+        if (!bootTest) Qt.callLater(win.start)
+    }
+    Connections {
+        target: win
+        enabled: win.booting && !win.bootStarted
+        function onFrameSwapped() { win.bootGo() }
+    }
+    Timer { interval: 1500; running: win.booting && !win.bootStarted; onTriggered: win.bootGo() }
+    Timer { id: bootMin; interval: 650 }
     // «Окно» (Инструменты): "" = auto (1600x900, the whole screen when that does not fit), "WxH", "full"
     function applyWindowSize(v) {
         const aw = Screen.desktopAvailableWidth, ah = Screen.desktopAvailableHeight
         let w = 1600, h = 900
         if (v && v !== "full") { const wh = v.split("x"); w = parseInt(wh[0]); h = parseInt(wh[1]) }
-        if (v === "full" || w > aw || h > ah - 32) { win.visibility = Window.Maximized; return }
+        if (v === "full" || w > aw || h > ah - 32) {
+            if (win.visible) win.visibility = Window.Maximized
+            else win.bootMaximized = true           // the first show: main.cpp shows it maximized at once
+            return
+        }
         if (win.visibility === Window.Maximized || win.visibility === Window.FullScreen) win.visibility = Window.Windowed
         win.width = w
         win.height = h
@@ -48,7 +72,7 @@ ApplicationWindow {
             openEditor(p, false)
         } else {
             const screens = { "projects": "mods", "gallery": "gallery", "settings": "settings", "center": "center" }
-            stack.push(launcherComp, { intro: shotPage === "" || shotPage === "launcher", startScreen: screens[shotPage] || "" })
+            stack.push(launcherComp, { intro: shotPage === "" || shotPage === "launcher" || shotPage === "boot-flow", startScreen: screens[shotPage] || "" })
         }
     }
 
@@ -140,6 +164,13 @@ ApplicationWindow {
             BusyIndicator { width: 26; height: 26; running: Engine.busy; anchors.verticalCenter: parent.verticalCenter }
             Text { text: Engine.busyText; color: Theme.text; font.family: Theme.ui; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
         }
+    }
+
+    BootScreen {
+        anchors.fill: parent
+        z: 58
+        visible: win.booting && opacity > 0.01
+        done: win.bootStarted && !bootMin.running && stack.depth > 0 && stack.currentItem && stack.currentItem.ready !== false
     }
 
     Toasts { id: toasts; anchors.fill: parent; z: 60 }

@@ -12,6 +12,8 @@ Item {
     property string screen: "menu"          // menu | mods | gallery | settings | center
     property string dialog: ""              // "" | new | help | about
     property string startScreen: ""
+    // the loading screen waits for this: the menu's picture is there and its intro begins
+    readonly property bool ready: screen !== "menu" || mainMenu.shown
 
     function lastProject() {
         const id = Engine.setting("lastProject", "")

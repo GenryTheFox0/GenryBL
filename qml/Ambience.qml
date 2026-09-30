@@ -8,7 +8,7 @@ import GenryBL
 // (the living menu, LiveBoard.qml, calls gust() when its leaves bend).
 QtObject {
     id: amb
-    property bool enabled: Engine.setting("ambience", true) === true || Engine.setting("ambience", true) === "true"
+    property bool enabled: !Engine.shotMode && (Engine.setting("ambience", true) === true || Engine.setting("ambience", true) === "true")
     property real level: 0.6                       // under the music
     readonly property real target: enabled ? Music.volume * level : 0
     property string timeOfDay: ""

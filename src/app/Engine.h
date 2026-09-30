@@ -80,6 +80,7 @@ class Engine : public QObject {
     Q_PROPERTY(bool patchInstalled READ patchInstalled NOTIFY assetsChanged)   // the 18+ patch 1118110148 is there (either way)
     Q_PROPERTY(bool patchBundled READ patchBundled NOTIFY assetsChanged)       // … as GenryBL's own copy (data/patch)
     Q_PROPERTY(QString mode READ mode CONSTANT)                          // "" | install | uninstall (Installer.cpp)
+    Q_PROPERTY(bool shotMode READ shotMode CONSTANT)                    // --shot: a self-check picture, silent
     Q_PROPERTY(bool esArt READ esArt NOTIFY esArtChanged)                // the installer found the game: it wears its art
 
 public:
@@ -217,6 +218,7 @@ public:
     Q_INVOKABLE void keepVersion(const QString& id, const QString& text, const QString& tag);
     // --shot: screens type demo text into the editor - it must never land in the user's real project
     void setShotMode(bool on) { m_shotMode = on; }
+    bool shotMode() const { return m_shotMode; }
     // «Поиск по всем модам» (Ctrl+Shift+F): every line with `query` in every project's story, the open one first
     // (its text as it is in the editor): [{id, name, line, text, col, len}] (at most 3000)
     Q_INVOKABLE QVariantList searchProjects(const QString& query, bool caseSensitive, const QString& openId, const QString& openText) const;

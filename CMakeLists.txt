@@ -107,6 +107,7 @@ qt_add_qml_module(GenryBL
         qml/SearchAllDialog.qml
         qml/BreakDialog.qml
         qml/CrashDialog.qml
+        qml/BootScreen.qml
         qml/CenterScreen.qml
         qml/Timeline.qml
         qml/Editor.qml
@@ -142,7 +143,7 @@ qt_add_shaders(GenryBL "genrybl_shaders"
 target_include_directories(GenryBL PRIVATE src/app)
 target_link_libraries(GenryBL PRIVATE gb_core Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Concurrent Qt6::Network)
 if(WIN32)
-    target_link_libraries(GenryBL PRIVATE ole32 shell32 uuid dbghelp)
+    target_link_libraries(GenryBL PRIVATE ole32 shell32 uuid dbghelp dwmapi)
 endif()
 
 # ---- GenryBL_Setup.exe: the one-file installer (plain Win32, the zipped program is appended by make_release.py)

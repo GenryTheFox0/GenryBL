@@ -7,7 +7,7 @@ import GenryBL
 // channel for the asset browser that ducks the menu theme while a track is auditioned.
 QtObject {
     id: music
-    property bool enabled: Engine.setting("music", true) === true || Engine.setting("music", true) === "true"
+    property bool enabled: !Engine.shotMode && (Engine.setting("music", true) === true || Engine.setting("music", true) === "true")
     property real volume: Number(Engine.setting("volume", 0.7))
     property string current: ""
     property int loopMs: 0

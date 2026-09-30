@@ -24,7 +24,10 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <dwmapi.h>
 #endif
+#include <QElapsedTimer>
+#include <memory>
 
 static QFile* g_log = nullptr;
 
@@ -85,9 +88,15 @@ int main(int argc, char** argv)
     const QStringList args = app.arguments();
     const int shotAt = int(args.indexOf(QStringLiteral("--shot")));
     const bool shot = shotAt > 0 && args.size() > shotAt + 2;
+    // GenryBL.exe --boot-test <png> [ms]: the loading screen's own check - the window stays cloaked (nothing on screen,
+    // silent), the time to its first frame goes to <png>.txt, its picture to <png>, then quit. With [ms]: the whole
+    // start runs (the launcher is built behind the loading screen) and the picture is taken [ms] after the first frame
+    const int bootAt = int(args.indexOf(QStringLiteral("--boot-test")));
+    const bool bootTest = !shot && bootAt > 0 && args.size() > bootAt + 1;
+    const int bootGrabMs = bootTest && args.size() > bootAt + 2 ? args[bootAt + 2].toInt() : 0;
 
     Engine& engine = *Engine::boot();
-    engine.setShotMode(shot);
+    engine.setShotMode(shot || bootTest);
     if (!engine.appRoot().isEmpty()) {
         QDir().mkpath(engine.appRoot() + QStringLiteral("/work"));
         g_log = new QFile(engine.appRoot() + QStringLiteral("/work/genrybl.log"));
@@ -98,6 +107,7 @@ int main(int argc, char** argv)
     QQmlApplicationEngine qml;
     qml.addImageProvider(QStringLiteral("gb"), new GbImages(&engine));
     qml.rootContext()->setContextProperty(QStringLiteral("shotPage"), shot ? args[shotAt + 1] : QString());
+    qml.rootContext()->setContextProperty(QStringLiteral("bootTest"), bootTest && bootGrabMs <= 0);
     // optional page input, e.g. "a.wav|b.ogg" for editor-dialogue-import
     qml.rootContext()->setContextProperty(QStringLiteral("shotArg"),
                                           shot && args.size() > shotAt + 3 && !args[shotAt + 3].startsWith(QLatin1String("--")) ? args[shotAt + 3] : QString());
@@ -109,6 +119,47 @@ int main(int argc, char** argv)
     QObject::connect(&engine, &Engine::languageChanged, &qml, [&qml] { qml.retranslate(); });
     qml.loadFromModule("GenryBL", "Main");
     if (qml.rootObjects().isEmpty()) return 3;
+
+    // The window comes on screen with its first finished frame (the loading screen): Windows' blank white window
+    // before it - and the 1600x900 one left inside a maximized window - never reach the screen. Main.qml keeps the
+    // window hidden and sizes it; here it is shown, cloaked until that frame is swapped.
+    if (auto* win = qobject_cast<QQuickWindow*>(qml.rootObjects().first()); win && !win->isVisible()) {
+#ifdef Q_OS_WIN
+        if (!shot) {
+            const HWND hwnd = reinterpret_cast<HWND>(win->winId());
+            BOOL on = TRUE;
+            DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, &on, sizeof on);
+            auto once = std::make_shared<QMetaObject::Connection>();
+            if (bootTest) {
+                const QString out = args[bootAt + 1];
+                auto clock = std::make_shared<QElapsedTimer>();
+                clock->start();
+                *once = QObject::connect(win, &QQuickWindow::frameSwapped, &app, [once, clock, win, out, bootGrabMs] {
+                    QObject::disconnect(*once);
+                    const qint64 ms = clock->elapsed();
+                    QTimer::singleShot(bootGrabMs > 0 ? bootGrabMs : 1200, win, [win, out, ms] {
+                        QFile t(out + QStringLiteral(".txt"));
+                        if (t.open(QIODevice::WriteOnly)) t.write(QByteArray::number(ms) + " ms to the first frame\n");
+                        QCoreApplication::exit(win->grabWindow().save(out) ? 0 : 4);
+                    });
+                }, Qt::QueuedConnection);
+                QTimer::singleShot(10000, &app, [] { QCoreApplication::exit(5); });   // no frame while cloaked
+            } else {
+                *once = QObject::connect(win, &QQuickWindow::frameSwapped, &app, [once, hwnd] {
+                    QObject::disconnect(*once);
+                    BOOL off = FALSE;
+                    DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, &off, sizeof off);
+                }, Qt::QueuedConnection);
+                QTimer::singleShot(4000, &app, [hwnd] {          // whatever happens, never an invisible window
+                    BOOL off = FALSE;
+                    DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, &off, sizeof off);
+                });
+            }
+        }
+#endif
+        if (win->property("bootMaximized").toBool()) win->showMaximized();
+        else win->show();
+    }
 
     // GenryBL.exe --crash-test: fall on purpose after 3 s (the crash catcher's own check)
     if (args.contains(QStringLiteral("--crash-test")))
