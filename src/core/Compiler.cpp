@@ -4378,11 +4378,6 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         const bool sdlStyle = spec.style == QLatin1String("7dl");
         const QString corbelFont = QStringLiteral("font \"fonts/corbel.ttf\"");
         const QString click = QStringLiteral("activate_sound \"sound/sfx/click_1.ogg\"");
-        auto buttonAction = [&](const QString& word) {       // the action of a button written «кнопка Галерея»
-            for (int i = 0; i + 1 < buttons.size(); i += 2)
-                if (buttons[i].toLower().contains(word)) return buttons[i + 1];
-            return QString();
-        };
         if (esStyle) {
             // ES's own board (screens.rpy main_menu imagemap): the same zones, leading into the mod
             const QString gallery = QStringLiteral("Show(\"genry_gallery\", cgs=%1)").arg(c.sys(QStringLiteral("cgs")));
@@ -4400,9 +4395,12 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             // the game's own board has no free zone: «Имя» stands under «Главы» in the corner
             if (buttons.contains(nameAction))
                 menuScreen << QStringLiteral("    textbutton u\"Имя: [me_name]\" action ") + nameAction + QStringLiteral(" xpos 60 ypos 100 text_size 40 text_color \"#ffffff\" text_hover_color \"#ffd27d\" text_outlines [(3, \"#000000aa\", 0, 0)] background None hover_background None text_font \"fonts/corbel.ttf\" ") + click;
-            const QString chapters = buttonAction(U("глав"));
+            // «Главы» by what the button does, under its own caption («кнопка Дни -> главы» stays there)
+            QString chapters, chaptersCap;
+            for (int i = 0; i + 1 < buttons.size(); i += 2)
+                if (buttons[i + 1].startsWith(QLatin1String("Show(\"genry_chapters\""))) { chapters = buttons[i + 1]; chaptersCap = buttons[i]; break; }
             if (!chapters.isEmpty())
-                menuScreen << QStringLiteral("    textbutton u\"Главы\" action ") + chapters + QStringLiteral(" xpos 60 ypos 40 text_size 40 text_color \"#ffffff\" text_hover_color \"#ffd27d\" text_outlines [(3, \"#000000aa\", 0, 0)] background None hover_background None text_font \"fonts/corbel.ttf\" ") + click;
+                menuScreen << QStringLiteral("    textbutton %1 action ").arg(chaptersCap) + chapters + QStringLiteral(" xpos 60 ypos 40 text_size 40 text_color \"#ffffff\" text_hover_color \"#ffd27d\" text_outlines [(3, \"#000000aa\", 0, 0)] background None hover_background None text_font \"fonts/corbel.ttf\" ") + click;
             if (!title.isEmpty())
                 menuScreen << QStringLiteral("    frame:") << QStringLiteral("        xalign 0.5") << QStringLiteral("        yalign 0.985")
                            << QStringLiteral("        background Solid(\"#000000a0\")") << QStringLiteral("        padding (30, 10)")
