@@ -180,6 +180,28 @@ Rectangle {
         flash.flashAt(a)
         area.forceActiveFocus()
     }
+    // Line `from` goes to stand right before line `to` (the timeline: a clip dragged to another beat); undoable
+    function moveLine(from, to) {
+        if (from === to || from + 1 === to) return
+        const t = area.text
+        const a = lineStartPos(from), b = lineBounds(a).end
+        const body = t.substring(a, b)
+        const last = b >= t.length
+        area.remove(last ? Math.max(0, a - 1) : a, last ? b : b + 1)
+        const target = to > from ? to - 1 : to               // the lines below moved up by one
+        const count = area.text.split("\n").length
+        let at
+        if (target > count) {
+            at = area.text.length + 1
+            area.insert(area.text.length, "\n" + body)
+        } else {
+            at = lineStartPos(target)
+            area.insert(at, body + "\n")
+        }
+        area.cursorPosition = at
+        flash.flashAt(at)
+        area.forceActiveFocus()
+    }
     // Line n goes away altogether (the doctor: a stray «конецвыбора»)
     function removeLine(n) {
         const b = lineBounds(lineStartPos(n))

@@ -30,6 +30,7 @@
 #include <QGuiApplication>
 #include <QPainter>
 #include <QPainterPath>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QTextStream>
 
@@ -323,29 +324,33 @@ int main(int argc, char** argv)
         if (!r.ok) return fail(r.error);
         out << "installed " << r.modFile << " labels: " << r.labels.join(' ') << "\n";
         if (cmd == "lint") {
-            out << "running Everlasting Summer lint...\n";
+            // what «Проверить движком» does: the game builds the mod's screens, checks its names, runs its lint on it
+            out << "the game checks the mod...\n";
             out.flush();
-            const QStringList hits = build::lint(esRoot, r.meta.modId, &err, 600000);
-            if (!err.isEmpty()) return fail(err);
-            if (hits.isEmpty()) out << "LINT CLEAN: no report lines mention " << r.meta.modId << "\n";
-            for (const QString& h : hits) out << "  " << h << "\n";
-            return hits.isEmpty() ? 0 : 1;
+            const build::GameCheck c = build::gameCheck(esRoot, root + "/data", {r.meta.modId});
+            if (!c.ran) return fail(c.error);
+            if (c.hits.isEmpty()) out << "LINT CLEAN: " << c.statements << " statements, " << c.screens << " screens built\n";
+            for (const QString& h : c.hits) out << "  " << h << "\n";
+            return c.hits.isEmpty() ? 0 : 1;
         }
         if (cmd == "export") {
             // gb_cli export <story.txt> zip|workshop <out .zip | out folder>: what the «Экспорт» button does
-            out << "running Everlasting Summer lint...\n";
+            out << "the game checks the mod...\n";
             out.flush();
-            const QStringList hits = build::lint(esRoot, r.meta.modId, &err, 600000);
-            if (!err.isEmpty()) return fail(err);
-            if (!hits.isEmpty()) {
-                for (const QString& h : hits) out << "  " << h << "\n";
-                return fail("the game's lint is not clean - no export");
+            const build::GameCheck c = build::gameCheck(esRoot, root + "/data", {r.meta.modId});
+            if (!c.ran) return fail(c.error);
+            if (!c.hits.isEmpty()) {
+                for (const QString& h : c.hits) out << "  " << h << "\n";
+                return fail("the game found problems - no export");
             }
             const QStringList missing = build::missingModFiles(r.modDir, r.meta.modId);
             if (!missing.isEmpty()) return fail("not inside the mod: " + missing.join(", "));
             const QString kind = a.value(3), dest = a.value(4);
+            QStringList notes;
             const bool ok = kind == "workshop" ? build::exportWorkshopFolder(r.modDir, r.meta.modId, r.meta.modName, dest, &err)
+                          : kind == "android"  ? build::exportAndroid(r.modDir, r.meta.modId, r.meta.modName, dest, &err, &notes)
                                                : build::exportZip(r.modDir, r.meta.modId, r.meta.modName, dest, &err);
+            for (const QString& n : notes) out << "  note: " << n << "\n";
             if (!ok) return fail(err);
             out << "EXPORTED " << dest << "\n";
             return 0;
@@ -389,6 +394,26 @@ int main(int argc, char** argv)
         }
         out << "installed " << ids.size() << " mods in " << t.elapsed() / 1000 << " s; the game checks them...\n";
         out.flush();
+        // Ren'Py 8 («renpy8» branch in Steam, Python 3): every piece of Python the mods carry must compile there too
+        {
+            QStringList files;
+            for (const QString& id : ids) files << QDir::toNativeSeparators(esRoot + "/game/mods/" + id + "/" + id + ".rpy");
+            QProcess py;
+            py.start(QStringLiteral("python"), QStringList{QDir::toNativeSeparators(root + "/data/gate/py3check.py")} + files);
+            if (!py.waitForStarted(10000)) {
+                out << "  (no Python 3 here - the Ren'Py 8 check is skipped)\n";
+            } else {
+                py.waitForFinished(300000);
+                static const QRegularExpression modOfPy(QStringLiteral("(gbgate_\\d+)"));
+                for (const QString& l : QString::fromUtf8(py.readAllStandardOutput()).split('\n')) {
+                    const QString line = l.trimmed();
+                    if (line.startsWith(QLatin1String("PY3 CHECKED"))) { out << "  " << line << "\n"; continue; }
+                    if (!line.contains(QLatin1String(": Python 3: "))) continue;
+                    failed << nameOf.value(modOfPy.match(line).captured(1), QStringLiteral("?")) + ": " + line.section(QStringLiteral("/game/"), -1);
+                }
+                out.flush();
+            }
+        }
         if (a.contains("--dry")) {                       // only the builds (no game start)
             for (const QString& fl : failed) out << "  FAIL " << fl << "\n";
             if (!a.contains("--keep")) clearGateMods(esRoot);

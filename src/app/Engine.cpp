@@ -6,6 +6,7 @@
 #include "Lint.h"
 #include "History.h"
 #include "Graph.h"
+#include "Timeline.h"
 #include "Py.h"
 #include "Text.h"
 
@@ -32,6 +33,7 @@
 #include <QProcess>
 #include <QQmlEngine>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QThread>
 #include <QUrl>
@@ -62,8 +64,13 @@ QByteArray readFile(const QString& p)
 bool writeFile(const QString& p, const QByteArray& b)
 {
     QDir().mkpath(QFileInfo(p).absolutePath());
-    QFile f(p);
-    return f.open(QIODevice::WriteOnly | QIODevice::Truncate) && f.write(b) == b.size();
+    // atomically: into a file next to it, then swapped in - a crash or a full disk never leaves half a story
+    QSaveFile f(p);
+    if (!f.open(QIODevice::WriteOnly) || f.write(b) != b.size()) {
+        f.cancelWriting();
+        return false;
+    }
+    return f.commit();
 }
 
 QString localPath(const QString& fileUrl)
@@ -1224,6 +1231,21 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
             {QStringLiteral("moment"), c.moment}, {QStringLiteral("note"), c.note}, {QStringLiteral("time"), st.timeOfDay}};
 }
 
+QVariantMap Engine::sceneTimeline(const QString& text, int line) const
+{
+    const SceneTimeline t = gb::sceneTimeline(text, line, options());
+    QVariantList beats, tracks;
+    for (int l : t.beatLines) beats << l;
+    for (const TimelineTrack& tr : t.tracks) {
+        QVariantList clips;
+        for (const TimelineClip& c : tr.clips)
+            clips << QVariantMap{{QStringLiteral("from"), c.from}, {QStringLiteral("to"), c.to}, {QStringLiteral("line"), c.line},
+                                 {QStringLiteral("label"), c.label}, {QStringLiteral("kind"), c.kind}, {QStringLiteral("movable"), c.movable}};
+        tracks << QVariantMap{{QStringLiteral("id"), tr.id}, {QStringLiteral("title"), tr.title}, {QStringLiteral("clips"), clips}};
+    }
+    return {{QStringLiteral("scene"), t.scene}, {QStringLiteral("headLine"), t.headLine}, {QStringLiteral("beats"), beats}, {QStringLiteral("tracks"), tracks}};
+}
+
 QVariantList Engine::labPieces() const
 {
     QVariantList out;
@@ -1841,12 +1863,12 @@ QVariantList Engine::historyDiff(const QString& id, const QString& file, const Q
     return out;
 }
 
-QString Engine::restoreHistory(const QString& id, const QString& file, const QString& currentText)
+QVariant Engine::restoreHistory(const QString& id, const QString& file, const QString& currentText)
 {
+    if (file.contains(QLatin1Char('/')) || file.contains(QLatin1Char('\\')) || !QFileInfo::exists(historyDir(id) + QLatin1Char('/') + file)) return QVariant();
     const QString old = history::read(historyDir(id), file);
-    if (old.isEmpty()) return {};
     history::snapshot(historyDir(id), currentText, QStringLiteral("restore"));
-    saveStory(id, old);
+    if (!saveStory(id, old)) return QVariant();
     return old;
 }
 
@@ -2295,7 +2317,7 @@ QString Engine::claimModId(const QString& id, const QString& text)
 void Engine::play(const QString& id, const QString& storyText, int line)
 {
     if (m_busy) { emit toast(gbTr("Уже собираю, секунду"), 1); return; }
-    saveStory(id, storyText);
+    if (!saveStory(id, storyText)) return;                // the story is not on disk: nothing is built from a guess
     const QString text = claimModId(id, storyText);
     stopGame();
     const BuildEnv env = envFor(id);
@@ -2337,7 +2359,7 @@ void Engine::stopGame()
 void Engine::engineCheck(const QString& id, const QString& storyText)
 {
     if (m_busy) return;
-    saveStory(id, storyText);
+    if (!saveStory(id, storyText)) return;
     const QString text = claimModId(id, storyText);
     const BuildEnv env = envFor(id);
     const CompileOptions opt = options();
@@ -2371,11 +2393,12 @@ QString Engine::exportDir() const
 void Engine::exportMod(const QString& id, const QString& storyText, const QString& kind)
 {
     if (m_busy) { emit toast(gbTr("Уже собираю, секунду"), 1); return; }
-    saveStory(id, storyText);
+    if (!saveStory(id, storyText)) { emit exportFinished(false, gbTr("Не удалось сохранить историю — экспорт остановлен"), QString()); return; }
     const QString text = claimModId(id, storyText);
     const BuildEnv env = envFor(id);
     const CompileOptions opt = options();
     const bool workshop = kind == QLatin1String("workshop");
+    const bool android = kind == QLatin1String("android");
     const QString base = exportDir();
     setBusy(true, gbTr("Экспорт: собираю мод…"));
     auto log = [this](const QString& s) { QMetaObject::invokeMethod(this, [this, s] { setBusy(true, s); }, Qt::QueuedConnection); };
@@ -2398,7 +2421,7 @@ void Engine::exportMod(const QString& id, const QString& storyText, const QStrin
         emit exportFinished(r.ok, r.message, r.path);
         if (r.ok) revealFile(workshop ? r.path + QStringLiteral("/mods") : r.path);
     });
-    w->setFuture(QtConcurrent::run([this, env, text, opt, workshop, base, log]() -> Result {
+    w->setFuture(QtConcurrent::run([this, env, text, opt, workshop, android, base, log]() -> Result {
         Result res;
         waitForWardrobe(log);
         const BuildReport r = build::install(env, text, opt, log);
@@ -2421,6 +2444,15 @@ void Engine::exportMod(const QString& id, const QString& storyText, const QStrin
             return res;
         }
         log(workshop ? gbTr("Экспорт: готовлю папку для Мастерской…") : gbTr("Экспорт: пакую архив и перечитываю его…"));
+        if (android) {
+            res.path = base + QString::fromUtf8("/Экспорт/") + r.meta.modId + QStringLiteral("_android.zip");
+            QStringList notes;
+            if (!build::exportAndroid(r.modDir, r.meta.modId, r.meta.modName, res.path, &err, &notes)) { res.message = err; return res; }
+            res.message = gbTr("Архив для Андроида готов: картинки и разметка уменьшены под мобильную игру, внутри «КАК_УСТАНОВИТЬ_ANDROID.txt»") +
+                          (notes.isEmpty() ? QString() : QStringLiteral("\n") + notes.join(QLatin1Char('\n')));
+            res.ok = true;
+            return res;
+        }
         if (workshop) {
             res.path = base + QString::fromUtf8("/Мастерская/") + r.meta.modId;
             if (!build::exportWorkshopFolder(r.modDir, r.meta.modId, r.meta.modName, res.path, &err)) { res.message = err; return res; }

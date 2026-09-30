@@ -51,6 +51,8 @@ class Engine : public QObject {
     Q_PROPERTY(QVariantList ambience READ ambience NOTIFY assetsChanged)
     Q_PROPERTY(QString appRoot READ appRoot CONSTANT)
     Q_PROPERTY(QString esRoot READ esRoot NOTIFY readyChanged)
+    // the game's Ren'Py here: "7.4.11" (the usual Steam build) / "8.3.4" (the «renpy8» branch) - mods run on both
+    Q_PROPERTY(QString esRenpy READ esRenpy NOTIFY readyChanged)
     // «Обновить»: {state: ""|checking|latest|available|downloading|starting|error|dev, text, version, source: github|steam, progress 0..1}
     Q_PROPERTY(QVariantMap updateInfo READ updateInfo NOTIFY updateChanged)
     // the report the crash catcher wrote last time (work/crash/GenryBL_*.txt) if nobody has seen it yet, else ""
@@ -139,6 +141,7 @@ public:
     Q_INVOKABLE QString importCommunity(const QString& file);           // -> "audio/x.ogg" in the mod + CREDITS.txt
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
+    QString esRenpy() const { return m_es.esRoot().isEmpty() ? QString() : gb::build::esRenpyVersion(m_es.esRoot()); }
     QString version() const { return QStringLiteral("V2.1.0"); }
 
     // ---- story tools ----
@@ -149,6 +152,9 @@ public:
     // «Карта сюжета» (src/core/Graph): {nodes: [{name, line, lastLine, lines, words, bg, kind, ending, start, reachable,
     // chapter, col, row}], edges: [{from, to, kind, text, line}], cols, rows}
     Q_INVOKABLE QVariantMap storyGraph(const QString& text) const;
+    // «Таймлайн» (src/core/Timeline): the scene under the cursor as tracks of clips - {scene, headLine, beats: [line…],
+    // tracks: [{id, title, clips: [{from, to, line, label, kind, movable}]}]}
+    Q_INVOKABLE QVariantMap sceneTimeline(const QString& text, int line) const;
     // «Лаборатория механик» (data/lab/*.txt): ready pieces of scenes, each checked by the game in the gate -
     // [{id, title, group, icon, about, body, preview, atEnd}] (atEnd: it has scenes of its own - goes to the story's end)
     Q_INVOKABLE QVariantList labPieces() const;
@@ -195,8 +201,9 @@ public:
     Q_INVOKABLE QString historyText(const QString& id, const QString& file) const;
     // what bringing that version back does to the text now: [{kind: "=" | "+" (comes back) | "-" (goes away) | "~", text, line}]
     Q_INVOKABLE QVariantList historyDiff(const QString& id, const QString& file, const QString& currentText) const;
-    // the text now is kept as a version of its own first, then the old one is returned (the editor takes it)
-    Q_INVOKABLE QString restoreHistory(const QString& id, const QString& file, const QString& currentText);
+    // the text now is kept as a version of its own first, then the old one is returned (the editor takes it);
+    // undefined when there is no such version (an empty story is a version too)
+    Q_INVOKABLE QVariant restoreHistory(const QString& id, const QString& file, const QString& currentText);
     // a version kept right now, with why (doctor: before «Починить всё»)
     Q_INVOKABLE void keepVersion(const QString& id, const QString& text, const QString& tag);
     // --shot: screens type demo text into the editor - it must never land in the user's real project

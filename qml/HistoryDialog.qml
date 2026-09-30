@@ -187,7 +187,7 @@ Popup {
                         onClicked: {
                             const v = hd.versions[hd.current]
                             const text = Engine.restoreHistory(hd.projectId, v.file, hd.currentText)
-                            if (text === "") return
+                            if (text === undefined || text === null) return
                             Sfx.click()
                             hd.restored(text)
                             Engine.toast(qsTr("Вернул версию «") + v.ago + qsTr("». То, что было до отката, тоже лежит в истории"), 0)

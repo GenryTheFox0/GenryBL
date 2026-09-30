@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QSaveFile>
 #include <QSet>
 #include <QStringList>
 
@@ -14,8 +15,7 @@ namespace gb::history {
 namespace {
 
 const char* const kStamp = "yyyy-MM-dd_HH-mm-ss";
-constexpr int kKeepAll = 60;          // the newest snapshots, all of them
-constexpr int kKeepDays = 120;        // older: the last one of each day, for this long
+constexpr int kKeepAll = 60;          // the newest snapshots, all of them; older: the last one of each day, for good
 constexpr qint64 kWorkGap = 4 * 60;   // seconds of work between two ordinary snapshots
 
 QStringList linesOf(const QString& s)
@@ -30,9 +30,13 @@ QStringList linesOf(const QString& s)
 bool writeText(const QString& path, const QString& text)
 {
     QDir().mkpath(QFileInfo(path).absolutePath());
-    QFile f(path);
+    QSaveFile f(path);
     const QByteArray b = text.toUtf8();
-    return f.open(QIODevice::WriteOnly | QIODevice::Truncate) && f.write(b) == b.size();
+    if (!f.open(QIODevice::WriteOnly) || f.write(b) != b.size()) {
+        f.cancelWriting();
+        return false;
+    }
+    return f.commit();
 }
 
 // the edit script of Myers' O(ND) algorithm over the lines between the common head and tail
@@ -158,13 +162,14 @@ int onSave(const QString& dir, const QString& onDisk, const QString& next, const
 
 void prune(const QString& dir, const QDateTime& now)
 {
+    Q_UNUSED(now);                            // one version of every day is kept for good
     const QVector<Version> have = list(dir);
     QSet<QString> days;
     for (int i = 0; i < have.size(); ++i) {
         if (i < kKeepAll) { days.insert(have[i].when.date().toString(Qt::ISODate)); continue; }
         const QString day = have[i].when.date().toString(Qt::ISODate);
         const bool firstOfDay = !days.contains(day);          // newest first: the first seen is the day's last
-        if (firstOfDay && have[i].when.daysTo(now) <= kKeepDays) { days.insert(day); continue; }
+        if (firstOfDay) { days.insert(day); continue; }
         QFile::remove(dir + QLatin1Char('/') + have[i].file);
     }
 }

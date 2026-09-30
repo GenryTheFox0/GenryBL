@@ -44,6 +44,7 @@ add_library(gb_core STATIC
     src/core/Cinema.cpp
     src/core/History.cpp
     src/core/Graph.cpp
+    src/core/Timeline.cpp
 )
 target_include_directories(gb_core PUBLIC src/core)
 target_link_libraries(gb_core PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent PRIVATE Qt6::CorePrivate)
@@ -99,6 +100,7 @@ qt_add_qml_module(GenryBL
         qml/StoryMap.qml
         qml/ModFilesDialog.qml
         qml/LabDialog.qml
+        qml/Timeline.qml
         qml/Editor.qml
         qml/CodeEditor.qml
         qml/Palette.qml

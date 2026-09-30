@@ -72,6 +72,7 @@ Item {
         if (shotPage === "editor-form-edit") Qt.callLater(() => { code.gotoLine(Number(shotArg) || 14); ed.editLine() })
         if (shotPage === "editor-storymap") Qt.callLater(() => storyMap.openFor(code.text))
         if (shotPage === "editor-lab") Qt.callLater(() => { labDialog.openLab(); labDialog.pick(Number(shotArg) || 0) })
+        if (shotPage === "editor-timeline") Qt.callLater(() => { ed.showTimeline = true; code.gotoLine(Number(shotArg) || 14); ed.refreshPreview() })
         if (shotPage === "editor-history") Qt.callLater(() => historyDialog.openFor(projectId, code.text))
         // «живое кино»: shotArg = "line clicks"
         if (shotPage === "editor-live") Qt.callLater(() => {
@@ -98,7 +99,11 @@ Item {
         previewSrc = Engine.previewUrl(code.text, code.currentLine, hoverExtra)
         scene = Engine.sceneInfo(code.text, code.currentLine)
         preview.boxes = hoverExtra === "" ? Engine.spriteBoxes(code.text, code.currentLine) : []
+        if (timeline.visible) timeline.tdata = Engine.sceneTimeline(code.text, code.currentLine)
     }
+    // «Таймлайн» under the editor (remembered between runs)
+    property bool showTimeline: Engine.setting("timeline", "false") === "true"
+    onShowTimelineChanged: { Engine.setSetting("timeline", showTimeline ? "true" : "false"); if (showTimeline) refreshPreview() }
     function insert(cmd) { hoverExtra = ""; code.insertLine(cmd) }
     // palette row -> its window: the choice and dialogue masters, or the command's form
     function openCommand(row) {
@@ -209,6 +214,7 @@ Item {
     Shortcut { sequence: "Ctrl+Shift+V"; enabled: !screenplay.opened; onActivated: screenplay.openFor(code.text, code.currentLine, Engine.clipboardText()) }
     Shortcut { sequence: "Ctrl+K"; onActivated: { leftTabs.currentIndex = 0; palette.focusSearch() } }
     Shortcut { sequence: "Ctrl+M"; enabled: !storyMap.opened; onActivated: storyMap.openFor(code.text) }
+    Shortcut { sequence: "Ctrl+T"; onActivated: ed.showTimeline = !ed.showTimeline }
     Repeater {                                   // Alt+1..9: the quick inserts of the palette
         model: 9
         Item { required property int index; Shortcut { sequence: "Alt+" + (index + 1); enabled: !cmdForm.opened; onActivated: palette.runPin(index) } }
@@ -494,6 +500,14 @@ Item {
                     }
                     PillButton {
                         dark: true
+                        accent: ed.showTimeline
+                        text: qsTr("🎞 Таймлайн")
+                        onClicked: ed.showTimeline = !ed.showTimeline
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Сцена дорожками, как в видеоредакторе: фон, герои, реплики, музыка, эффекты — тащи клипы, чтобы переставить строки (Ctrl+T)")
+                    }
+                    PillButton {
+                        dark: true
                         text: qsTr("🗺 Карта сюжета")
                         onClicked: storyMap.openFor(code.text)
                         ToolTip.visible: hovered
@@ -535,6 +549,7 @@ Item {
                     MenuSeparator {}
                     MenuItem { text: qsTr("Папка мода"); onTriggered: Engine.openFolder(Engine.projectDir(ed.projectId)) }
                     MenuItem { text: qsTr("Лаборатория механик"); onTriggered: labDialog.openLab() }
+                    MenuItem { text: qsTr("Таймлайн сцены"); onTriggered: ed.showTimeline = !ed.showTimeline }
                     MenuItem { text: qsTr("Карта сюжета"); onTriggered: storyMap.openFor(code.text) }
                     MenuItem { text: qsTr("Файлы мода — что уедет к игрокам"); enabled: !Engine.busy; onTriggered: modFilesDialog.openFor(ed.projectId, code.text) }
                     MenuItem { text: qsTr("История версий"); onTriggered: { ed.save(); historyDialog.openFor(ed.projectId, code.text) } }
@@ -597,7 +612,7 @@ Item {
         anchors.top: top.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        anchors.bottom: timeline.visible ? timeline.top : parent.bottom
         orientation: Qt.Horizontal
         handle: Rectangle {
             implicitWidth: 5
@@ -870,6 +885,24 @@ Item {
                 }
             }
         }
+    }
+
+    // ---------------------------------------------------------------- the timeline (Ctrl+T)
+    Timeline {
+        id: timeline
+        visible: ed.showTimeline
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: Math.min(300, Math.max(170, ed.height * 0.28))
+        line: code.currentLine
+        onGotoLine: (n) => code.gotoLine(n)
+        onEditLine: (n) => { code.gotoLine(n); ed.editLine() }
+        onMoveLine: (from, to) => {
+            code.moveLine(from, to)
+            previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+        }
+        onCloseMe: ed.showTimeline = false
     }
 
     // ---------------------------------------------------------------- big preview (reading mode)

@@ -42,6 +42,9 @@ QString findEsRoot(const QStringList& candidates);
 // library of libraryfolders.vdf, then the usual folders of every drive; "" = not found
 QString detectEsRoot();
 bool isEsRoot(const QString& dir);
+// which Ren'Py the game in that folder runs: "7.4.11" (the usual Steam build, Python 2) or "8.3.4" (the «renpy8» beta
+// branch, Python 3); "" = not known. The mods GenryBL writes run on both - this only tells the maker which one is here.
+QString esRenpyVersion(const QString& esRoot);
 QString esExe(const QString& esRoot);
 // project images as Ren'Py names: "bg my_room.png" -> ("bg my_room", mods/<id>/images/bg my_room.png)
 QVector<CustomImage> customImages(const QString& assetsDir, const QString& modId);
@@ -81,6 +84,12 @@ QStringList missingModFiles(const QString& modDir, const QString& modId);
 bool exportZip(const QString& modDir, const QString& modId, const QString& modName, const QString& zipPath, QString* err);
 // what the game's own Workshop uploader wants: <dest>/mods/<id>/... + КАК_ВЫЛОЖИТЬ.txt (preview.jpg: the caller)
 bool exportWorkshopFolder(const QString& modDir, const QString& modId, const QString& modName, const QString& dest, QString* err);
+// «Андроид»: the mod the way the mobile Бесконечное лето takes it (the community's ESTool rules, es-doc «mobile_port»):
+// the game there runs at 1280×720 - the mod's pictures two thirds, the pixel numbers in its code two thirds, Latin file
+// names; ZIP = mods/<id>/… + КАК_УСТАНОВИТЬ_ANDROID.txt. `notes`: what to look at on a phone (the camp map, workshop clothes…)
+bool exportAndroid(const QString& modDir, const QString& modId, const QString& modName, const QString& zipPath, QString* err, QStringList* notes = nullptr);
+// the pixel numbers of a line of Ren'Py code times `k` (xpos 300 -> 200, size 36 -> 24, xysize (1920, 1080) -> (1280, 720))
+QString scalePixels(const QString& line, double k);
 // game/mods/<id>/.genrybl_owner: the project folder that built the mod. Another copy of GenryBL (a developer
 // own build vs the public one) never overwrites a mod it did not build. "" = free (or ours).
 QString modOwner(const QString& esRoot, const QString& modId);

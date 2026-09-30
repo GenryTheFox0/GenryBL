@@ -8,25 +8,32 @@
 #      with («call screen x(…)», «show screen x(…)»); a screen nobody calls is built with its defaults.
 #   3) the game's own lint checks, on the mods' statements only (the whole game with the workshop takes minutes).
 # The report goes to GENRY_SMOKE_OUT; the mods are GENRY_SMOKE_MODS (comma separated).
+# It runs on both branches of the game in Steam: the usual one (Ren'Py 7, Python 2) and «renpy8» (Python 3).
 init 1999 python:
     import os as _genry_gate_os
 
     def _genry_gate_smoke():
         import io, re, sys, dis, traceback, types
-        import __builtin__
+        PY3 = sys.version_info[0] >= 3
+        if PY3:
+            import builtins as B
+        else:
+            import __builtin__ as B
         # this function lives in the store, where any mod may have put a Character called «all» or «set»:
         # the builtins it uses are taken from the source, the nested functions see these through the closure
-        B = __builtin__
-        all, any, set, sorted, list, dict, len, str, unicode, repr, type, isinstance, hasattr, getattr, eval, compile, \
+        all, any, set, sorted, list, dict, len, str, repr, type, isinstance, hasattr, getattr, eval, compile, \
             ord, range, enumerate, Exception, SyntaxError, object, sum, max, min = \
-            B.all, B.any, B.set, B.sorted, B.list, B.dict, B.len, B.str, B.unicode, B.repr, B.type, B.isinstance, B.hasattr, \
+            B.all, B.any, B.set, B.sorted, B.list, B.dict, B.len, B.str, B.repr, B.type, B.isinstance, B.hasattr, \
             B.getattr, B.eval, B.compile, B.ord, B.range, B.enumerate, B.Exception, B.SyntaxError, B.object, B.sum, B.max, B.min
+        unicode = B.str if PY3 else B.unicode
         out = io.open(_genry_gate_os.environ.get("GENRY_SMOKE_OUT", "genry_smoke.txt"), "w", encoding="utf-8")
         mods = [m for m in _genry_gate_os.environ.get("GENRY_SMOKE_MODS", "").split(",") if m]
 
         def text(x):
             if isinstance(x, unicode):
                 return x
+            if PY3:
+                return str(x)
             try:
                 return unicode(str(x), "utf-8", "replace")
             except Exception:
@@ -60,6 +67,15 @@ init 1999 python:
             # «x = 0» defines x, «x += 1» only works if x is there: a name counts as set only when it is stored
             # before it is first read (a list comprehension stores its variable first)
             reads, stores = set(), set()
+            if PY3:
+                for ins in dis.get_instructions(co):
+                    if ins.opname in ("LOAD_NAME", "LOAD_GLOBAL"):
+                        if ins.argval not in stores:
+                            reads.add(ins.argval)
+                    elif ins.opname in ("STORE_NAME", "STORE_GLOBAL", "DELETE_NAME", "IMPORT_NAME"):
+                        if ins.argval not in reads:
+                            stores.add(ins.argval)
+                return reads, stores
             code = co.co_code
             i, n, ext = 0, len(code), 0
             while i < n:
@@ -139,7 +155,7 @@ init 1999 python:
         reported = set()
         for s, names in reads:
             for n in sorted(names):
-                if n in sets or n in known or hasattr(renpy.store, n) or hasattr(__builtin__, n):
+                if n in sets or n in known or hasattr(renpy.store, n) or hasattr(B, n):
                     continue
                 if (s.filename, s.linenumber, n) in reported:
                     continue
@@ -179,7 +195,7 @@ init 1999 python:
                     d.update()
                     tested += 1
                 except Exception as e:
-                    tb = traceback.extract_tb(sys.exc_info()[2])
+                    tb = [tuple(t)[:2] for t in traceback.extract_tb(sys.exc_info()[2])]
                     where = [t for t in tb if owner(t[0])]
                     fn, ln = (where[-1][0], where[-1][1]) if where else (loc[0], loc[1])
                     say(u"ERROR", fn, ln, u"screen %s%s: %s: %s" % (name, args, type(e).__name__, text(e)))

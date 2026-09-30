@@ -12,6 +12,7 @@
 #include "EsAssets.h"
 #include "History.h"
 #include "Graph.h"
+#include "Timeline.h"
 #include "Forms.h"
 #include "Library.h"
 #include "Lint.h"
@@ -1506,6 +1507,45 @@ static void test7dl()
           "menu buttons: «Прогресс» = statistics, «Для стрима» = the streamer mode");
 }
 
+// [14] the timeline and the Android export's pixel scaling
+static void testTimelineAndroid()
+{
+    out << "[14] timeline + android\n";
+    const QString story = QString::fromUtf8(
+        "@mod_id genry_t\n"
+        ": start\n"                                  // 2
+        "фон ext_square_day\n"                       // 3  beat 0
+        "музыка sunny_day\n"                         // 4  beat 1
+        "показать sl smile pioneer center\n"         // 5  beat 2
+        "Славя: Привет!\n"                           // 6  beat 3
+        "показать sl happy pioneer center\n"         // 7  beat 4
+        "убрать sl\n"                                // 8  beat 5
+        "фон ext_beach_day\n"                        // 9  beat 6
+        "текст Пляж.\n"                              // 10 beat 7
+        "переход next\n"                             // 11 beat 8
+        ": next\n"
+        "текст Дальше.\n");
+    const SceneTimeline t = sceneTimeline(story, 6);
+    auto trackOf = [&](const QString& id) { for (const TimelineTrack& x : t.tracks) if (x.id == id) return x; return TimelineTrack{}; };
+    const TimelineTrack bg = trackOf(QStringLiteral("bg")), sl = trackOf(QStringLiteral("char:sl")), say = trackOf(QStringLiteral("say")),
+                        mus = trackOf(QStringLiteral("music")), flow = trackOf(QStringLiteral("flow"));
+    check(t.scene == QStringLiteral("start") && t.beatLines.size() == 9 && t.beatLines.first() == 3 && t.beatLines.last() == 11,
+          QStringLiteral("timeline: the scene under the cursor, a beat a line (%1 beats)").arg(t.beatLines.size()));
+    check(bg.clips.size() == 2 && bg.clips[0].from == 0 && bg.clips[0].to == 6 && bg.clips[1].from == 6 && bg.clips[1].to == 9,
+          "timeline: a background runs until the next one");
+    check(sl.clips.size() == 2 && sl.clips[0].from == 2 && sl.clips[0].to == 4 && sl.clips[1].from == 4 && sl.clips[1].to == 6 &&
+              sl.clips[1].label == QStringLiteral("sl happy pioneer"),
+          "timeline: a character from «показать» to «убрать», cut where the emotion changes");
+    check(say.clips.size() == 2 && mus.clips.size() == 1 && mus.clips[0].to == 9 && flow.clips.size() == 1 && flow.clips[0].line == 11,
+          "timeline: lines, music to the scene's end, the way out");
+    // the Android export: pixels two thirds, shares of the screen as they are
+    check(build::scalePixels(QStringLiteral("    text \"x\" xpos 300 ypos 90 size 36 xalign 0.5"), 2.0 / 3.0) == QStringLiteral("    text \"x\" xpos 200 ypos 60 size 24 xalign 0.5") &&
+              build::scalePixels(QStringLiteral("        xysize (1920, 1080)"), 2.0 / 3.0) == QStringLiteral("        xysize (1280, 720)") &&
+              build::scalePixels(QStringLiteral("        hotspot (439, 265, 318, 621) action Return(1)"), 2.0 / 3.0) == QStringLiteral("        hotspot (293, 177, 212, 414) action Return(1)") &&
+              build::scalePixels(QStringLiteral("    $ renpy.pause(1.0)"), 2.0 / 3.0) == QStringLiteral("    $ renpy.pause(1.0)"),
+          "android: xpos / size / xysize / hotspot scaled, the rest untouched: " + build::scalePixels(QStringLiteral("    text \"x\" xpos 300 ypos 90 size 36 xalign 0.5"), 2.0 / 3.0));
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -1525,6 +1565,7 @@ int main(int argc, char** argv)
     testHistory();
     testDoctor();
     test7dl();
+    testTimelineAndroid();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

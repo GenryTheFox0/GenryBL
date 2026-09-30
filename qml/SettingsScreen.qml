@@ -122,7 +122,7 @@ Item {
         Text {
             width: 760
             wrapMode: Text.Wrap
-            text: qsTr("Бесконечное лето: ") + Engine.esRoot
+            text: qsTr("Бесконечное лето: ") + Engine.esRoot + (Engine.esRenpy ? "   ·   Ren'Py " + Engine.esRenpy + (Engine.esRenpy.charAt(0) === "8" ? qsTr(" (ветка renpy8)") : qsTr(" (обычная версия)")) : "")
             color: Theme.ink; font.family: Theme.ui; font.pixelSize: 22
         }
         Row {

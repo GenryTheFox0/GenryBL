@@ -17,6 +17,7 @@
 #include <QFileInfo>
 #include <QImage>
 #include <QImageReader>
+#include <QBuffer>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
@@ -153,6 +154,22 @@ bool isEsRoot(const QString& dir)
 }
 
 QString esExe(const QString& esRoot) { return esRoot + QStringLiteral("/Everlasting Summer.exe"); }
+
+QString esRenpyVersion(const QString& esRoot)
+{
+    // Ren'Py 8 ships Python 3 (lib/py3-*, lib/python3.x); its renpy/__init__.py still names both versions
+    const bool py3 = !QDir(esRoot + QStringLiteral("/lib")).entryList({QStringLiteral("py3-*"), QStringLiteral("python3*")}, QDir::Dirs).isEmpty();
+    QFile f(esRoot + QStringLiteral("/renpy/__init__.py"));
+    if (!f.open(QIODevice::ReadOnly)) return {};
+    static const QRegularExpression vt(QStringLiteral("version_tuple\\s*=\\s*\\((\\d+),\\s*(\\d+),\\s*(\\d+)"));
+    QString best;
+    for (auto m = vt.globalMatch(QString::fromUtf8(f.readAll())); m.hasNext();) {
+        const auto x = m.next();
+        const bool eight = x.captured(1).toInt() >= 8;
+        if (eight == py3) best = x.captured(1) + QLatin1Char('.') + x.captured(2) + QLatin1Char('.') + x.captured(3);
+    }
+    return best;
+}
 
 QString findEsRoot(const QStringList& candidates)
 {
@@ -823,6 +840,152 @@ bool exportZip(const QString& modDir, const QString& modId, const QString& modNa
     if (!QFile::rename(tmp, zipPath)) {
         if (err) *err = QStringLiteral("не могу переименовать в %1 (открыт в другой программе?)").arg(QDir::toNativeSeparators(zipPath));
         return false;
+    }
+    return true;
+}
+
+QString scalePixels(const QString& line, double k)
+{
+    auto num = [k](const QString& v) { return QString::number(qRound(v.toInt() * k)); };
+    QString out = line;
+    // «xpos 300», «size 36» (screen language and ATL): whole numbers only - «xpos 0.5» is a share of the screen
+    static const QRegularExpression prop(QStringLiteral(
+        "\\b(xpos|ypos|xoffset|yoffset|xsize|ysize|xmaximum|ymaximum|xminimum|yminimum|spacing|size|text_size|xpadding|ypadding|"
+        "left_padding|right_padding|top_padding|bottom_padding|xmargin|ymargin|left_margin|right_margin|top_margin|bottom_margin|"
+        "xanchor|yanchor|first_spacing|line_spacing|outline|radius)(\\s+|=)(-?\\d+)(?![\\d.])"));
+    QString res;
+    int last = 0;
+    for (auto it = prop.globalMatch(out); it.hasNext();) {
+        const auto m = it.next();
+        res += out.mid(last, m.capturedStart(3) - last) + num(m.captured(3));
+        last = int(m.capturedEnd(3));
+    }
+    out = res + out.mid(last);
+    // «xysize (1920, 1080)», «pos (40, 120)», «padding (22, 12)», «offset (4, 4)», «hotspot (x, y, w, h)»
+    static const QRegularExpression tup(QStringLiteral("\\b(xysize|pos|padding|offset|margin|hotspot|xycenter)\\s*\\(([-\\d,\\s]+)\\)"));
+    res.clear();
+    last = 0;
+    for (auto it = tup.globalMatch(out); it.hasNext();) {
+        const auto m = it.next();
+        QStringList parts = m.captured(2).split(QLatin1Char(','));
+        for (QString& p : parts) {
+            const QString t = p.trimmed();
+            if (!t.isEmpty()) p = (p.startsWith(QLatin1Char(' ')) ? QStringLiteral(" ") : QString()) + num(t);
+        }
+        res += out.mid(last, m.capturedStart(2) - last) + parts.join(QLatin1Char(','));
+        last = int(m.capturedEnd(2));
+    }
+    return res + out.mid(last);
+}
+
+bool exportAndroid(const QString& modDir, const QString& modId, const QString& modName, const QString& zipPath, QString* err, QStringList* notes)
+{
+    const double k = 2.0 / 3.0;
+    // the game compiled .rpyc from the full-size code here: the phone compiles the scaled .rpy itself
+    QStringList files;
+    for (const QString& rel : shippedFiles(modDir))
+        if (!rel.endsWith(QLatin1String(".rpyc"))) files << rel;
+    if (files.isEmpty()) {
+        if (err) *err = QStringLiteral("папка мода пустая: %1").arg(QDir::toNativeSeparators(modDir));
+        return false;
+    }
+    // Latin names: an old phone's file system and the mod loaders stumble on Cyrillic
+    QHash<QString, QString> renamed;
+    QSet<QString> taken;
+    for (const QString& rel : files) {
+        QString to = rel;
+        bool ascii = true;
+        for (const QChar ch : rel) if (ch.unicode() > 127) { ascii = false; break; }
+        if (!ascii) {
+            QStringList parts = rel.split(QLatin1Char('/'));
+            for (QString& p : parts) {
+                const QString suffix = p.contains(QLatin1Char('.')) ? p.mid(p.lastIndexOf(QLatin1Char('.'))) : QString();
+                const QString base = suffix.isEmpty() ? p : p.left(p.size() - suffix.size());
+                p = translit(base) + suffix;
+            }
+            to = parts.join(QLatin1Char('/'));
+        }
+        QString unique = to;
+        for (int n = 2; taken.contains(unique.toLower()); ++n) unique = to.left(to.lastIndexOf(QLatin1Char('.'))) + QStringLiteral("_%1").arg(n) + to.mid(to.lastIndexOf(QLatin1Char('.')));
+        taken.insert(unique.toLower());
+        if (unique != rel) renamed.insert(rel, unique);
+    }
+    QDir().mkpath(QFileInfo(zipPath).absolutePath());
+    const QString tmp = zipPath + QStringLiteral(".part");
+    QFile::remove(tmp);
+    bool usesWardrobe = false, usesMap = false, usesVideo = false;
+    {
+        QZipWriter zip(tmp);
+        if (zip.status() != QZipWriter::NoError) {
+            if (err) *err = QStringLiteral("не могу записать %1").arg(QDir::toNativeSeparators(zipPath));
+            return false;
+        }
+        zip.setCompressionPolicy(QZipWriter::AutoCompress);
+        const QString readme = QString::fromUtf8(
+            "%1 — версия для Андроида\n"
+            "Мод для мобильного «Бесконечного лета». Сделан в GenryBL: https://github.com/GenryTheFox0/GenryBL\n\n"
+            "КАК УСТАНОВИТЬ\n"
+            "1. Распакуй архив.\n"
+            "2. Папку «mods» целиком положи в память телефона:\n"
+            "   Android/media/su.sovietgames.everlasting_summer/  (новые версии игры)\n"
+            "   или Android/data/su.sovietgames.everlasting_summer/files/  (старые версии)\n"
+            "3. В игре: Настройки → Моды и сценарии → «%1».\n\n"
+            "Картинки и разметка уменьшены под экран мобильной игры (1280×720).\n").arg(modName.isEmpty() ? modId : modName);
+        zip.addFile(QString::fromUtf8("КАК_УСТАНОВИТЬ_ANDROID.txt"), readme.toUtf8());
+        for (const QString& rel : files) {
+            QFile f(modDir + QLatin1Char('/') + rel);
+            if (!f.open(QIODevice::ReadOnly)) {
+                if (err) *err = QStringLiteral("не читается %1").arg(QDir::toNativeSeparators(f.fileName()));
+                return false;
+            }
+            QByteArray data = f.readAll();
+            const QString ext = QFileInfo(rel).suffix().toLower();
+            if (ext == QLatin1String("rpy")) {
+                QString text = QString::fromUtf8(data);
+                usesWardrobe = usesWardrobe || text.contains(QLatin1String("genry_wardrobe/"));
+                usesMap = usesMap || text.contains(QLatin1String("genry_camp_map")) || text.contains(QLatin1String("genry_map_pic("));
+                usesVideo = usesVideo || text.contains(QLatin1String("renpy.movie_cutscene")) || text.contains(QLatin1String("Movie("));
+                for (auto it = renamed.begin(); it != renamed.end(); ++it)
+                    text.replace(QStringLiteral("mods/%1/%2").arg(modId, it.key()), QStringLiteral("mods/%1/%2").arg(modId, it.value()));
+                QStringList lines = text.split(QLatin1Char('\n'));
+                for (QString& l : lines)
+                    if (!l.trimmed().startsWith(QLatin1Char('#'))) l = scalePixels(l, k);
+                data = (QStringLiteral("# GenryBL: версия для мобильного Бесконечного лета (1280x720)\n") + lines.join(QLatin1Char('\n'))).toUtf8();
+            } else if (ext == QLatin1String("png") || ext == QLatin1String("jpg") || ext == QLatin1String("jpeg") || ext == QLatin1String("webp")) {
+                QImage img;
+                if (img.loadFromData(data) && img.width() >= 48 && img.height() >= 48) {
+                    const QImage shrunk = img.scaled(qMax(1, qRound(img.width() * k)), qMax(1, qRound(img.height() * k)), Qt::IgnoreAspectRatio,
+                                                    Qt::SmoothTransformation);
+                    QBuffer buf;
+                    buf.open(QIODevice::WriteOnly);
+                    if (shrunk.save(&buf, ext == QLatin1String("png") ? "PNG" : ext == QLatin1String("webp") ? "WEBP" : "JPG", ext == QLatin1String("png") ? -1 : 90))
+                        data = buf.data();
+                }
+            }
+            zip.addFile(QStringLiteral("mods/%1/%2").arg(modId, renamed.value(rel, rel)), data);
+        }
+        zip.close();
+        if (zip.status() != QZipWriter::NoError) {
+            if (err) *err = QStringLiteral("архив не дописался (место на диске?)");
+            return false;
+        }
+    }
+    {
+        QZipReader back(tmp);
+        if (!back.isReadable() || back.count() != files.size() + 1) {
+            if (err) *err = QStringLiteral("архив не читается после записи");
+            return false;
+        }
+    }
+    QFile::remove(zipPath);
+    if (!QFile::rename(tmp, zipPath)) {
+        if (err) *err = QStringLiteral("не могу переименовать в %1 (открыт в другой программе?)").arg(QDir::toNativeSeparators(zipPath));
+        return false;
+    }
+    if (notes) {
+        if (usesWardrobe) *notes << gbTr("В моде одежда из Мастерской: проверь героинь на телефоне — у мобильной игры свои спрайты");
+        if (usesMap) *notes << gbTr("В моде карта лагеря: проверь на телефоне, что места нажимаются куда надо");
+        if (usesVideo) *notes << gbTr("В моде видео: мобильная игра играет не все форматы — проверь ролики на телефоне");
     }
     return true;
 }
