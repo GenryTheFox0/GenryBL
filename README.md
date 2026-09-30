@@ -86,7 +86,7 @@ GenryBL — **для взрослых**, и я этого не прячу.
 ## Как установить
 
 1. Скачай **[GenryBL_Setup.exe](https://github.com/GenryTheFox0/GenryBL/releases/latest/download/GenryBL_Setup.exe)**
-   (или `GenryBL_V1_portable.zip`, если не любишь установщики) со [страницы выпуска](https://github.com/GenryTheFox0/GenryBL/releases/latest).
+   (или `GenryBL_portable.zip`, если не любишь установщики) со [страницы выпуска](https://github.com/GenryTheFox0/GenryBL/releases/latest).
 2. Запусти. Windows может испугаться неподписанной программы — «Подробнее» → «Выполнить в любом случае».
 3. Подтверди 18+, выбери папку (админ не нужен). Игру установщик найдёт сам.
 4. «Новый мод» — и понеслась. Всё по шагам — в **[вики](docs/README.md)**.

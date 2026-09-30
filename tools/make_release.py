@@ -7,7 +7,7 @@
    data/ (+ ffmpeg), ПРОЧТИ.txt - and proves with dumpbin that every DLL any exe/dll of it needs is either
    inside or a part of Windows itself (a clean Windows has no VC++ Redistributable)
 3. dist/github/: GenryBL_Setup.exe (the Win32 bootstrap + the zipped program + footer),
-   GenryBL_V1_portable.zip, README.md - nothing else (no .cmd, no sources, no dev junk)
+   GenryBL_portable.zip, README.md - nothing else (no .cmd, no sources, no dev junk)
 """
 import hashlib
 import os
@@ -252,7 +252,7 @@ def main():
     if WORKSHOP:
         os.remove(payload)
     else:
-        shutil.move(payload, os.path.join(OUT, 'GenryBL_V1_portable.zip'))
+        shutil.move(payload, os.path.join(OUT, 'GenryBL_portable.zip'))
         shutil.copy2(os.path.join(ROOT, 'release_files', 'README.md'), OUT)
     print('== ' + os.path.relpath(OUT, ROOT).replace(os.sep, '/'))
     for f in sorted(os.listdir(OUT)):
