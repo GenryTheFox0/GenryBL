@@ -1356,7 +1356,17 @@ QStringList Engine::sceneNames(const QString& text) const
 QStringList Engine::spriteNames(const QString& tag) const
 {
     QStringList out = m_es.spriteNames(tag);
-    if (!m_hidden.isEmpty() || !m_hiddenShipped.isEmpty()) out.erase(std::remove_if(out.begin(), out.end(), [&](const QString& n) { return spriteHidden(tag, n); }), out.end());
+    // the game's own sprites: only the user's own «удалить» hides them, never the list that ships with GenryBL - a
+    // curation of the workshop wardrobe there once swept every emotion but «smile» off Ольга Дмитриевна for everyone
+#ifdef GB_RELEASE
+    const QSet<QString>& own = m_hidden;
+#else
+    static const QSet<QString> own;                 // a developer build's list is data/ - what ships
+#endif
+    if (!own.isEmpty())
+        out.erase(std::remove_if(out.begin(), out.end(), [&](const QString& n) {
+                      return Wardrobe::hiddenIn(own, tag, n.section(QLatin1Char(' '), 0, 0), n.section(QLatin1Char(' '), 1));
+                  }), out.end());
     const QString prefix = tag + QLatin1Char(' ');
     const auto custom = m_renderer.customImages();
     for (auto it = custom.begin(); it != custom.end(); ++it) {

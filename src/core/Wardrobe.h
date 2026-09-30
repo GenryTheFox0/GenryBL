@@ -97,6 +97,8 @@ public:
     // "tag|look:smile nude" (one sprite), "tag|face:smile" (an emotion everywhere), "tag|outfit:nude"
     void setHidden(const QSet<QString>& keys);
     bool isHidden(const QString& tag, const QString& face, const QString& outfit) const;
+    // the same reading of «удалено» keys (tag|look:…, tag|face:…, tag|outfit:…) in any set
+    static bool hiddenIn(const QSet<QString>& keys, const QString& tag, const QString& face, const QString& outfit);
     // «поправить лицо»: the user's shifts of the face layers (Engine: work/wardrobe_faces.txt), keys
     // "tag|dist|look:smile nude" before "tag|dist|outfit:nude" before "tag|dist|face:smile" (dist normal|close|far)
     void setFaceShifts(const QHash<QString, QPoint>& shifts);

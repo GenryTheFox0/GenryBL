@@ -778,14 +778,19 @@ void Wardrobe::setHidden(const QSet<QString>& keys)
 bool Wardrobe::isHidden(const QString& tag, const QString& face, const QString& outfit) const
 {
     QReadLocker lock(&m_hideLock);
-    if (m_hidden.isEmpty()) return false;
+    return hiddenIn(m_hidden, tag, face, outfit);
+}
+
+bool Wardrobe::hiddenIn(const QSet<QString>& keys, const QString& tag, const QString& face, const QString& outfit)
+{
+    if (keys.isEmpty()) return false;
     const QString t = tag + QLatin1Char('|');
-    if (m_hidden.contains(t + QStringLiteral("look:") + (face + QLatin1Char(' ') + outfit).trimmed())) return true;
+    if (keys.contains(t + QStringLiteral("look:") + (face + QLatin1Char(' ') + outfit).trimmed())) return true;
     for (const QString& f : face.split(QLatin1Char(' '), Qt::SkipEmptyParts))
-        if (m_hidden.contains(t + QStringLiteral("face:") + f)) return true;
-    if (!outfit.isEmpty() && m_hidden.contains(t + QStringLiteral("outfit:") + outfit)) return true;
+        if (keys.contains(t + QStringLiteral("face:") + f)) return true;
+    if (!outfit.isEmpty() && keys.contains(t + QStringLiteral("outfit:") + outfit)) return true;
     for (const QString& o : outfit.split(QLatin1Char(' '), Qt::SkipEmptyParts))
-        if (m_hidden.contains(t + QStringLiteral("outfit:") + o)) return true;
+        if (keys.contains(t + QStringLiteral("outfit:") + o)) return true;
     return false;
 }
 
