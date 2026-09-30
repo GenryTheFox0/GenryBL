@@ -40,7 +40,8 @@ ApplicationWindow {
         if (bootStarted) return
         bootStarted = true
         bootMin.start()
-        if (!bootTest) Qt.callLater(win.start)
+        console.info("start: the loading screen is up, building the launcher")
+        if (!bootTest) Qt.callLater(() => { win.start(); console.info("start: launcher built") })
     }
     Connections {
         target: win
@@ -171,6 +172,7 @@ ApplicationWindow {
         z: 58
         visible: win.booting && opacity > 0.01
         done: win.bootStarted && !bootMin.running && stack.depth > 0 && stack.currentItem && stack.currentItem.ready !== false
+        onDoneChanged: if (done) console.info("start: the menu is there, the loading screen dissolves")
     }
 
     Toasts { id: toasts; anchors.fill: parent; z: 60 }

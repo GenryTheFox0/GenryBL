@@ -28,7 +28,7 @@ Item {
     }
     Text {
         x: 480; y: 262
-        text: Engine.projects.length ? qsTr("Альбом лагеря: ") + Engine.projects.length + qsTr(" шт. Двойной клик — открыть.") : qsTr("Альбом пока пуст — начни с первого мода.")
+        text: Engine.projects.length ? qsTr("Альбом лагеря: ") + Engine.projects.length + qsTr(" шт. Клик — открыть, правый клик — меню.") : qsTr("Альбом пока пуст — начни с первого мода.")
         color: "#d9ccaa"; font.family: Theme.ui; font.pixelSize: 24
     }
 
@@ -44,7 +44,11 @@ Item {
         model: [{ create: true }].concat(Engine.projects)
         delegate: Item {
             width: 376; height: 300
-            readonly property bool hot: area.containsMouse
+            // a HoverHandler, not the MouseArea's containsMouse: over «Открыть» / «Играть» the MouseArea lost the hover
+            // to the button - the buttons vanished and came back on every move of the mouse, the photo jumped,
+            // and a click could fall through the gap
+            HoverHandler { id: hov }
+            readonly property bool hot: hov.hovered
             Item {
                 id: photo
                 x: 20; y: hot ? 4 : 12
@@ -102,18 +106,21 @@ Item {
                 text: "⋯"
                 onClicked: { menu.project = modelData; menu.popup() }
             }
+            // one click opens the mod (the right button - its menu)
             MouseArea {
                 id: area
                 anchors.fill: parent
-                hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 z: -1
                 cursorShape: Qt.PointingHandCursor
                 onClicked: (m) => {
                     if (modelData.create) { Sfx.click(); album.create(); return }
-                    if (m.button === Qt.RightButton) { menu.project = modelData; menu.popup() }
+                    if (m.button === Qt.RightButton) { menu.project = modelData; menu.popup(); return }
+                    Sfx.click()
+                    album.open(modelData.id)
                 }
-                onDoubleClicked: if (!modelData.create) { Sfx.click(); album.open(modelData.id) }
+                // an old habit's double click: with this handler the second click is not a second «open»
+                onDoubleClicked: {}
             }
         }
     }

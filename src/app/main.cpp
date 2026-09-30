@@ -30,6 +30,7 @@
 #include <memory>
 
 static QFile* g_log = nullptr;
+static QElapsedTimer g_since;                   // since the process started: the start's own timeline in the log
 
 // A WIN32 app has no console: QML warnings and errors go to work/genrybl.log.
 static void logHandler(QtMsgType type, const QMessageLogContext& ctx, const QString& msg)
@@ -78,6 +79,7 @@ int main(int argc, char** argv)
     // how GenryBL draws and where its Qt plugins are is its own business: a Qt setting inherited from whoever started it
     // (a Qt tool, a game a mod launched it from) must not break the window ("no Qt platform plugin could be initialized")
     for (const char* v : {"QT_QPA_PLATFORM", "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH", "QT_SCALE_FACTOR"}) qunsetenv(v);
+    g_since.start();
     applyUiScale(argc, argv);
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QGuiApplication app(argc, argv);
@@ -96,11 +98,18 @@ int main(int argc, char** argv)
     const int bootGrabMs = bootTest && args.size() > bootAt + 2 ? args[bootAt + 2].toInt() : 0;
 
     Engine& engine = *Engine::boot();
-    engine.setShotMode(shot || bootTest);
+    engine.setShotMode(shot || (bootTest && bootGrabMs <= 0));  // [ms]: the start for real - music, Discord (mute them in that root)
     if (!engine.appRoot().isEmpty()) {
         QDir().mkpath(engine.appRoot() + QStringLiteral("/work"));
-        g_log = new QFile(engine.appRoot() + QStringLiteral("/work/genrybl.log"));
+        const QString logPath = engine.appRoot() + QStringLiteral("/work/genrybl.log");
+        const QString prevPath = engine.appRoot() + QStringLiteral("/work/genrybl.prev.log");
+        if (!shot && QFileInfo::exists(logPath)) {         // the last start's log survives this one (a start that went wrong)
+            QFile::remove(prevPath);
+            QFile::rename(logPath, prevPath);
+        }
+        g_log = new QFile(logPath);
         if (g_log->open(QIODevice::WriteOnly | QIODevice::Truncate)) qInstallMessageHandler(logHandler);
+        qInfo("start: %s, engine up in %lld ms", qPrintable(engine.version()), g_since.elapsed());
         crash::install(engine.appRoot() + QStringLiteral("/work/crash"), engine.appRoot() + QStringLiteral("/work/genrybl.log"), engine.version());
     }
     if (engine.ready()) QGuiApplication::setWindowIcon(QIcon(QPixmap::fromImage(engine.providerImage(QStringLiteral("file/images/gui/title_menu/owl_idle.png"), QSize(256, 256)))));
@@ -118,7 +127,8 @@ int main(int argc, char** argv)
     // a new language in «Инструменты»: every qsTr() in the window is re-read at once
     QObject::connect(&engine, &Engine::languageChanged, &qml, [&qml] { qml.retranslate(); });
     qml.loadFromModule("GenryBL", "Main");
-    if (qml.rootObjects().isEmpty()) return 3;
+    if (qml.rootObjects().isEmpty()) { qCritical("start: the window's QML did not load"); return 3; }
+    qInfo("start: window loaded at %lld ms", g_since.elapsed());
 
     // The window comes on screen with its first finished frame (the loading screen): Windows' blank white window
     // before it - and the 1600x900 one left inside a maximized window - never reach the screen. Main.qml keeps the
@@ -145,20 +155,28 @@ int main(int argc, char** argv)
                 }, Qt::QueuedConnection);
                 QTimer::singleShot(10000, &app, [] { QCoreApplication::exit(5); });   // no frame while cloaked
             } else {
-                *once = QObject::connect(win, &QQuickWindow::frameSwapped, &app, [once, hwnd] {
+                auto shown = std::make_shared<bool>(false);
+                *once = QObject::connect(win, &QQuickWindow::frameSwapped, &app, [once, hwnd, shown] {
                     QObject::disconnect(*once);
+                    if (*shown) return;
+                    *shown = true;
                     BOOL off = FALSE;
                     DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, &off, sizeof off);
+                    qInfo("start: first frame on screen at %lld ms", g_since.elapsed());
                 }, Qt::QueuedConnection);
-                QTimer::singleShot(4000, &app, [hwnd] {          // whatever happens, never an invisible window
+                QTimer::singleShot(4000, &app, [hwnd, shown] {  // whatever happens, never an invisible window
+                    if (*shown) return;
+                    *shown = true;
                     BOOL off = FALSE;
                     DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, &off, sizeof off);
+                    qWarning("start: no frame in 4 s - the window is shown anyway");
                 });
             }
         }
 #endif
         if (win->property("bootMaximized").toBool()) win->showMaximized();
         else win->show();
+        qInfo("start: window shown at %lld ms", g_since.elapsed());
     }
 
     // GenryBL.exe --crash-test: fall on purpose after 3 s (the crash catcher's own check)

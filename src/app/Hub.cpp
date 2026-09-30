@@ -151,7 +151,7 @@ void Engine::updatePresence()
 {
     if (!m_discord) return;
     const QString id = m_settings.value(QStringLiteral("discordAppId"), QString::fromLatin1(kDiscordApp)).toString();
-    if (!discordOn() || id.isEmpty()) {
+    if (!discordOn() || id.isEmpty() || m_shotMode) {     // a self-check picture tells Discord nothing
         m_discord->setClientId({});
         emit discordChanged();
         return;

@@ -59,12 +59,24 @@ Item {
         y: (launcher.height - 1080 * s) / 2
 
         component Screen: Item {
+            id: scr
             property bool shown
+            // a page is built when it is first opened (or quietly in the background once the menu is up), not at the
+            // start: the start builds only the menu
+            property Component page: null
+            property bool built: false
+            onShownChanged: if (shown) built = true
+            Component.onCompleted: if (shown) built = true
             width: 1920; height: 1080
             opacity: shown ? 1 : 0
             visible: opacity > 0.01
             enabled: shown
             Behavior on opacity { NumberAnimation { duration: 450; easing.type: Easing.InOutQuad } }
+            Loader {
+                active: scr.page !== null && scr.built
+                asynchronous: !scr.shown                // built in the background: a piece per frame, the menu keeps moving
+                sourceComponent: scr.page
+            }
         }
 
         Screen {
@@ -82,8 +94,9 @@ Item {
             }
         }
         Screen {
+            id: modsScreen
             shown: launcher.screen === "mods"
-            AlbumScreen {
+            page: Component { AlbumScreen {
                 onBack: launcher.screen = "menu"
                 onOpen: (id) => launcher.open(id)
                 onPlay: (id) => launcher.playProject(id)
@@ -96,19 +109,22 @@ Item {
                     publishDialog.autoPublish = true
                     publishDialog.run("workshop")
                 }
-            }
+            } }
         }
         Screen {
+            id: centerScreen
             shown: launcher.screen === "center"
-            CenterScreen { onBack: launcher.screen = "menu" }
+            page: Component { CenterScreen { onBack: launcher.screen = "menu" } }
         }
         Screen {
+            id: galleryScreen
             shown: launcher.screen === "gallery"
-            GalleryScreen { onBack: launcher.screen = "menu" }
+            page: Component { GalleryScreen { onBack: launcher.screen = "menu" } }
         }
         Screen {
+            id: settingsScreen
             shown: launcher.screen === "settings"
-            SettingsScreen { onBack: launcher.screen = "menu" }
+            page: Component { SettingsScreen { onBack: launcher.screen = "menu" } }
         }
 
         // ---- the plaques: the constructor is 18+; a developer build is marked
