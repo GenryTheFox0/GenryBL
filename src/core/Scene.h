@@ -112,6 +112,7 @@ struct SceneState {
     QString pushWho, pushText;                    // transient: «пуш Кто: текст»
     int line = 0;
     QHash<QString, QString> customSpeakers;       // персонаж id/name -> "Name|#color"
+    QHash<QString, QString> strangers;            // V2.1 «прозвище»: speaker id -> the name shown until she names herself
 };
 
 // Walk the story up to `upto` lines (-1 = all). `es` gives names/colours of the cast.

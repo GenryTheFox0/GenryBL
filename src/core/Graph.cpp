@@ -92,7 +92,7 @@ StoryGraph storyGraph(const QString& storyText, const CompileOptions& opt)
                 }
                 const QString kind = menuButtonKind(target.isEmpty() ? caption : target);
                 if (kind == U("главы")) showsChapters = true;
-                static const QSet<QString> special{U("галерея"), U("достижения"), U("шкалы"), U("главы"), U("настройки"), U("загрузить"), U("выход"), U("имя")};
+                static const QSet<QString> special{U("галерея"), U("достижения"), U("шкалы"), U("главы"), U("настройки"), U("загрузить"), U("выход"), U("имя"), U("статистика"), U("стример")};
                 if (special.contains(kind)) continue;
                 pending.push_back({menuNode, target.isEmpty() ? QStringLiteral("start") : target, QStringLiteral("button"), caption, ln});
             }
@@ -173,6 +173,20 @@ StoryGraph storyGraph(const QString& storyText, const CompileOptions& opt)
         if (cmd == QLatin1String("screenmenu")) {
             for (const QString& it : fieldsOf(rest).mid(1))
                 if (it.contains(QLatin1String("->"))) to(it.section(QStringLiteral("->"), 1), QStringLiteral("menu"), pyStrip(it.section(QStringLiteral("->"), 0, 0)));
+            continue;
+        }
+        if (cmd == QLatin1String("terminal")) {
+            for (const QString& it : fieldsOf(rest).mid(1))
+                if (it.contains(QLatin1String("->"))) {
+                    const QString t = pyStrip(it.section(QStringLiteral("->"), 1)), tl = t.toLower();
+                    if (tl != U("выход") && tl != QLatin1String("exit") && tl != U("дальше"))
+                        to(t, QStringLiteral("menu"), pyStrip(it.section(QStringLiteral("->"), 0, 0).section(QLatin1Char(':'), 0, 0)));
+                }
+            continue;
+        }
+        if (cmd == QLatin1String("rps")) {
+            for (const QString& it : fieldsOf(rest).mid(1))
+                if (it.contains(QLatin1String("->"))) to(it.section(QStringLiteral("->"), 1), QStringLiteral("code"), pyStrip(it.section(QStringLiteral("->"), 0, 0)));
             continue;
         }
         if (cmd == QLatin1String("bestmeter")) {

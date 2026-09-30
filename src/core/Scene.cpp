@@ -159,6 +159,13 @@ QString heroText(const QString& text, const SceneState& st)
 void say(SceneState& st, const QString& who, const QString& text, const EsAssets* es)
 {
     sayAdv(st, who, text, es);
+    // «незнакомка»: under the name the hero knows her by; she says her own name - from the next line she is herself
+    if (st.strangers.contains(st.speakerId)) {
+        const QString real = st.speakerName;
+        st.speakerName = st.strangers.value(st.speakerId);
+        const QString said = text.toLower();
+        if ((!real.isEmpty() && said.contains(real.toLower())) || said.contains(pyStrip(who).toLower())) st.strangers.remove(st.speakerId);
+    }
     if (!st.nvlMode) return;
     // the NVL page holds every box of a long line
     for (const QString& box : st.textBoxes.isEmpty() ? QStringList{st.text} : st.textBoxes)
@@ -492,6 +499,14 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             clearSay(st);
             st.text = rest;
             if (st.nvlMode) { st.nvlPage << QStringLiteral("||") + rest; st.text.clear(); }
+            continue;
+        }
+        if (cmd == QLatin1String("stranger") || cmd == QLatin1String("meet")) {
+            CompileState cs;
+            const QString id = speakerId(pyStrip(rest.section(QLatin1Char('|'), 0, 0)), cs, {});
+            const QString shown = pyStrip(rest.section(QLatin1Char('|'), 1));
+            if (cmd == QLatin1String("meet") || shown.isEmpty()) st.strangers.remove(id);
+            else st.strangers.insert(id, shown);
             continue;
         }
         if (cmd == QLatin1String("character")) {

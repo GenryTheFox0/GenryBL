@@ -737,6 +737,27 @@ CinemaStop Cinema::run()
             st.optionOk = {k.okTarget.isEmpty() || m_labels.contains(label(k.okTarget)), k.badTarget.isEmpty() || m_labels.contains(label(k.badTarget))};
             return st;
         }
+        if (cmd == QLatin1String("terminal") || cmd == QLatin1String("rps")) {
+            m_path << raw;
+            QStringList options;
+            m_targets.clear();
+            for (const QString& x : fieldsOf(rest).mid(1)) {
+                if (!x.contains(QLatin1String("->"))) continue;
+                QString t = pyStrip(x.section(QStringLiteral("->"), 1));
+                const QString tl = t.toLower();
+                if (tl == U("выход") || tl == QLatin1String("exit") || tl == U("дальше")) t.clear();
+                options << pyStrip(x.section(QStringLiteral("->"), 0, 0).section(QLatin1Char(':'), 0, 0));
+                m_targets << t;
+            }
+            if (options.isEmpty()) continue;
+            if (cmd == QLatin1String("terminal")) { options << U("Выйти"); m_targets << QString(); }
+            m_timeoutSet = false;
+            m_resume = i + 1;
+            CinemaStop st = stop(CinemaStop::Choice, i);
+            st.options = options;
+            for (const QString& t : m_targets) st.optionOk << (t.isEmpty() || m_labels.contains(label(t)));
+            return st;
+        }
         if (cmd == QLatin1String("phonecall")) {
             // «звонок Славя | принять -> a | сбросить -> b | нет ответа -> c | ждать=10»
             m_path << raw;

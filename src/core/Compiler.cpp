@@ -24,6 +24,7 @@ namespace {
 #include "V1Phone.inc"
 #include "V2Achievements.inc"
 #include "V2Mechanics.inc"
+#include "V21Mechanics.inc"
 
 using SL = QStringList;
 const QString I4 = QStringLiteral("    ");
@@ -215,6 +216,20 @@ SL tintAtl(const QString& image)
 }
 
 QString effectZorder() { return QStringLiteral(" zorder 100"); }
+
+QString trackTitle(const QString& name)
+{
+    QString n = name;
+    if (n.contains(QLatin1Char('/')) || n.contains(QLatin1Char('.'))) n = QFileInfo(n).completeBaseName();
+    n.replace(QLatin1Char('_'), QLatin1Char(' ')).replace(QLatin1Char('-'), QLatin1Char(' '));
+    n = n.simplified();
+    bool start = true;
+    for (int i = 0; i < n.size(); ++i) {
+        if (start && n[i].isLetter()) n[i] = n[i].toUpper();
+        start = n[i] == QLatin1Char(' ');
+    }
+    return n;
+}
 
 bool isNum(const QString& s) { return pyIsNumber(s); }
 
@@ -1599,6 +1614,18 @@ const QHash<QString, QString>& v1Renames()
         {U("кодовыйзамок"), QStringLiteral("codelock")}, {U("кодзамок"), QStringLiteral("codelock")}, {QStringLiteral("codelock"), QStringLiteral("codelock")},
         // V2: «фонарик» / «фонарик выкл» / «фонарик 1.4 | цвет=#012» - the dark with a light that follows the mouse (7ДЛ)
         {U("фонарик"), QStringLiteral("flashlight")}, {U("фонарь"), QStringLiteral("flashlight")}, {QStringLiteral("flashlight"), QStringLiteral("flashlight")},
+        // V2.1 - the 7ДЛ mechanics (V21Mechanics.inc)
+        // «прозвище Славя | Блондинка» (not «незнакомка»: that is a speaker of its own in many stories)
+        {U("прозвище"), QStringLiteral("stranger")}, {U("доназнакомства"), QStringLiteral("stranger")}, {QStringLiteral("stranger"), QStringLiteral("stranger")},
+        {U("знакомство"), QStringLiteral("meet")}, {U("познакомиться"), QStringLiteral("meet")}, {QStringLiteral("meet"), QStringLiteral("meet")},
+        {U("имясохранения"), QStringLiteral("savename")}, {U("названиесохранения"), QStringLiteral("savename")}, {QStringLiteral("savename"), QStringLiteral("savename")},
+        {U("сейчасиграет"), QStringLiteral("nowplaying")}, {QStringLiteral("nowplaying"), QStringLiteral("nowplaying")},
+        {U("заставкаафк"), QStringLiteral("afk")}, {U("афк"), QStringLiteral("afk")}, {QStringLiteral("afk"), QStringLiteral("afk")},
+        {U("статистика"), QStringLiteral("stats")}, {QStringLiteral("stats"), QStringLiteral("stats")},
+        {U("терминал"), QStringLiteral("terminal")}, {QStringLiteral("terminal"), QStringLiteral("terminal")},
+        {U("кнб"), QStringLiteral("rps")}, {U("каменьножницыбумага"), QStringLiteral("rps")}, {QStringLiteral("rps"), QStringLiteral("rps")},
+        {U("экранвыхода"), QStringLiteral("farewell")}, {QStringLiteral("farewell"), QStringLiteral("farewell")},
+        {U("режимстримера"), QStringLiteral("streamer")}, {QStringLiteral("streamer"), QStringLiteral("streamer")},
     };
     return m;
 }
@@ -2152,6 +2179,8 @@ static SL compileV1Feature(const QString& cmd, const QString& rest, const QStrin
         const QString title = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
         if (title.isEmpty()) return {U("    # новаяглава Название | картинка")};
         SL r{QStringLiteral("    $ persistent.%1 = True").arg(persistentKey(modId, QStringLiteral("ch_") + title, QStringLiteral("chapter"), c.opt))};
+        // V2.1: the save made in this chapter is called by it
+        if (!c.opt.legacy) r << QStringLiteral("    $ save_name = ") + pyUQ(st.modName.isEmpty() ? title : st.modName + QStringLiteral(": ") + title);
         r << compileTitlecard(title, !c.opt.legacy, st.eyesClosed);
         return r;
     }
@@ -2221,13 +2250,31 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         name = name == QLatin1String("start") && !(st.modMenu && !opt.legacy) ? c.sl(modId, "genry_mod") : c.lab(pyStrip(stripped.mid(1)));
         st.eyesClosed = st.autoOpen = false;
         st.timeSynced = false;
+        // V2.1: a save made in the mod is called by the mod's name (not by the last chapter of the game)
+        if (!opt.legacy && !st.modName.isEmpty() && pyStrip(stripped.mid(1)).toLower() == QLatin1String("start"))
+            return {QString(), QStringLiteral("label %1:").arg(name), QStringLiteral("    $ save_name = ") + pyUQ(st.modName)};
         return {QString(), QStringLiteral("label %1:").arg(name)};
     }
     const QString low = stripped.toLower();
     if (stripped.contains(QLatin1Char(':')) && !isCommandName(cmdOf(stripped)) && !low.startsWith(QLatin1String("http:")) &&
         !low.startsWith(QLatin1String("https:"))) {
         const SL st2 = pySplitSep(stripped, QStringLiteral(":"), 1);
-        return {I4 + speakerFor(st2[0], st, opt) + QLatin1Char(' ') + pyQ(pyStrip(st2[1]))};
+        const QString id = speakerFor(st2[0], st, opt);
+        if (!opt.legacy && st.strangers.contains(id)) {
+            const QString shown = st.strangers.value(id);
+            const QString var = QStringLiteral("%1__stranger_%2").arg(modId, slugOf(id + QLatin1Char(' ') + shown, QStringLiteral("x"), opt));
+            st.strangerChars.insert(var, {id, shown});
+            // she says her own name («Меня Славя зовут»): from the next line on she is herself
+            const QString said = pyStrip(st2[1]).toLower();
+            bool named = said.contains(pyStrip(st2[0]).toLower());
+            for (auto it = T().speakers.begin(); !named && it != T().speakers.end(); ++it)
+                if (it.value() == id && it.key().size() >= 3 && said.contains(it.key())) named = true;
+            for (auto it = st.speakers.begin(); !named && it != st.speakers.end(); ++it)
+                if (it.value() == id && it.key().size() >= 3 && said.contains(it.key())) named = true;
+            if (named) st.strangers.remove(id);
+            return {I4 + var + QLatin1Char(' ') + pyQ(pyStrip(st2[1]))};
+        }
+        return {I4 + id + QLatin1Char(' ') + pyQ(pyStrip(st2[1]))};
     }
 
     const SL parts = words(stripped);
@@ -2416,8 +2463,33 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         if (w.isEmpty() && !opt.legacy) return {U("    # убрать: кого? («убрать dv» или «убратьвсех»)")};
         return {withEffectLine(QStringLiteral("    hide ") + joinW(w), effect)};
     }
-    if (cmd == QLatin1String("music")) return compileMusicPlay(rest, c);
-    if (cmd == QLatin1String("musicfile")) return compileMusicFile(rest, modId);
+    if (cmd == QLatin1String("music")) {
+        SL r = compileMusicPlay(rest, c);
+        if (st.nowPlaying && !opt.legacy && !words(rest).isEmpty()) r << QStringLiteral("    $ genry_now_playing(%1)").arg(pyUQ(trackTitle(words(rest).value(0))));
+        return r;
+    }
+    if (cmd == QLatin1String("musicfile")) {
+        // V2.1 «музыкафайл audio/song.ogg | стрим=sunny_day»: in the streamer mode a track of the game plays instead
+        QString file = rest, alt;
+        if (!opt.legacy && rest.contains(QLatin1Char('|'))) {
+            file = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
+            for (const QString& part : rest.split(QLatin1Char('|')).mid(1)) {
+                const QString k = pyStrip(part.section(QLatin1Char('='), 0, 0)).toLower();
+                if (k == U("стрим") || k == QLatin1String("stream") || k == U("стример")) alt = pyStrip(part.section(QLatin1Char('='), 1));
+            }
+        }
+        SL r;
+        if (!alt.isEmpty()) {
+            r << QStringLiteral("    if persistent.genry_streamer:");
+            for (const QString& l : compileMusicPlay(alt, c)) r << QStringLiteral("    ") + l;
+            r << QStringLiteral("    else:");
+            for (const QString& l : compileMusicFile(file, modId)) r << QStringLiteral("    ") + l;
+        } else {
+            r = compileMusicFile(file, modId);
+        }
+        if (st.nowPlaying && !opt.legacy && !words(file).isEmpty()) r << QStringLiteral("    $ genry_now_playing(%1)").arg(pyUQ(trackTitle(words(file).value(0))));
+        return r;
+    }
     if (cmd == QLatin1String("musicqueue")) return compileAudioQueue(QStringLiteral("music"), rest, modId, true, c);
     if (cmd == QLatin1String("soundqueue")) return compileAudioQueue(QStringLiteral("sound"), rest, modId, false, c);
     if (cmd == QLatin1String("sound") || cmd == QLatin1String("voice")) return compileSoundExpr(rest, c);
@@ -2744,6 +2816,115 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         else if (!k.okTarget.isEmpty()) r << QStringLiteral("    if _return:") << QStringLiteral("        jump ") + c.lab(k.okTarget);
         else if (!k.badTarget.isEmpty()) r << QStringLiteral("    if not _return:") << QStringLiteral("        jump ") + c.lab(k.badTarget);
         return r;
+    }
+    if (!opt.legacy && (cmd == QLatin1String("stranger") || cmd == QLatin1String("meet"))) {
+        // «прозвище Славя | Блондинка» … «знакомство Славя» (or she names herself in a line of her own)
+        const QString who = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
+        const QString shown = pyStrip(rest.section(QLatin1Char('|'), 1));
+        if (who.isEmpty() || (cmd == QLatin1String("stranger") && shown.isEmpty())) return {U("    # прозвище Славя | Блондинка")};
+        const QString id = speakerId(who, st, opt);
+        if (cmd == QLatin1String("meet")) {
+            st.strangers.remove(id);
+            return {U("    # знакомство: дальше «%1» под своим именем").arg(who)};
+        }
+        st.strangers.insert(id, shown);
+        return {U("    # «%1» — «%2», пока не назовёт себя").arg(who, shown)};
+    }
+    if (!opt.legacy && cmd == QLatin1String("savename")) {
+        if (rest.isEmpty()) return {U("    # имясохранения Текст")};
+        return {QStringLiteral("    $ save_name = ") + pyUQ(rest)};
+    }
+    if (!opt.legacy && cmd == QLatin1String("nowplaying")) {
+        const QString w = rest.toLower();
+        st.nowPlaying = !(w == U("выкл") || w == U("нет") || w == QLatin1String("off") || w == U("выключить"));
+        return {st.nowPlaying ? U("    # сейчас играет: названия треков видны") : U("    # сейчас играет: выключено")};
+    }
+    if (!opt.legacy && cmd == QLatin1String("afk")) {
+        const QString w = pyStrip(rest.section(QLatin1Char('|'), 0, 0)).toLower();
+        if (w == U("выкл") || w == U("нет") || w == QLatin1String("off") || w == U("выключить"))
+            return {QStringLiteral("    hide screen genry_afk_watch"), QStringLiteral("    hide screen genry_afk")};
+        double secs = 60;
+        pyFloat(w, &secs);
+        secs = qBound(10.0, secs, 3600.0);
+        QString img = pyStrip(rest.section(QLatin1Char('|'), 1));
+        if (img.isEmpty()) img = QStringLiteral("cg d2_sovenok");
+        QString kind;
+        img = choiceImage(img, &kind);
+        return {QStringLiteral("    show screen genry_afk_watch(%1, %2)").arg(int(secs)).arg(pyQ(img))};
+    }
+    if (!opt.legacy && cmd == QLatin1String("stats"))
+        return {QStringLiteral("    call screen genry_stats(") + c.sys(QStringLiteral("scenes")) + QStringLiteral(", called=True)")};
+    if (!opt.legacy && cmd == QLatin1String("terminal")) {
+        // «терминал Заголовок | подсказка | help: ответ | open -> сцена | exit -> выход»
+        const QStringList f = c.pipes(rest);
+        const QString title = f.value(0).isEmpty() ? U("Терминал") : f.value(0);
+        QString hint;
+        SL items;
+        for (int i = 1; i < f.size(); ++i) {
+            const QString x = pyStrip(f[i]);
+            if (x.isEmpty()) continue;
+            const int colon = int(x.indexOf(QLatin1Char(':'))), arrow = int(x.indexOf(QLatin1String("->")));
+            if (colon < 0 && arrow < 0) { if (i == 1) hint = x; continue; }
+            const int cut = colon >= 0 && (arrow < 0 || colon < arrow) ? colon : arrow;
+            const QString word = pyStrip(x.left(cut)).toLower();
+            QString answer, target = QStringLiteral("None");
+            QString tail = x.mid(cut + (cut == colon ? 1 : 0));
+            if (tail.contains(QLatin1String("->"))) {
+                answer = pyStrip(tail.section(QStringLiteral("->"), 0, 0));
+                const QString t = pyStrip(tail.section(QStringLiteral("->"), 1));
+                const QString tl = t.toLower();
+                target = tl == U("выход") || tl == QLatin1String("exit") || tl == U("дальше") || t.isEmpty() ? QStringLiteral("u\"\"") : pyQ(c.lab(t));
+            } else {
+                answer = pyStrip(tail);
+            }
+            if (!word.isEmpty()) items << QStringLiteral("(%1, %2, %3)").arg(pyUQ(word), pyUQ(answer), target);
+        }
+        if (items.isEmpty()) return {U("    # терминал Заголовок | подсказка | слово: ответ | слово -> сцена")};
+        return {QStringLiteral("    window auto hide"),
+                QStringLiteral("    $ _genry_term = genry_terminal_run(%1, %2, [%3])").arg(pyUQ(title), pyUQ(hint), items.join(QStringLiteral(", "))),
+                QStringLiteral("    if _genry_term:"), QStringLiteral("        jump expression _genry_term")};
+    }
+    if (!opt.legacy && cmd == QLatin1String("rps")) {
+        // «кнб Алиса | победа -> a | поражение -> b | ничья -> c | раунды=3»
+        const QStringList f = c.pipes(rest);
+        const QString who = f.value(0).isEmpty() ? U("Соперник") : f.value(0);
+        int rounds = 3;
+        QString win, lose, draw;
+        for (const QString& x : f.mid(1)) {
+            const QString k = pyStrip(x.section(QStringLiteral("->"), 0, 0)).toLower();
+            if (x.contains(QLatin1Char('=')) && !x.contains(QLatin1String("->"))) {
+                double v = 3;
+                if (pyFloat(pyStrip(x.section(QLatin1Char('='), 1)), &v)) rounds = qBound(1, int(v), 9);
+                continue;
+            }
+            const QString t = pyStrip(x.section(QStringLiteral("->"), 1));
+            if (t.isEmpty()) continue;
+            if (k.startsWith(U("побед")) || k.startsWith(U("выигр")) || k == QLatin1String("win")) win = c.lab(t);
+            else if (k.startsWith(U("пораж")) || k.startsWith(U("проигр")) || k == QLatin1String("lose")) lose = c.lab(t);
+            else if (k.startsWith(U("нич")) || k == QLatin1String("draw")) draw = c.lab(t);
+        }
+        SL r{QStringLiteral("    window auto hide"), QStringLiteral("    $ _genry_rps = genry_rps_run(%1, %2)").arg(pyUQ(who)).arg(rounds)};
+        if (!win.isEmpty()) r << QStringLiteral("    if _genry_rps == \"win\":") << QStringLiteral("        jump ") + win;
+        if (!lose.isEmpty()) r << QStringLiteral("    if _genry_rps == \"lose\":") << QStringLiteral("        jump ") + lose;
+        if (!draw.isEmpty()) r << QStringLiteral("    if _genry_rps == \"draw\":") << QStringLiteral("        jump ") + draw;
+        return r;
+    }
+    if (!opt.legacy && cmd == QLatin1String("farewell")) {
+        // «экранвыхода cg d3_sl_evening | До встречи!» / «экранвыхода выкл»
+        const QString img0 = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
+        const QString w = img0.toLower();
+        if (w == U("выкл") || w == U("нет") || w == QLatin1String("off") || w == U("выключить"))
+            return {QStringLiteral("    $ store.genry_farewell_now = None")};
+        QString kind;
+        const QString img = choiceImage(img0.isEmpty() ? QStringLiteral("bg ext_camp_entrance_night") : img0, &kind);
+        QString words0 = pyStrip(rest.section(QLatin1Char('|'), 1));
+        if (words0.isEmpty()) words0 = U("До встречи в «Совёнке»!");
+        return {QStringLiteral("    $ store.genry_farewell_now = (%1, %2)").arg(pyQ(img), pyUQ(words0))};
+    }
+    if (!opt.legacy && cmd == QLatin1String("streamer")) {
+        const QString w = rest.toLower();
+        const bool off = w == U("выкл") || w == U("нет") || w == QLatin1String("off") || w == U("выключить");
+        return {QStringLiteral("    $ persistent.genry_streamer = ") + (off ? QStringLiteral("False") : QStringLiteral("True"))};
     }
     if (cmd == QLatin1String("flashlight") && !opt.legacy) {
         // V2: 7ДЛ's flashlight - the mask is drawn by the builder (images/genry_fx/flashlight.png), tinted to the dark
@@ -3279,6 +3460,8 @@ QString menuButtonKind(const QString& word)
                    "домой", "покинуть", "покинуть лагерь", "сбежать", "до свидания", "пока", "закрыть", "назад в игру", "в меню бл",
                    "exit", "quit", "leave"}},
         {"имя", {"имя", "мое имя", "твое имя", "имя героя", "имя игрока", "представиться", "как тебя зовут", "кто ты", "name"}},
+        {"статистика", {"статистика", "прогресс", "пройдено", "stats", "statistics", "progress"}},
+        {"стример", {"стример", "режим стримера", "для стрима", "streamer", "streamer mode"}},
     };
     // «Имя: [имя]» -> «имя»: the caption may show the name itself
     static const QRegularExpression tag(QStringLiteral("\\[[^\\]]*\\]"));
@@ -4047,6 +4230,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
     st.speakers = speakerMap;
     st.modVars = modVars;
     st.modMenu = modMenu;
+    st.modName = meta.modName;
     for (const Meter& m : meterList) st.meters.insert(c.var(m.raw), {m.title, m.color, m.lo, m.hi});
     QString timeoutTarget, choiceSecs;
     bool timeoutSet = false;
@@ -4335,6 +4519,13 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         SL decl;
         for (auto it = st.unknownSpeakers.begin(); it != st.unknownSpeakers.end(); ++it)
             decl << QStringLiteral("    $ %1 = Character(%2, color=\"#e8e8e8\")").arg(it.key(), pyUQ(it.value()));
+        // «незнакомка»: her own look (colour, box) under the name the hero knows her by
+        for (auto it = st.strangerChars.begin(); it != st.strangerChars.end(); ++it) {
+            const QString id = it.value().first;
+            const bool kind = opt.knownSpeakers.contains(id) || id.startsWith(QLatin1String("genry_sp_"));
+            decl << (kind ? QStringLiteral("    $ %1 = Character(%2, kind=%3)").arg(it.key(), pyUQ(it.value().second), id)
+                          : QStringLiteral("    $ %1 = Character(%2, color=\"#e8e8e8\")").arg(it.key(), pyUQ(it.value().second)));
+        }
         // румянец / пот / слёзы / мокрая: the ES sprite + the overlay the builder draws for it
         QStringList ov(st.overlayImages.begin(), st.overlayImages.end());
         ov.sort();
@@ -4403,6 +4594,8 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             else if (key == U("загрузить") || key == U("продолжить") || key == QLatin1String("load")) action = QStringLiteral("ShowMenu(\"load\")");
             else if (key == U("выход") || key == U("выйти") || key == QLatin1String("exit")) action = QStringLiteral("Return(\"__exit\")");
             else if (key == U("имя")) action = nameAction;
+            else if (key == U("статистика")) action = QStringLiteral("Show(\"genry_stats\", scenes=%1)").arg(c.sys(QStringLiteral("scenes")));
+            else if (key == U("стример")) action = QStringLiteral("ToggleField(persistent, \"genry_streamer\")");
             else {
                 const QString lab = c.lab(target.isEmpty() ? QStringLiteral("start") : target);
                 action = QStringLiteral("Return(") + pyQ(lab) + QLatin1Char(')');
@@ -4737,6 +4930,30 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         if (all.contains(QLatin1String("genry_choice_random"))) block(kV1ChoiceRandom);
         if (all.contains(QLatin1String("genry_codelock"))) block(kV2CodeLock);
         if (all.contains(QLatin1String("genry_flashlight"))) block(kV2Flashlight);
+        if (all.contains(QLatin1String("genry_now_playing("))) block(kV21NowPlaying);
+        if (all.contains(QLatin1String("genry_afk_watch"))) block(kV21Afk);
+        if (all.contains(QLatin1String("genry_terminal_run("))) block(kV21Terminal);
+        if (all.contains(QLatin1String("genry_rps_run("))) block(kV21Rps);
+        if (all.contains(QLatin1String("genry_farewell_now"))) block(kV21Farewell);
+        if (all.contains(QLatin1String("genry_stats"))) {
+            block(kV21Stats);
+            // every scene of the mod and whether it is an ending (its last line: «конецигры»)
+            SL m;
+            QString scene, lastCmd;
+            auto flush = [&] {
+                if (!scene.isEmpty())
+                    m << QStringLiteral("(%1, %2, %3)").arg(pyQ(scene == QLatin1String("start") && !modMenu ? modId : c.lab(scene)), pyUQ(scene),
+                                                           lastCmd == QLatin1String("endgame") ? QStringLiteral("True") : QStringLiteral("False"));
+            };
+            for (const QString& raw : bodyIn) {
+                const QString s = pyStrip(raw);
+                if (s.isEmpty() || s.startsWith(QLatin1Char('#'))) continue;
+                if (s.startsWith(QLatin1Char(':'))) { flush(); scene = pyStrip(s.mid(1)); lastCmd.clear(); continue; }
+                lastCmd = normalizeCommand(firstWord(s));
+            }
+            flush();
+            out << QString() << QStringLiteral("define %1 = [%2]").arg(c.sys(QStringLiteral("scenes")), m.join(QStringLiteral(", ")));
+        }
         if (all.contains(QLatin1String("genry_camp_map")) || all.contains(QLatin1String("genry_map_pic("))) block(kV1Map);
         if (all.contains(QLatin1String("genry_lids"))) block(kV1Lids);
         if (all.contains(QLatin1String("genry_hero_apply"))) block(kV1Hero);

@@ -55,6 +55,11 @@ struct CompileState {
     bool timeSynced = false;                  // V1: this scene has set the sprites' time already
     bool timeExplicit = false;                // V1: that time came from «время», not from a picture
     QString bgImage;                          // V1: the place on screen now ("ext_square_day"), "" = a CG / black / none
+    // V2.1 «прозвище Славя | Блондинка»: speaker id -> the name the hero knows her by until she names herself
+    QHash<QString, QString> strangers;
+    QMap<QString, QPair<QString, QString>> strangerChars;   // the mod's Character var -> (her id, the name shown)
+    bool nowPlaying = false;                  // V2.1 «сейчасиграет вкл»: a started track shows its name
+    QString modName;                          // the mod's name (the save's name at its start)
 };
 
 // `image <name> = "<path>"` for the mod's own pictures (paths relative to game/).

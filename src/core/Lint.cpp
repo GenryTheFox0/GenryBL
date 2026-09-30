@@ -286,7 +286,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             }
             if (lw == U("кнопка") || lw == QLatin1String("button")) {
                 // the kinds the menu knows by word (menuButtonKind: «Дни» = главы, «Выселиться» = выход…)
-                static const QSet<QString> special{U("галерея"), U("достижения"), U("шкалы"), U("главы"), U("настройки"), U("загрузить"), U("выход"), U("имя")};
+                static const QSet<QString> special{U("галерея"), U("достижения"), U("шкалы"), U("главы"), U("настройки"), U("загрузить"), U("выход"), U("имя"), U("статистика"), U("стример")};
                 if (rest.contains(QLatin1String("->"))) {
                     const QString t = pyStrip(rest.section(QStringLiteral("->"), 1));
                     if (!special.contains(menuButtonKind(t))) targets.push_back({ln, t, curI});
@@ -508,6 +508,40 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             }
         }
         auto popEffect = [&] { if (!w.isEmpty() && isEffect(w.last())) w.removeLast(); };
+        // V2.1 - the 7ДЛ mechanics
+        if (!ctx.opt.legacy && cmd == QLatin1String("stranger")) {
+            if (pyStrip(rest.section(QLatin1Char('|'), 1)).isEmpty())
+                add(ln, LintIssue::Error, gbTr("Как её зовут, пока не познакомились? «прозвище Славя | Блондинка»"));
+            continue;
+        }
+        if (!ctx.opt.legacy && cmd == QLatin1String("terminal")) {
+            bool any = false;
+            for (const QString& x : rest.split(QLatin1Char('|')).mid(1)) {
+                if (x.contains(QLatin1Char(':')) || x.contains(QLatin1String("->"))) any = true;
+                if (!x.contains(QLatin1String("->"))) continue;
+                const QString t = pyStrip(x.section(QStringLiteral("->"), 1)), tl = t.toLower();
+                if (!t.isEmpty() && tl != U("выход") && tl != QLatin1String("exit") && tl != U("дальше")) targets.push_back({ln, t, curI});
+            }
+            if (!any) add(ln, LintIssue::Error, gbTr("Терминалу нужны команды: «терминал Компьютер | Введи help | help: ответ | open -> сцена»"));
+            continue;
+        }
+        if (!ctx.opt.legacy && cmd == QLatin1String("rps")) {
+            for (const QString& x : rest.split(QLatin1Char('|')).mid(1))
+                if (x.contains(QLatin1String("->")) && !pyStrip(x.section(QStringLiteral("->"), 1)).isEmpty())
+                    targets.push_back({ln, pyStrip(x.section(QStringLiteral("->"), 1)), curI});
+            continue;
+        }
+        if (!ctx.opt.legacy && (cmd == QLatin1String("afk") || cmd == QLatin1String("farewell"))) {
+            const QString img = pyStrip(rest.section(QLatin1Char('|'), cmd == QLatin1String("afk") ? 1 : 0, cmd == QLatin1String("afk") ? 1 : 0));
+            if (!img.isEmpty() && img.toLower() != U("выкл")) {
+                QString kind;
+                const QString full = choiceImage(img, &kind, ctx.customImages);
+                if (kind == QLatin1String("sprite")) checkSprite(ln, full);
+                else if (!imageKnown(full) && !patchCg(ln, full))
+                    add(ln, LintIssue::Warning, gbTr("Нет картинки «%1» — похожие: %2").arg(img, closest(full.mid(3), full.startsWith(QLatin1String("cg ")) ? (es ? es->cgs() : QStringList()) : (es ? es->backgrounds() : QStringList()))));
+            }
+            continue;
+        }
         if (cmd == QLatin1String("codelock") && !ctx.opt.legacy) {
             const CodeLockSpec k = parseCodeLock(rest);
             const QString rawLine = rawLines.value(srcOf.value(i));

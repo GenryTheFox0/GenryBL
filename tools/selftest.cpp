@@ -1446,6 +1446,66 @@ static void testDoctor()
           QStringLiteral("map: the mod menu is the start, its buttons, the options, chapters (%1 reached, %2 ways)").arg(reachable).arg(mg.edges.size()));
 }
 
+// [13] the 7ДЛ mechanics of V2.1: the heroine not met yet, the save's name, «сейчас играет», the screensaver, statistics,
+//      the terminal, rock-paper-scissors, the farewell screen, the streamer mode
+static void test7dl()
+{
+    out << "[13] 7DL mechanics\n";
+    CompileOptions v1;
+    v1.knownSpeakers = {QStringLiteral("sl"), QStringLiteral("dv"), QStringLiteral("us"), QStringLiteral("me")};
+    const QString story = QString::fromUtf8(
+        "@mod_id genry_t\n@mod_name Лето\n"
+        ": start\n"
+        "прозвище Славя | Блондинка\n"
+        "Славя: Привет! Ты новенький?\n"
+        "Славя: Меня Славя зовут.\n"
+        "Славя: Пошли.\n"
+        "сейчасиграет вкл\n"
+        "музыка sunny_day\n"
+        "заставкаафк 45 | cg d2_sovenok\n"
+        "экранвыхода bg ext_camp_entrance_night | Пока!\n"
+        "музыкафайл audio/song.ogg | стрим=everlasting_summer\n"
+        "терминал Компьютер | help | help: Доступно: 1968 | 1968 -> secret | exit -> выход\n"
+        "кнб Ульяна | победа -> secret | поражение -> secret | раунды=3\n"
+        "статистика\n"
+        ": secret\n"
+        "новаяглава Тайна\n"
+        "конецигры\n");
+    QString err;
+    const QString rpy = compileText(story, v1, &err);
+    check(err.isEmpty() && rpy.contains(QString::fromUtf8("    genry_t__stranger_sl_blondinka \"Привет! Ты новенький?\"")) &&
+              rpy.contains(QString::fromUtf8("    genry_t__stranger_sl_blondinka \"Меня Славя зовут.\"")) && rpy.contains(QString::fromUtf8("    sl \"Пошли.\"")) &&
+              rpy.contains(QString::fromUtf8("$ genry_t__stranger_sl_blondinka = Character(u\"Блондинка\", kind=sl)")),
+          "«прозвище»: «Блондинка» until she says her name, then Славя");
+    check(rpy.contains(QString::fromUtf8("    $ save_name = u\"Лето\"")) && rpy.contains(QString::fromUtf8("    $ save_name = u\"Лето: Тайна\"")),
+          "the save is called by the mod and its chapter");
+    check(rpy.contains(QStringLiteral("    $ genry_now_playing(u\"Sunny Day\")")) && rpy.contains(QStringLiteral("screen genry_now_playing(title):")),
+          "«сейчас играет»: the track's name");
+    check(rpy.contains(QStringLiteral("    show screen genry_afk_watch(45, \"cg d2_sovenok\")")) && rpy.contains(QStringLiteral("screen genry_afk(img):")),
+          "«заставкаафк»: after 45 s of standing still");
+    check(rpy.contains(QString::fromUtf8("    $ store.genry_farewell_now = (\"bg ext_camp_entrance_night\", u\"Пока!\")")) &&
+              rpy.contains(QStringLiteral("config.quit_action = genry_quit")),
+          "«экранвыхода»: the farewell before quitting");
+    check(rpy.contains(QStringLiteral("    if persistent.genry_streamer:")) && rpy.contains(QStringLiteral("        play music \"mods/genry_t/audio/song.ogg\"")),
+          "the streamer mode swaps the mod's own song");
+    check(rpy.contains(QString::fromUtf8("genry_terminal_run(u\"Компьютер\", u\"help\", [(u\"help\", u\"Доступно: 1968\", None), (u\"1968\", u\"\", \"genry_t__secret\"), (u\"exit\", u\"\", u\"\")])")),
+          "«терминал»: answers, a word into a scene, a word out");
+    check(rpy.contains(QString::fromUtf8("    $ _genry_rps = genry_rps_run(u\"Ульяна\", 3)")) && rpy.contains(QStringLiteral("    if _genry_rps == \"win\":")),
+          "«кнб»: the game and its results");
+    check(rpy.contains(QStringLiteral("    call screen genry_stats(genry_t__scenes, called=True)")) &&
+              rpy.contains(QString::fromUtf8("define genry_t__scenes = [(\"genry_t\", u\"start\", False), (\"genry_t__secret\", u\"secret\", True)]")),
+          "«статистика»: every scene, the endings marked");
+    // the preview knows the stranger too
+    const SceneState a = sceneAt(story, 5, nullptr), b = sceneAt(story, 6, nullptr), c = sceneAt(story, 7, nullptr);
+    check(a.speakerName == QString::fromUtf8("Блондинка") && b.speakerName == QString::fromUtf8("Блондинка") && c.speakerName != QString::fromUtf8("Блондинка"),
+          "preview: " + a.speakerName + " / " + b.speakerName + " / " + c.speakerName);
+    // the menu: statistics and the streamer mode as buttons
+    const QString menu = compileText(QString::fromUtf8("@mod_id genry_t\nменюмода панель\nкнопка Начать -> start\nкнопка Прогресс\nкнопка Для стрима\nконецменюмода\n: start\nтекст а\nконецигры\n"), v1);
+    check(menu.contains(QStringLiteral("Show(\"genry_stats\", scenes=genry_t__scenes)")) && menu.contains(QStringLiteral("ToggleField(persistent, \"genry_streamer\")")) &&
+              menu.contains(QStringLiteral("define genry_t__scenes")),
+          "menu buttons: «Прогресс» = statistics, «Для стрима» = the streamer mode");
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -1464,6 +1524,7 @@ int main(int argc, char** argv)
     testAchievements2();
     testHistory();
     testDoctor();
+    test7dl();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

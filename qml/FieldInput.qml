@@ -455,6 +455,7 @@ ColumnLayout {
                             { value: "главы", label: qsTr("Главы") }, { value: "галерея", label: qsTr("Галерея") },
                             { value: "достижения", label: qsTr("Достижения") }, { value: "отношения", label: qsTr("Отношения") },
                             { value: "настройки", label: qsTr("Настройки") }, { value: "имя", label: qsTr("Имя игрока") },
+                            { value: "статистика", label: qsTr("Статистика") }, { value: "стример", label: qsTr("Режим стримера") },
                             { value: "выход", label: qsTr("Выход") }]
                            .concat((n.scenes || []).map(s => ({ value: s, label: "→ " + s })))
                 if (fe.type === "speaker") return Engine.storySpeakers(fe.host ? fe.host.storyText : "").map(s => ({ value: s.name, label: s.name, color: s.color }))
