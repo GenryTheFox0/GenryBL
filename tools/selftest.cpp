@@ -15,6 +15,8 @@
 #include "Timeline.h"
 #include "Fuzz.h"
 #include "Crash.h"
+#include "Discord.h"
+#include "ModHub.h"
 #include "Forms.h"
 #include "Library.h"
 #include "Lint.h"
@@ -28,6 +30,11 @@
 
 #include <QGuiApplication>
 #include <QDir>
+#include <functional>
+#include <QtEndian>
+#include <QElapsedTimer>
+#include <QLocalSocket>
+#include <QLocalServer>
 #include <QDateTime>
 #include <QThread>
 #include <QFile>
@@ -1705,6 +1712,130 @@ static void testCrash()
           "crash: errors.txt - the mod whose script the game could not read");
 }
 
+// [17] the Center: Discord over its pipe (a stand-in Discord here), the game's mods, the catalog's archive, «Играть»
+static bool waitFor(const std::function<bool()>& done, int ms = 5000)
+{
+    QElapsedTimer t;
+    t.start();
+    while (!done() && t.elapsed() < ms) QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    return done();
+}
+
+static void testHub()
+{
+    out << "[17] center: discord, mods, catalog\n";
+    // ---- Discord: the handshake with the app id, READY, then SET_ACTIVITY - the newest one only, one per gap
+    const QString pipe = QStringLiteral("genry-selftest-ipc-%1").arg(QCoreApplication::applicationPid());
+    QLocalServer server;
+    QLocalServer::removeServer(pipe);
+    check(server.listen(pipe), "discord: the stand-in pipe listens");
+    QLocalSocket* peer = nullptr;
+    QByteArray got;
+    QList<QPair<quint32, QJsonObject>> frames;
+    auto reply = [&](quint32 op, const QJsonObject& o) {
+        const QByteArray j = QJsonDocument(o).toJson(QJsonDocument::Compact);
+        QByteArray h(8, '\0');
+        qToLittleEndian<quint32>(op, h.data());
+        qToLittleEndian<quint32>(quint32(j.size()), h.data() + 4);
+        peer->write(h + j);
+        peer->flush();
+    };
+    QObject::connect(&server, &QLocalServer::newConnection, [&] {
+        peer = server.nextPendingConnection();
+        QObject::connect(peer, &QLocalSocket::readyRead, [&] {
+            got += peer->readAll();
+            while (got.size() >= 8) {
+                const quint32 op = qFromLittleEndian<quint32>(got.constData()), len = qFromLittleEndian<quint32>(got.constData() + 4);
+                if (quint32(got.size()) < 8 + len) break;
+                frames << qMakePair(op, QJsonDocument::fromJson(got.mid(8, int(len))).object());
+                got.remove(0, int(8 + len));
+                if (op == 0) reply(1, {{QStringLiteral("cmd"), QStringLiteral("DISPATCH")}, {QStringLiteral("evt"), QStringLiteral("READY")}});
+            }
+        });
+    });
+    DiscordPresence d;
+    d.setMinGap(400);
+    d.setActivity({{QStringLiteral("details"), QStringLiteral("first")}});
+    d.setClientId(QStringLiteral("1234567890"), pipe);
+    check(waitFor([&] { return d.isReady() && frames.size() >= 2; }), "discord: handshake, READY, the waiting activity goes out");
+    check(!frames.isEmpty() && frames[0].first == 0 && frames[0].second.value(QStringLiteral("client_id")).toString() == QStringLiteral("1234567890") &&
+              frames[0].second.value(QStringLiteral("v")).toInt() == 1,
+          "discord: the handshake carries v=1 and the app id");
+    const QJsonObject set = frames.value(1).second;
+    check(set.value(QStringLiteral("cmd")).toString() == QLatin1String("SET_ACTIVITY") &&
+              set.value(QStringLiteral("args")).toObject().value(QStringLiteral("activity")).toObject().value(QStringLiteral("details")).toString() == QStringLiteral("first") &&
+              set.value(QStringLiteral("args")).toObject().value(QStringLiteral("pid")).toInteger() == QCoreApplication::applicationPid(),
+          "discord: SET_ACTIVITY with our pid");
+    d.setActivity({{QStringLiteral("details"), QStringLiteral("second")}});
+    d.setActivity({{QStringLiteral("details"), QStringLiteral("third")}});
+    waitFor([&] { return frames.size() >= 3; }, 3000);
+    QCoreApplication::processEvents();
+    check(frames.size() == 3 && frames[2].second.value(QStringLiteral("args")).toObject().value(QStringLiteral("activity")).toObject()
+                                    .value(QStringLiteral("details")).toString() == QStringLiteral("third"),
+          QStringLiteral("discord: two changes inside the gap - only the newest is sent (%1 frames)").arg(frames.size()));
+    // a wrong app id: Discord closes (4000) and nobody knocks again with it
+    reply(2, {{QStringLiteral("code"), 4000}, {QStringLiteral("message"), QStringLiteral("Invalid Client ID")}});
+    check(waitFor([&] { return !d.isReady() && d.error() == QStringLiteral("Invalid Client ID"); }), "discord: «Invalid Client ID» is heard");
+
+    // ---- the game's mods: the Workshop and game/mods, their Mods-menu entries, the cover, the same entry twice
+    QTemporaryDir root;
+    const QString es = root.path() + QStringLiteral("/steamapps/common/Everlasting Summer");
+    const QString ws = root.path() + QStringLiteral("/steamapps/workshop/content/331470");
+    auto put = [](const QString& path, const QByteArray& data) {
+        QDir().mkpath(QFileInfo(path).absolutePath());
+        QFile f(path);
+        if (f.open(QIODevice::WriteOnly)) f.write(data);
+    };
+    put(es + QStringLiteral("/Everlasting Summer.exe"), "x");
+    put(ws + QStringLiteral("/111/mods/foo/foo.rpy"), "init python:\n    mods[\"foo_start\"] = u\"{b}Фу-мод{/b}\"\n");
+    put(ws + QStringLiteral("/111/preview.jpg"), "jpg");
+    put(es + QStringLiteral("/game/mods/bar/bar.rpy"), "init:\n    $ mods['bar'] = 'Бар'\n    $ mods[\"foo_start\"] = u\"Фу-мод копия\"\n");
+    put(es + QStringLiteral("/game/mods/_genry_v1_preview/x.rpy"), "label x:\n    return\n");
+    const QVector<HubMod> mods = scanGameMods(es);
+    const HubMod* foo = nullptr;
+    const HubMod* bar = nullptr;
+    for (const HubMod& m : mods) {
+        if (m.id == QStringLiteral("111")) foo = &m;
+        if (m.id == QStringLiteral("bar")) bar = &m;
+    }
+    check(mods.size() == 2 && foo && bar, QStringLiteral("hub: a Workshop item and a game/mods folder, not GenryBL's own hooks (%1)").arg(mods.size()));
+    check(foo && foo->source == QLatin1String("workshop") && foo->title == QString::fromUtf8("Фу-мод") && foo->preview.endsWith(QStringLiteral("preview.jpg")) &&
+              foo->entries.size() == 1 && foo->entries[0].label == QStringLiteral("foo_start"),
+          "hub: its name from the game's Mods menu, text tags gone, its cover");
+    check(bar && bar->entries.size() == 2 && bar->twins == QStringList{QStringLiteral("workshop:111")} && foo && foo->twins == QStringList{QStringLiteral("local:bar")},
+          "hub: the same entry in two mods is seen from both sides");
+    // «▶ Играть»: the game's own way - persistent.jump_to + Start, the hook takes itself away
+    QString err;
+    check(writePlayHook(es, QStringLiteral("foo_start"), &err), "hub: the play hook is written");
+    const QString hook = QString::fromUtf8(readAll(es + QStringLiteral("/game/mods/_genry_play/_genry_play.rpy")));
+    check(hook.contains(QStringLiteral("persistent.jump_to = \"foo_start\"")) && hook.contains(QStringLiteral("renpy.jump_out_of_context(\"start\")")) &&
+              hook.contains(QStringLiteral("os.remove")) && !writePlayHook(es, QStringLiteral("x\"; import os"), &err),
+          "hub: the hook starts the mod like the Mods menu and deletes itself; a strange label is refused");
+    removePlayHook(es);
+
+    // ---- «Мастерская GenryBL»: a players' archive into game/mods; an update of its own folder; a stranger's folder stays
+    const QString src = root.path() + QStringLiteral("/src/genry_cat");
+    put(src + QStringLiteral("/genry_cat.rpy"), "label genry_cat:\n    return\n");
+    put(src + QStringLiteral("/images/a.png"), "png");
+    const QString zip = root.path() + QStringLiteral("/genry_cat.zip");
+    check(build::exportZip(src, QStringLiteral("genry_cat"), QStringLiteral("Cat"), zip, &err), "catalog: a players' archive to install (" + err + ")");
+    QString folder;
+    err.clear();
+    const QString modsDir = es + QStringLiteral("/game/mods");
+    const bool installed = build::installModArchive(zip, modsDir, QStringLiteral("genry_cat"), &folder, &err);
+    check(installed && folder == QStringLiteral("genry_cat") &&
+              QFileInfo::exists(modsDir + QStringLiteral("/genry_cat/images/a.png")) && QFileInfo::exists(modsDir + QStringLiteral("/genry_cat/.genrybl_catalog")),
+          "catalog: installed into game/mods with its mark (" + err + ")");
+    check(build::installModArchive(zip, modsDir, QStringLiteral("genry_cat"), &folder, &err), "catalog: installed again = updated");
+    put(modsDir + QStringLiteral("/genry_cat2/keep.txt"), "mine");
+    const QString zip2 = root.path() + QStringLiteral("/genry_cat2.zip");
+    QDir(root.path() + QStringLiteral("/src/genry_cat2")).removeRecursively();
+    put(root.path() + QStringLiteral("/src/genry_cat2/genry_cat2.rpy"), "label genry_cat2:\n    return\n");
+    build::exportZip(root.path() + QStringLiteral("/src/genry_cat2"), QStringLiteral("genry_cat2"), QStringLiteral("Cat2"), zip2, &err);
+    check(!build::installModArchive(zip2, modsDir, QStringLiteral("genry_cat2"), &folder, &err) && QFileInfo::exists(modsDir + QStringLiteral("/genry_cat2/keep.txt")),
+          "catalog: a folder the catalog did not put there is never overwritten");
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -1727,6 +1858,7 @@ int main(int argc, char** argv)
     testTimelineAndroid();
     testBreakMod();
     testCrash();
+    testHub();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

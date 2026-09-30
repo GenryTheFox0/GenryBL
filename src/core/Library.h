@@ -15,6 +15,9 @@ namespace gb {
 
 class RpaArchive;
 
+QString compiledScriptText(const QString& path);   // the readable text inside a .rpyc (names, strings)
+QString workshopKnownTitle(const QString& id);     // Workshop mods that name themselves nowhere
+
 struct LibItem {
     QString id, title;
     QString dir;                 // the workshop folder

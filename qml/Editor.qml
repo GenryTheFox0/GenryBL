@@ -101,6 +101,7 @@ Item {
         if (shotPage === "editor-publish") Qt.callLater(() => { exportDialog.openFor(projectId, code.text); exportDialog.startPublish() })
         if (shotPage === "editor-crash") Qt.callLater(() => Engine.shotCrash(projectId, code.text))
         if (startLine > 0) Qt.callLater(() => { code.gotoLine(startLine); if (startFind) code.openFindWith(startFind, false) })
+        Engine.presence("edit", projectId, code.currentLine)
         refreshPreview()
     }
 
@@ -192,6 +193,7 @@ Item {
     }
 
     Timer { id: previewTimer; interval: 40; onTriggered: ed.refreshPreview() }
+    Timer { id: presenceTimer; interval: 2500; onTriggered: Engine.presence(cinemaView.opened ? "cinema" : "edit", ed.projectId, code.currentLine) }
     Timer { id: choiceSyncShot; interval: 900; onTriggered: choiceWizard.demoSync() }
     Timer { id: facefixShot; property var args: []; interval: 9000; onTriggered: charBrowser.fixFace(args[0], args.slice(1).join(" "), "") }
     Timer { id: lintTimer; interval: 300; onTriggered: { ed.issues = Engine.lint(code.text); ed.badges = Engine.choiceBadges(code.text) } }
@@ -201,7 +203,7 @@ Item {
     Connections {
         target: code
         function onEdited() { previewTimer.restart(); lintTimer.restart(); saveTimer.restart(); if (cinemaView.opened && cinemaView.docked) liveTimer.restart() }
-        function onCurrentLineChanged() { previewTimer.restart() }
+        function onCurrentLineChanged() { previewTimer.restart(); presenceTimer.restart() }
     }
     Connections {
         target: Engine
@@ -255,7 +257,8 @@ Item {
     CinemaView {
         id: cinemaView
         onGotoLine: (line) => code.gotoLine(line)
-        onClosed: code.focusEditor()
+        onOpened: Engine.presence("cinema", ed.projectId, code.currentLine)
+        onClosed: { code.focusEditor(); Engine.presence("edit", ed.projectId, code.currentLine) }
     }
     // the live cinema re-walks the story when a picture / sound comes into the project too
     Connections { target: Engine; function onAssetsChanged() { if (cinemaView.opened && cinemaView.docked) liveTimer.restart() } }

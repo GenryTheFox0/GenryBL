@@ -47,9 +47,11 @@ add_library(gb_core STATIC
     src/core/Timeline.cpp
     src/core/Fuzz.cpp
     src/core/Crash.cpp
+    src/core/Discord.cpp
+    src/core/ModHub.cpp
 )
 target_include_directories(gb_core PUBLIC src/core)
-target_link_libraries(gb_core PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent PRIVATE Qt6::CorePrivate)
+target_link_libraries(gb_core PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent Qt6::Network PRIVATE Qt6::CorePrivate)
 
 qt_add_executable(gb_selftest tools/selftest.cpp)
 set_target_properties(gb_selftest PROPERTIES WIN32_EXECUTABLE OFF)
@@ -105,6 +107,7 @@ qt_add_qml_module(GenryBL
         qml/SearchAllDialog.qml
         qml/BreakDialog.qml
         qml/CrashDialog.qml
+        qml/CenterScreen.qml
         qml/Timeline.qml
         qml/Editor.qml
         qml/CodeEditor.qml
@@ -127,6 +130,7 @@ qt_add_qml_module(GenryBL
         src/app/Highlighter.h src/app/Highlighter.cpp
         src/app/Installer.cpp
         src/app/Updater.cpp
+        src/app/Hub.cpp
         src/app/CrashCatcher.h src/app/CrashCatcher.cpp
 )
 # the living menu: wind in the leaves of the camp picture (qml/LiveBoard.qml) -> qrc:/shaders/menuwind.frag.qsb

@@ -14,6 +14,7 @@
 #include "Builder.h"
 #include "Cinema.h"
 #include "Fuzz.h"
+#include "Discord.h"
 #include "EsAssets.h"
 #include "Forms.h"
 #include "Library.h"
@@ -187,7 +188,7 @@ int main(int argc, char** argv)
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
     const QStringList a = app.arguments();
-    const bool gate = a.value(1) == QLatin1String("gate");
+    const bool gate = a.value(1) == QLatin1String("gate") || a.value(1) == QLatin1String("discord");
     if (a.size() < 3 && !gate) {
         out << "usage: gb_cli compile|install|lint|run|frame <story.txt> ... | gb_cli gate\n";
         return 2;
@@ -292,6 +293,21 @@ int main(int argc, char** argv)
         }
         out << "steps " << cin.steps() << "\n";
         return 0;
+    }
+    if (cmd == "discord") {
+        //   gb_cli discord <app id> "<details>" [seconds]   the status on the real Discord for a while (a live check)
+        DiscordPresence d;
+        d.setActivity({{QStringLiteral("details"), a.value(3)}, {QStringLiteral("state"), QStringLiteral("gb_cli")},
+                       {QStringLiteral("timestamps"), QJsonObject{{QStringLiteral("start"), QDateTime::currentSecsSinceEpoch()}}}});
+        QObject::connect(&d, &DiscordPresence::readyChanged, [&] { out << (d.isReady() ? QStringLiteral("READY\n") : "GONE " + d.error() + "\n"); out.flush(); });
+        QObject::connect(&d, &DiscordPresence::sent, [&](const QJsonObject&) { out << "SENT\n"; out.flush(); });
+        d.setClientId(a.value(2));
+        QElapsedTimer t;
+        t.start();
+        const int secs = a.size() > 4 ? a.value(4).toInt() : 20;
+        while (t.elapsed() < secs * 1000) QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        out << (d.isReady() ? QStringLiteral("OK\n") : "NOT READY " + d.error() + "\n");
+        return d.isReady() ? 0 : 1;
     }
     if (cmd == "break") {
         //   gb_cli break <story>   «Сломай мой мод»: hundreds of walks by the cinema, what they found

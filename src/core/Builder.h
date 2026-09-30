@@ -82,6 +82,9 @@ QStringList missingModFiles(const QString& modDir, const QString& modId);
 // the ZIP for players: <id>/... + КАК_УСТАНОВИТЬ.txt, file names in UTF-8 (Qt's zip writer marks them - the old
 // tar-made archive could turn Cyrillic names into garbage on another PC), then read back and compared byte for byte
 bool exportZip(const QString& modDir, const QString& modId, const QString& modName, const QString& zipPath, QString* err);
+// «Мастерская GenryBL» -> «Установить»: a players' archive (<mod>/…, or mods/<mod>/…) into game/mods. A folder that is
+// there already is replaced only if the catalog put it there (its .genrybl_catalog mark); *folder = the mod's folder
+bool installModArchive(const QString& zipPath, const QString& modsDir, const QString& expectFolder, QString* folder, QString* err);
 // what the game's own Workshop uploader wants: <dest>/mods/<id>/... + КАК_ВЫЛОЖИТЬ.txt (preview.jpg: the caller)
 bool exportWorkshopFolder(const QString& modDir, const QString& modId, const QString& modName, const QString& dest, QString* err);
 // «Андроид»: the mod the way the mobile Бесконечное лето takes it (the community's ESTool rules, es-doc «mobile_port»):

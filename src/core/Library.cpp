@@ -72,6 +72,9 @@ QString knownTitle(const QString& id)
 
 }   // namespace
 
+QString compiledScriptText(const QString& path) { return rpycText(path); }
+QString workshopKnownTitle(const QString& id) { return knownTitle(id); }
+
 Library::Library() = default;
 Library::~Library() = default;
 

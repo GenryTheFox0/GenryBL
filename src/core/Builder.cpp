@@ -21,6 +21,7 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
+#include <QSet>
 #include <private/qzipreader_p.h>
 #include <private/qzipwriter_p.h>
 
@@ -786,6 +787,54 @@ QStringList missingModFiles(const QString& modDir, const QString& modId)
     }
     missing.sort();
     return missing;
+}
+
+bool installModArchive(const QString& zipPath, const QString& modsDir, const QString& expectFolder, QString* folder, QString* err)
+{
+    auto fail = [err](const QString& m) { if (err) *err = m; return false; };
+    QZipReader zip(zipPath);
+    if (!zip.isReadable()) return fail(QStringLiteral("the archive does not open"));
+    const QVector<QZipReader::FileInfo> all = zip.fileInfoList();
+    // the root: «<mod>/…» (the players' archive) or «mods/<mod>/…» (a Workshop folder); files at the top are notes
+    QString strip;
+    for (const QZipReader::FileInfo& f : all)
+        if (QDir::fromNativeSeparators(f.filePath).startsWith(QLatin1String("mods/"))) { strip = QStringLiteral("mods/"); break; }
+    QSet<QString> tops;
+    for (const QZipReader::FileInfo& f : all) {
+        const QString p = QDir::fromNativeSeparators(f.filePath);
+        if (p.contains(QLatin1String("..")) || p.startsWith(QLatin1Char('/')) || p.contains(QLatin1Char(':')))
+            return fail(QStringLiteral("the archive has a bad path: ") + p);
+        if (!p.startsWith(strip)) continue;
+        const QString rest = p.mid(strip.size());
+        if (rest.contains(QLatin1Char('/'))) tops.insert(rest.section(QLatin1Char('/'), 0, 0));
+    }
+    QString mod = expectFolder;
+    if (mod.isEmpty() || !tops.contains(mod)) {
+        if (tops.size() != 1) return fail(QStringLiteral("the archive has no single mod folder"));
+        mod = *tops.begin();
+    }
+    static const QRegularExpression safe(QStringLiteral("^[A-Za-z0-9_.-]+$"));
+    if (!safe.match(mod).hasMatch() || mod.startsWith(QLatin1Char('.'))) return fail(QStringLiteral("a strange mod folder name: ") + mod);
+    const QString target = modsDir + QLatin1Char('/') + mod;
+    if (QFileInfo::exists(target)) {
+        if (!QFileInfo::exists(target + QStringLiteral("/.genrybl_catalog"))) return fail(QStringLiteral("game/mods/") + mod + QStringLiteral(" is there already and not from the catalog"));
+        QDir(target).removeRecursively();
+    }
+    const QString prefix = strip + mod + QLatin1Char('/');
+    for (const QZipReader::FileInfo& f : all) {
+        const QString p = QDir::fromNativeSeparators(f.filePath);
+        if (!p.startsWith(prefix)) continue;
+        const QString out = target + QLatin1Char('/') + p.mid(prefix.size());
+        if (f.isDir) { QDir().mkpath(out); continue; }
+        if (!f.isFile) continue;
+        QDir().mkpath(QFileInfo(out).absolutePath());
+        QFile o(out);
+        if (!o.open(QIODevice::WriteOnly) || o.write(zip.fileData(f.filePath)) < 0) return fail(QStringLiteral("cannot write ") + out);
+    }
+    QFile mark(target + QStringLiteral("/.genrybl_catalog"));
+    if (mark.open(QIODevice::WriteOnly)) mark.write("1\n");
+    if (folder) *folder = mod;
+    return true;
 }
 
 bool exportZip(const QString& modDir, const QString& modId, const QString& modName, const QString& zipPath, QString* err)

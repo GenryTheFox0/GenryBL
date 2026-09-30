@@ -47,7 +47,7 @@ ApplicationWindow {
             const p = Engine.projects.length ? Engine.projects[0].id : Engine.createProject("Проверка")
             openEditor(p, false)
         } else {
-            const screens = { "projects": "mods", "gallery": "gallery", "settings": "settings" }
+            const screens = { "projects": "mods", "gallery": "gallery", "settings": "settings", "center": "center" }
             stack.push(launcherComp, { intro: shotPage === "" || shotPage === "launcher", startScreen: screens[shotPage] || "" })
         }
     }

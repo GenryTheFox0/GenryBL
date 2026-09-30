@@ -7,6 +7,7 @@
 //                   [--preview <jpg/png>] [--item <id>] [--visibility 0|1|2|3] [--note-file <utf8 file>] [--lang russian]
 //                   [--tags "Slavya,Romance,Variative"]   the Workshop's own tags (the item gets exactly these)
 //   gb_workshop.exe --dll <steam_api64.dll> --check          resolve the functions, start nothing
+//   gb_workshop.exe --dll <steam_api64.dll> --subscribe <id> | --unsubscribe <id>   the Center's «Подписаться»
 //
 // It tells GenryBL what happens, one ASCII line at a time (texts after the code are UTF-8):
 //   ITEM <id>                  a new item was made (said at once: an upload that fails later keeps its item)
@@ -32,6 +33,8 @@ struct SubmitItemUpdateResult { int32_t result; bool needsLegal; uint64_t fileId
 static_assert(sizeof(CreateItemResult) == 24, "CreateItemResult_t is 24 bytes");
 static_assert(sizeof(SubmitItemUpdateResult) == 16, "SubmitItemUpdateResult_t is 16 bytes");
 struct StringArray { const char** strings; int32_t count; };                            // SteamParamStringArray_t
+struct SubscribeResult { int32_t result; uint64_t fileId; };                           // callbacks 1313 / 1315
+static_assert(sizeof(SubscribeResult) == 16, "RemoteStorage(Un)SubscribePublishedFileResult_t is 16 bytes");
 
 using FnInit = bool (*)();
 using FnVoid = void (*)();
@@ -48,6 +51,7 @@ using FnSubmit = uint64_t (*)(void*, uint64_t, const char*);
 using FnProgress = int (*)(void*, uint64_t, uint64_t*, uint64_t*);
 // SDK 1.50 has (self, handle, tags); later ones add «allow admin tags» - an extra argument the old one never reads
 using FnSetTags = bool (*)(void*, uint64_t, const StringArray*, bool);
+using FnSubscribe = uint64_t (*)(void*, uint64_t);
 
 const uint32_t kApp = 331470;
 
@@ -106,6 +110,7 @@ struct Api {
     FnSubmit submit = nullptr;
     FnProgress progress = nullptr;
     FnSetTags setTags = nullptr;
+    FnSubscribe subscribe = nullptr, unsubscribe = nullptr;
 
     template <typename T> bool get(T& fn, const char* name, bool required = true)
     {
@@ -141,6 +146,8 @@ struct Api {
         ok = get(setPreview, "SteamAPI_ISteamUGC_SetItemPreview") && ok;
         get(setLang, "SteamAPI_ISteamUGC_SetItemUpdateLanguage", false);
         get(setTags, "SteamAPI_ISteamUGC_SetItemTags", false);
+        get(subscribe, "SteamAPI_ISteamUGC_SubscribeItem", false);
+        get(unsubscribe, "SteamAPI_ISteamUGC_UnsubscribeItem", false);
         ok = get(setVisibility, "SteamAPI_ISteamUGC_SetItemVisibility") && ok;
         ok = get(submit, "SteamAPI_ISteamUGC_SubmitItemUpdate") && ok;
         ok = get(progress, "SteamAPI_ISteamUGC_GetItemUpdateProgress") && ok;
@@ -222,6 +229,8 @@ int wmain(int argc, wchar_t** argv)
     uint64_t item = 0;
     int visibility = -1;
     bool check = false;
+    uint64_t subId = 0;
+    bool subOn = true;
     for (int i = 1; i < argc; ++i) {
         const std::wstring k = argv[i];
         auto next = [&]() -> std::wstring { return i + 1 < argc ? argv[++i] : std::wstring(); };
@@ -236,11 +245,30 @@ int wmain(int argc, wchar_t** argv)
         else if (k == L"--item") item = _wcstoui64(next().c_str(), nullptr, 10);
         else if (k == L"--visibility") visibility = _wtoi(next().c_str());
         else if (k == L"--check") check = true;
+        else if (k == L"--subscribe") subId = _wcstoui64(next().c_str(), nullptr, 10);
+        else if (k == L"--unsubscribe") { subId = _wcstoui64(next().c_str(), nullptr, 10); subOn = false; }
     }
     if (dllPath.empty()) { say("ERROR args --dll is needed"); return 2; }
     Api a;
     if (!a.load(dllPath)) return 1;
     if (check) { say("CHECK OK"); return 0; }
+
+    if (subId) {                                     // the Center: subscribe / unsubscribe, Steam downloads it itself
+        if (!(subOn ? a.subscribe : a.unsubscribe)) { say("ERROR dll the game's Steam library cannot subscribe"); return 1; }
+        AppIdDir appId;
+        if (!appId.make()) { say("ERROR steam cannot write steam_appid.txt"); return 1; }
+        if (!a.init()) { say("ERROR steam Steam is not running, or not logged in, or this account has no Everlasting Summer"); return 1; }
+        int code = 1;
+        void* ugc = a.ugcIface();
+        void* utils = a.utilsIface();
+        SubscribeResult r{};
+        if (ugc && utils && wait(a, utils, ugc, (subOn ? a.subscribe : a.unsubscribe)(ugc, subId), &r, sizeof r, subOn ? 1313 : 1315, 30000)) {
+            if (r.result == 1) { say("DONE %llu", (unsigned long long)subId); code = 0; }
+            else say("ERROR result EResult %d", r.result);
+        }
+        a.shutdown();
+        return code;
+    }
 
     // everything is checked BEFORE Steam starts: a refusal from Steam after an hour of upload is the worst kind
     std::string desc, note;

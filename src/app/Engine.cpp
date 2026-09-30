@@ -9,6 +9,7 @@
 #include "Timeline.h"
 #include "Fuzz.h"
 #include "Crash.h"
+#include "ModHub.h"
 #include "Py.h"
 #include "Text.h"
 
@@ -215,6 +216,7 @@ bool Engine::start(const QString& esRoot)
     m_ready = true;
     build::removeHook(esRoot);            // a leftover from a crashed test run
     build::removeGate(esRoot);            // … or from a check GenryBL was closed in the middle of
+    removePlayHook(esRoot);               // … or a «▶ Играть» of the Center the game never got to
     m_watch.setInterval(1500);
     connect(&m_watch, &QTimer::timeout, this, [this] {
         checkCrash();                     // Ren'Py shows its error screen and keeps running: tell it at once
@@ -228,6 +230,7 @@ bool Engine::start(const QString& esRoot)
         }
     });
     refreshProjects();
+    startHub();
     {
         auto readHidden = [](const QString& file, QSet<QString>& into) {
             QFile f(file);
@@ -2925,6 +2928,8 @@ void Engine::setLanguage(const QString& setting)
     m_settings.setValue(QStringLiteral("language"), setting.isEmpty() ? QStringLiteral("auto") : setting);
     applyLanguage();
     emit languageChanged();
+    if (gamePresence()) writeGamePresenceConfig();    // the status in the game speaks the new language too
+    updatePresence();
 }
 
 QVariantList Engine::languages() const

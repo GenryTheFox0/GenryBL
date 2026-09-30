@@ -9,7 +9,7 @@ Item {
     signal openEditor(string id)
     signal playProject(string id)
     property bool intro: true
-    property string screen: "menu"          // menu | mods | gallery | settings
+    property string screen: "menu"          // menu | mods | gallery | settings | center
     property string dialog: ""              // "" | new | help | about
     property string startScreen: ""
 
@@ -20,11 +20,15 @@ Item {
     }
     function open(id) { Music.stopTheme(); Ambience.stop(); launcher.openEditor(id) }
     // back on the board from «Инструменты»: the time of day may have been changed there
-    onScreenChanged: if (screen === "menu") mainMenu.timeSetting = Engine.setting("menuTime", "auto")
+    onScreenChanged: {
+        if (screen === "menu") mainMenu.timeSetting = Engine.setting("menuTime", "auto")
+        Engine.presence(screen === "center" ? "center" : "menu")
+    }
 
     Component.onCompleted: {
         Music.playTheme("sound/music/blow_with_the_fires.ogg", 0)
         if (startScreen) screen = startScreen
+        Engine.presence(screen === "center" ? "center" : "menu")
     }
 
     Rectangle { anchors.fill: parent; color: "black" }
@@ -68,6 +72,7 @@ Item {
                 onOpen: (id) => launcher.open(id)
                 onPlay: (id) => launcher.playProject(id)
                 onCreate: launcher.dialog = "new"
+                onCenter: launcher.screen = "center"
                 // «⇪ В Мастерскую Steam»: the Workshop folder is built (the game checks the mod), then the upload form
                 onPublish: (id) => {
                     Engine.openProject(id)
@@ -76,6 +81,10 @@ Item {
                     publishDialog.run("workshop")
                 }
             }
+        }
+        Screen {
+            shown: launcher.screen === "center"
+            CenterScreen { onBack: launcher.screen = "menu" }
         }
         Screen {
             shown: launcher.screen === "gallery"

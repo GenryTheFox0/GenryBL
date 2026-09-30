@@ -13,6 +13,7 @@ Item {
     signal play(string id)
     signal create()
     signal publish(string id)
+    signal center()
 
     Image { anchors.fill: parent; source: "image://gb/file/images/gui/save_load/load_bg.jpg"; asynchronous: true }
     Rectangle { anchors.fill: parent; color: "#000000"; opacity: 0.0 }
@@ -145,6 +146,28 @@ Item {
         standardButtons: Dialog.Yes | Dialog.No
         Label { text: menu.project ? "«" + menu.project.name + qsTr("» переедет в projects/_trash — вернуть можно руками.") : "" }
         onAccepted: Engine.trashProject(menu.project.id)
+    }
+
+    // «Бесконечное лето»: the game and every mod in it, the Workshops - a note pinned on the album
+    Rectangle {
+        x: 1190; y: 176; width: centerRow.implicitWidth + 40; height: 64
+        rotation: 2
+        radius: 6
+        color: centerArea.containsMouse ? "#f6ecd2" : Theme.paper
+        border.color: "#c9b58a"; border.width: 2
+        Rectangle { x: parent.width / 2 - 40; y: -10; width: 80; height: 20; rotation: -3; color: "#99d8332f" }
+        Row {
+            id: centerRow
+            anchors.centerIn: parent
+            spacing: 10
+            Text { text: "▶"; color: Theme.pioneer; font.pixelSize: 26; anchors.verticalCenter: parent.verticalCenter }
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                Text { text: qsTr("Бесконечное лето"); color: Theme.ink; font.family: Theme.riffic; font.pixelSize: 26; font.bold: true }
+                Text { text: qsTr("игра, все моды, Мастерские"); color: "#7d6a4c"; font.family: Theme.ui; font.pixelSize: 15 }
+            }
+        }
+        MouseArea { id: centerArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Sfx.click(); album.center() } }
     }
 
     // ES-style "Назад"

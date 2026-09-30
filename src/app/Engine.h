@@ -29,6 +29,7 @@ class QJSEngine;
 class QProcess;
 class QNetworkAccessManager;
 class QQmlEngine;
+namespace gb { class DiscordPresence; }
 
 class Engine : public QObject {
     Q_OBJECT
@@ -39,6 +40,11 @@ class Engine : public QObject {
     Q_PROPERTY(QString startupError READ startupError NOTIFY readyChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(bool uploading READ uploading NOTIFY uploadingChanged)
+    // ---- Discord (src/app/Hub.cpp): what I do in GenryBL, and the status inside the game itself
+    Q_PROPERTY(bool discordOn READ discordOn NOTIFY discordChanged)
+    Q_PROPERTY(bool discordHide READ discordHide NOTIFY discordChanged)
+    Q_PROPERTY(bool gamePresence READ gamePresence NOTIFY discordChanged)
+    Q_PROPERTY(QString discordState READ discordState NOTIFY discordChanged)      // off | noid | waiting | ready | error
     Q_PROPERTY(QString busyText READ busyText NOTIFY busyChanged)
     Q_PROPERTY(bool gameRunning READ gameRunning NOTIFY gameRunningChanged)
     Q_PROPERTY(QVariantList projects READ projects NOTIFY projectsChanged)
@@ -312,6 +318,35 @@ public:
     Q_INVOKABLE void publishWorkshop(const QString& id, const QString& storyText, const QString& item, const QString& title,
                                      const QString& desc, int visibility, const QString& note, const QStringList& tags);
     bool uploading() const { return m_upload != nullptr; }
+
+    // ---- «Бесконечное лето» - the Center (src/app/Hub.cpp)
+    bool discordOn() const;
+    bool discordHide() const;
+    bool gamePresence() const;
+    QString discordState() const;
+    Q_INVOKABLE void setDiscordOn(bool on);
+    Q_INVOKABLE void setDiscordHide(bool on);
+    Q_INVOKABLE bool setGamePresence(bool on);          // the status mod in game/mods/genry_presence, in or out
+    // where the writer is: menu | center | edit | cinema (edit / cinema: the project and its line); a running test
+    // game is seen by itself
+    Q_INVOKABLE void presence(const QString& kind, const QString& projectId = {}, int line = 0);
+    // every mod the game loads -> gameModsReady([{source, id, dir, title, entries: [{label, title}], preview, size,
+    // files, genrybl, twins}])
+    Q_INVOKABLE void scanGameMods();
+    Q_INVOKABLE void playGame();                        // through Steam: playtime, achievements
+    Q_INVOKABLE void playGameMod(const QString& label); // straight into that mod, like the game's Mods menu
+    // the Workshop over the web: the items' own titles and covers -> steamDetailsReady({id: {title, preview, subs,
+    // favorited, views, updated, size, desc, author}}); a page of the Workshop (trend | new | top | updated, a search)
+    // -> steamBrowseReady(items, page, more, error)
+    Q_INVOKABLE void steamDetails(const QStringList& ids);
+    Q_INVOKABLE void steamBrowse(const QString& sort, const QString& query, int page);
+    Q_INVOKABLE void steamSubscribe(const QString& id, bool on);   // -> steamSubscribed(id, on, ok, message)
+    Q_INVOKABLE bool steamSubscribing() const { return m_subscribe != nullptr; }
+    // «Мастерская GenryBL»: the catalog on GitHub (catalog/mods.json) -> catalogReady(mods, error); a mod from it into
+    // game/mods -> catalogInstalled(id, ok, message)
+    Q_INVOKABLE void loadCatalog();
+    Q_INVOKABLE void installCatalogMod(const QVariantMap& mod);
+    Q_INVOKABLE QString catalogSuggestUrl(const QString& projectId) const;
     // the project's files nobody uses go to projects/<id>/_unused (out of the mod, not deleted); how many moved
     Q_INVOKABLE int tidyUnused(const QString& id, const QStringList& paths);
     Q_INVOKABLE void revealFile(const QString& path) const;
@@ -360,6 +395,13 @@ signals:
     void modFilesReady(const QVariantMap& report);
     void breakModReady(const QVariantMap& report);
     void uploadingChanged();
+    void discordChanged();
+    void gameModsReady(const QVariantList& mods);
+    void steamDetailsReady(const QVariantMap& items);
+    void steamBrowseReady(const QVariantList& items, int page, bool more, const QString& error);
+    void steamSubscribed(const QString& id, bool on, bool ok, const QString& message);
+    void catalogReady(const QVariantList& mods, const QString& error);
+    void catalogInstalled(const QString& id, bool ok, const QString& message);
     void workshopProgress(const QString& stage, double share);
     void workshopFinished(bool ok, const QString& item, const QString& message, bool legal);
     // the story was changed by GenryBL itself (a free @mod_id): the editor takes the new text
@@ -448,6 +490,16 @@ private:
     qint64 m_playSince = 0;
     bool m_crashTold = false;
     QProcess* m_upload = nullptr;
+    QProcess* m_subscribe = nullptr;
+    gb::DiscordPresence* m_discord = nullptr;
+    QString m_presKind = QStringLiteral("menu"), m_presProject;
+    int m_presLine = 0;
+    qint64 m_sessionStart = 0;
+    QHash<QString, QVariantMap> m_steamCache;
+    void startHub();                                    // Discord up (called once the engine is ready)
+    void updatePresence();
+    void writeGamePresenceConfig();
+    QString workshopHelper() const;
     void checkCrash();
     void tellCrash(const gb::CrashReport& c, const QString& project, const QString& story);
 };
