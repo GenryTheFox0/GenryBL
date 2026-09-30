@@ -724,8 +724,8 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
         if (cmd == QLatin1String("dim")) { st.dim = 0.55; num(rest, &st.dim); continue; }
         if (cmd == QLatin1String("undim")) { st.dim = 0; continue; }
         if (cmd == QLatin1String("notedim")) { st.noteDim = 0.6; num(rest, &st.noteDim); st.noteDim = qBound(0.0, st.noteDim, 1.0); continue; }
-        if (cmd == QLatin1String("eyesclose")) { st.eyesClosed = true; continue; }
-        if (cmd == QLatin1String("eyesopen")) { st.eyesClosed = false; continue; }
+        if (cmd == QLatin1String("eyesclose")) { st.eyesClosed = true; st.eyesSeconds = 2.0; num(rest, &st.eyesSeconds); continue; }
+        if (cmd == QLatin1String("eyesopen")) { st.eyesClosed = false; st.eyesSeconds = 2.0; num(rest, &st.eyesSeconds); continue; }
         if (cmd == QLatin1String("sleepyeyes")) { st.sleepy = true; continue; }
         if (cmd == QLatin1String("stopsleepyeyes")) { st.sleepy = false; continue; }
         if (cmd == QLatin1String("staticfx") || cmd == QLatin1String("noisefx") || cmd == QLatin1String("glitchfx") || cmd == QLatin1String("vhsfx") ||

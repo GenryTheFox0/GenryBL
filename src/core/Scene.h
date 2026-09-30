@@ -40,6 +40,8 @@ struct SceneState {
     bool eyesClosed = false, sleepy = false;
     QString weather, filter;
     int weatherLevel = 2;                         // «слабо» 1 / обычно 2 / «сильно» 3
+    double eyesSeconds = 2.0;                     // how long the lids close / open (the command's number, the game's 2 s)
+    bool liveFx = false;                          // the cinema moves the weather and the lids itself: not baked in the frame
     bool windowHidden = false;
     QString music;                                // for the HUD
     // dialogue

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Particles
 import QtQuick.Controls
 import QtMultimedia
 import GenryBL
@@ -32,7 +33,15 @@ Popup {
     property string storyText: ""
     property int startLine: 1
     property bool auto: false
-    property bool skipping: false
+    // the game's skip: Ctrl held, or Tab / the right leaf (Skip()) until a choice
+    property bool skipHold: false
+    property bool skipOn: false
+    readonly property bool skipping: skipHold || skipOn
+    // the game's «история» (its left leaf): every line shown, and how many steps back to it
+    property var history: []
+    property bool historyOpen: false
+    property string weatherKey: ""
+    property var weatherModel: []
     property int shown: 0                       // characters typed so far
     property bool useA: true
     property string musicKey: ""
@@ -56,7 +65,10 @@ Popup {
         storyText = text
         startLine = line
         auto = false
-        skipping = false
+        skipHold = false
+        skipOn = false
+        history = []
+        historyOpen = false
         musicKey = ""
         ambienceKey = ""
         inputs = []
@@ -75,7 +87,34 @@ Popup {
         apply(s)
         quiet = false
     }
-    function restart() { musicKey = ""; ambienceKey = ""; inputs = []; popupModel.clear(); apply(Engine.cinemaStart(storyText, startLine)) }
+    function restart() { musicKey = ""; ambienceKey = ""; inputs = []; history = []; historyOpen = false; skipOn = false; popupModel.clear(); apply(Engine.cinemaStart(storyText, startLine)) }
+    // «назад» (the wheel up, PageUp, a line of the history): the same walk with fewer steps - to that line, as the game rolls back
+    function goBack(n) {
+        historyOpen = false
+        if (n < 0 || n >= inputs.length) return
+        skipOn = false
+        inputs = inputs.slice(0, n)
+        const s = Engine.cinemaReplay(storyText, startLine, inputs)
+        if (s.used < inputs.length) inputs = inputs.slice(0, s.used)
+        quiet = true
+        apply(s)
+        quiet = false
+    }
+    function stepBack() {                        // the line shown before this one
+        for (let i = history.length - 1; i >= 0; --i)
+            if (history[i].n < inputs.length) { goBack(history[i].n); return }
+    }
+    function openHistory() {
+        skipOn = false
+        historyOpen = true
+        Qt.callLater(() => hList.positionViewAtEnd())
+    }
+    function toggleSkip() {
+        skipOn = !skipOn
+        if (!skipOn) return
+        if (typing) shown = stop.text.length
+        readTimer.restart()
+    }
     // one step on, remembered for the re-walk
     function next(arg) {
         inputs = inputs.concat([arg])
@@ -95,6 +134,19 @@ Popup {
     function apply(s) {
         stop = s
         autoTimer.stop(); choiceTimer.stop(); readTimer.stop()
+        // the history: a walk back gives it whole; a step on adds the line now shown
+        if (s.log !== undefined) history = s.log.slice()
+        if ((s.kind === "say" || s.kind === "note") && s.text) history = history.concat([{ speaker: s.speaker, color: s.color, text: s.text, n: inputs.length }])
+        if (s.kind === "choice" || s.kind === "end") skipOn = false          // the game's skip stops at a menu
+        // the weather keeps falling across lines: a new particle system only when the weather itself changes
+        if (s.weatherKey !== weatherKey) { weatherKey = s.weatherKey; weatherModel = s.weather || [] }
+        // the lids: the game's own, over the command's seconds (a walk back / a skip puts them where they are at once)
+        const shut = s.eyes === "closed" ? 1 : s.eyes === "sleepy" ? 0.5 : 0
+        if (Math.abs(shut - lids.shut) > 0.001) {
+            lidAnim.stop()
+            if (quiet || skipping) lids.shut = shut
+            else { lidAnim.from = lids.shut; lidAnim.to = shut; lidAnim.duration = Math.max(150, (s.eyesSeconds || 2) * 1000); lidAnim.start() }
+        }
         // the frame: a quick crossfade like ES's dissolve
         if (useA) { imgB.source = s.frame; fadeToB.restart() } else { imgA.source = s.frame; fadeToA.restart() }
         useA = !useA
@@ -117,7 +169,8 @@ Popup {
             for (const p of (s.popups || [])) popupModel.append({ title: p.title, text: p.text, born: Date.now() })
             if (s.moment === "shake") shake.restart()
             if (s.moment === "flash") flash.restart()
-            if (s.moment === "blink" || s.moment === "pixels") blink.restart()
+            if (s.moment === "blink") lidBlink.restart()
+            if (s.moment === "pixels") blink.restart()
         }
         // what makes it go on by itself
         if (s.kind === "card" || s.kind === "timed") { autoTimer.interval = skipping ? 60 : Math.max(200, s.seconds * 1000); autoTimer.start() }
@@ -130,6 +183,7 @@ Popup {
         if (!docked) keys.forceActiveFocus()        // docked: the keyboard stays with the editor
     }
     function advance() {
+        if (historyOpen) { historyOpen = false; return }
         if (!stop.kind || stop.kind === "end" || stop.kind === "choice") return
         if (typing) { shown = stop.text.length; return }
         videoPlayer.stop()
@@ -210,6 +264,73 @@ Popup {
             NumberAnimation { id: fadeToA; target: imgB; property: "opacity"; from: 1; to: 0; duration: cv.skipping ? 0 : 260 }
             VideoOutput { id: videoOut; anchors.fill: parent; visible: cv.stop.kind === "video" && videoPlayer.playbackState === MediaPlayer.PlayingState }
 
+            // ---- the weather, falling: the game's SnowBlossom layers (the same pictures, counts, speeds) as particles;
+            // the game's rain falls behind its dialogue box
+            Item {
+                id: weatherLayer
+                // the game's own 1920x1080 units, the whole layer scaled to the frame: the speeds and sizes are the game's
+                width: 1920
+                height: cv.stop.box ? 916 : 1080
+                scale: cv.sc
+                transformOrigin: Item.TopLeft
+                clip: true
+                Repeater {
+                    model: cv.opened ? cv.weatherModel : []
+                    Item {
+                        id: wl
+                        required property var modelData
+                        anchors.fill: parent
+                        readonly property real ys: (modelData.ys0 + modelData.ys1) / 2
+                        readonly property real slow: Math.max(6, Math.min(Math.abs(modelData.ys0), Math.abs(modelData.ys1)))
+                        readonly property real way: 1080 + 160
+                        ParticleSystem { id: ps; anchors.fill: parent; running: cv.opened }
+                        ImageParticle {
+                            system: ps
+                            source: wl.modelData.src
+                            alpha: wl.modelData.alpha
+                            alphaVariation: wl.modelData.anim === "twinkle" ? 0.5 : 0
+                            rotation: wl.modelData.rotate
+                            rotationVariation: wl.modelData.anim.indexOf("spin") === 0 ? 180 : 0
+                            rotationVelocity: wl.modelData.anim === "spinfast" ? 160 : wl.modelData.anim === "spin" ? 60 : 0
+                            rotationVelocityVariation: wl.modelData.anim.indexOf("spin") === 0 ? 40 : 0
+                        }
+                        Emitter {
+                            system: ps
+                            // born over the top edge (under the bottom one when they float up); the screen already full at once
+                            x: -80
+                            width: 1920 + 160
+                            y: wl.ys >= 0 ? -80 : 1080 + 80
+                            height: 1
+                            lifeSpan: wl.way / wl.slow * 1000
+                            emitRate: wl.modelData.count / Math.max(0.3, wl.way / Math.max(6, Math.abs(wl.ys)))
+                            startTime: lifeSpan
+                            size: wl.modelData.size
+                            velocity: PointDirection {
+                                x: (wl.modelData.xs0 + wl.modelData.xs1) / 2
+                                xVariation: Math.abs(wl.modelData.xs1 - wl.modelData.xs0) / 2
+                                y: wl.ys
+                                yVariation: Math.abs(wl.modelData.ys1 - wl.modelData.ys0) / 2
+                            }
+                        }
+                    }
+                }
+            }
+            // ---- the lids: the game's own pictures (anim blink_up / blink_down) close and open, as «закрытьглаза» does
+            Item {
+                id: lids
+                anchors.fill: parent
+                property real shut: 0                    // 0 open, 0.5 sleepy, 1 closed
+                visible: shut > 0.001
+                Image { width: parent.width; height: parent.height; y: -parent.height * (1 - lids.shut); source: "image://gb/file/images/anim/blink_up.png" }
+                Image { width: parent.width; height: parent.height; y: parent.height * (1 - lids.shut); source: "image://gb/file/images/anim/blink_down.png" }
+                NumberAnimation { id: lidAnim; target: lids; property: "shut"; easing.type: Easing.InOutSine }
+                SequentialAnimation {
+                    id: lidBlink                         // «моргание»: the lids, not a black flash
+                    NumberAnimation { target: lids; property: "shut"; to: 1; duration: 140; easing.type: Easing.InQuad }
+                    NumberAnimation { target: lids; property: "shut"; to: 0; duration: 260; easing.type: Easing.OutQuad }
+                }
+            }
+
             // the words, typed over the game's own dialogue box (Renderer: calibri 28, x 194, y 964, width 1541)
             FontMetrics { id: fm; font.family: Engine.font(); font.pixelSize: 28 }
             Repeater {
@@ -254,7 +375,114 @@ Popup {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: cv.stop.kind === "choice" ? Qt.ArrowCursor : Qt.PointingHandCursor
                 onClicked: (m) => { if (m.button === Qt.LeftButton) cv.advance() }
-                onWheel: (w) => { if (w.angleDelta.y < 0) cv.advance() }
+                onWheel: (w) => { if (w.angleDelta.y < 0) cv.advance(); else if (w.angleDelta.y > 0) cv.stepBack() }
+            }
+
+            // ---- the game's leaves on its dialogue box (Renderer: 38 / 1768, 949): the left one - what was said
+            // (the game's «история»), the right one - skip (Skip(); while it skips the game shows «fast_forward»)
+            readonly property string tod: cv.stop.time === "prologue" ? "prologue" : (cv.stop.time || "day")
+            Item {
+                anchors.fill: parent
+                visible: !!cv.stop.box && !cv.historyOpen
+                Image {
+                    x: 38 * cv.sc; y: 949 * cv.sc
+                    width: implicitWidth * cv.sc; height: implicitHeight * cv.sc
+                    source: "image://gb/file/images/gui/dialogue_box/" + frame.tod + "/backward_hover.png"
+                    visible: backArea.containsMouse
+                }
+                MouseArea {
+                    id: backArea
+                    x: 30 * cv.sc; y: 935 * cv.sc; width: 130 * cv.sc; height: 115 * cv.sc
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: cv.openHistory()
+                    ToolTip.visible: containsMouse
+                    ToolTip.delay: 500
+                    ToolTip.text: qsTr("История: что говорили раньше")
+                }
+                Image {
+                    x: 1768 * cv.sc; y: 949 * cv.sc
+                    width: implicitWidth * cv.sc; height: implicitHeight * cv.sc
+                    source: "image://gb/file/images/gui/dialogue_box/" + frame.tod + "/" + (cv.skipping ? "fast_forward" : "forward") + (fwdArea.containsMouse ? "_hover" : "_idle") + ".png"
+                    visible: fwdArea.containsMouse || cv.skipping
+                }
+                MouseArea {
+                    id: fwdArea
+                    x: 1760 * cv.sc; y: 935 * cv.sc; width: 130 * cv.sc; height: 115 * cv.sc
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: cv.toggleSkip()
+                    ToolTip.visible: containsMouse
+                    ToolTip.delay: 500
+                    ToolTip.text: qsTr("Пропуск (Tab)")
+                }
+            }
+
+            // ---- «история»: the game's text_history - its choice box, the names in their colours, a line takes you back there
+            Item {
+                id: historyView
+                anchors.fill: parent
+                visible: cv.historyOpen
+                z: 20
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: cv.historyOpen = false
+                    onWheel: (w) => { w.accepted = true }
+                }
+                // the game opens its history as a menu: the scene under it steps back into the dark
+                Rectangle { anchors.fill: parent; color: "#b0000000" }
+                BorderImage {
+                    anchors.centerIn: parent
+                    width: 1500 * cv.sc
+                    height: 900 * cv.sc
+                    border { left: 50; top: 50; right: 50; bottom: 50 }       // the game's Frame of it (Renderer: frame9, 50)
+                    source: "image://gb/file/images/gui/choice/" + frame.tod + "/choice_box.png"
+                    MouseArea { anchors.fill: parent }         // a click on the box itself does not close it
+                    ListView {
+                        id: hList
+                        anchors.fill: parent
+                        anchors.leftMargin: 75 * cv.sc
+                        anchors.rightMargin: 60 * cv.sc
+                        anchors.topMargin: 70 * cv.sc
+                        anchors.bottomMargin: 70 * cv.sc
+                        clip: true
+                        spacing: 16 * cv.sc
+                        model: cv.historyOpen ? cv.history : []
+                        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                        delegate: Column {
+                            id: hRow
+                            required property var modelData
+                            required property int index
+                            width: hList.width - 20 * cv.sc
+                            spacing: 2 * cv.sc
+                            Text {
+                                visible: !!hRow.modelData.speaker
+                                text: hRow.modelData.speaker || ""
+                                color: hRow.modelData.color || "#ffdd7d"
+                                font.family: Engine.font()
+                                font.pixelSize: Math.max(8, 29 * cv.sc)
+                                style: Text.Outline; styleColor: "#80000000"
+                            }
+                            Text {
+                                x: 100 * cv.sc
+                                width: parent.width - x
+                                wrapMode: Text.Wrap
+                                text: hRow.modelData.text
+                                color: lineArea.containsMouse ? "#40e138" : "#f3f0e6"
+                                font.family: Engine.font()
+                                font.pixelSize: Math.max(8, 28 * cv.sc)
+                                MouseArea {
+                                    id: lineArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: cv.goBack(hRow.modelData.n)
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // ---- choices: the game's look, clickable; a timed choice shows its fuse
@@ -391,7 +619,7 @@ Popup {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: !cv.docked
-                text: qsTr("строка ") + (cv.stop.line || "—") + qsTr("  ·  клик / пробел — дальше  ·  A — авто  ·  Ctrl — промотать  ·  Esc — выход")
+                text: qsTr("строка ") + (cv.stop.line || "—") + qsTr("  ·  клик / пробел — дальше  ·  колёсико ↑ — назад  ·  A — авто  ·  Ctrl / Tab — пропуск  ·  Esc — выход")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
             }
             Text {
@@ -434,12 +662,15 @@ Popup {
         id: keys
         focus: true
         Keys.onPressed: (e) => {
-            if (e.key === Qt.Key_Space || e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Right) { cv.advance(); e.accepted = true }
+            if (e.key === Qt.Key_Escape && cv.historyOpen) { cv.historyOpen = false; e.accepted = true }
+            else if (e.key === Qt.Key_Space || e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Right) { cv.advance(); e.accepted = true }
+            else if (e.key === Qt.Key_PageUp || e.key === Qt.Key_Left) { cv.stepBack(); e.accepted = true }
+            else if (e.key === Qt.Key_Tab) { cv.toggleSkip(); e.accepted = true }
             else if (e.key === Qt.Key_A) { cv.auto = !cv.auto; if (cv.auto && !cv.typing) readTimer.restart(); e.accepted = true }
-            else if (e.key === Qt.Key_Control) { cv.skipping = true; if (cv.typing) cv.shown = cv.stop.text.length; readTimer.restart(); e.accepted = true }
+            else if (e.key === Qt.Key_Control) { cv.skipHold = true; if (cv.typing) cv.shown = cv.stop.text.length; readTimer.restart(); e.accepted = true }
             else if (e.key >= Qt.Key_1 && e.key <= Qt.Key_9 && cv.stop.kind === "choice") { cv.pick(e.key - Qt.Key_1); e.accepted = true }
             else if (e.key === Qt.Key_Escape) { cv.close(); e.accepted = true }
         }
-        Keys.onReleased: (e) => { if (e.key === Qt.Key_Control) { cv.skipping = false; e.accepted = true } }
+        Keys.onReleased: (e) => { if (e.key === Qt.Key_Control) { cv.skipHold = false; e.accepted = true } }
     }
 }

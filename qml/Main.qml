@@ -20,11 +20,12 @@ ApplicationWindow {
             ? Engine.currentProjectName + " — GenryBL " + Engine.version
             : "GenryBL " + Engine.version + qsTr(" — конструктор модов «Бесконечного лета»")) + edition
 
-    // --shot mode: park the window off-screen so the user's desktop is never touched
+    // --shot mode: the window stays cloaked for good (main.cpp) - on the screen for Windows, so it draws and animates like
+    // the real one (off the screen nothing moved: a popup stayed a thin strip), and never seen
     Component.onCompleted: {
         if (Engine.mode !== "") { width = 1280; height = 720 }
         if (shotPage) {
-            x = -4000; y = -4000; width = Engine.mode !== "" ? 1280 : 1600; height = Engine.mode !== "" ? 720 : 900
+            x = Screen.virtualX + 20; y = Screen.virtualY + 20; width = Engine.mode !== "" ? 1280 : 1600; height = Engine.mode !== "" ? 720 : 900
             if (shotSize) { const wh = shotSize.split("x"); width = parseInt(wh[0]); height = parseInt(wh[1]) }
         }
         if (!shotPage && Engine.mode === "") applyWindowSize(Engine.setting("windowSize", ""))

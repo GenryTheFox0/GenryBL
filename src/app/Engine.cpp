@@ -12,6 +12,7 @@
 #include "ModHub.h"
 #include "Py.h"
 #include "Text.h"
+#include "Weather.h"
 
 #include <QClipboard>
 #include <QCoreApplication>
@@ -1202,16 +1203,26 @@ QVariantMap Engine::cinemaReplay(const QString& text, int line, const QVariantLi
     m_cinema.load(text, &m_es);
     CinemaStop st = m_cinema.start(line);
     int used = 0;
+    // every line walked past, for the cinema's «история» (the game's left leaf): who, what, how many steps to get back there
+    static const QRegularExpression tags(QStringLiteral("\\{[^}]*\\}"));
+    QVariantList log;
     for (const QVariant& in : inputs) {
         if (st.kind == CinemaStop::End) break;
         const int arg = in.toInt();
         // a pick that is not there any more (the option was deleted): the replay stops at that choice
         if (st.kind == CinemaStop::Choice && arg >= int(st.options.size())) break;
+        if ((st.kind == CinemaStop::Say || st.kind == CinemaStop::Note) && !st.scene.text.isEmpty()) {
+            QString t = st.scene.text;
+            t.remove(tags);
+            log << QVariantMap{{QStringLiteral("speaker"), st.scene.speakerName}, {QStringLiteral("color"), st.scene.speakerColor},
+                               {QStringLiteral("text"), t}, {QStringLiteral("n"), used}};
+        }
         st = m_cinema.next(arg);
         ++used;
     }
     QVariantMap m = cinemaMap(st);
     m.insert(QStringLiteral("used"), used);
+    m.insert(QStringLiteral("log"), log);
     return m;
 }
 
@@ -1221,6 +1232,18 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
     SceneState st = c.scene;
     const bool typed = c.kind == CinemaStop::Say && !st.nvlMode && !st.text.isEmpty() && !st.windowHidden;
     st.hideSayText = typed;
+    st.liveFx = true;                                // the rain falls and the lids move in the cinema itself
+    // the weather as the game's SnowBlossom layers: the cinema lets them fall (the same pictures, speeds, counts)
+    QVariantList weather;
+    if (!st.weather.isEmpty())
+        for (const WeatherLayer& l : weatherLayers(st.weather)) {
+            const QImage img = weatherParticle(l.png);
+            weather << QVariantMap{{QStringLiteral("src"), QStringLiteral("image://gb/fx/") + l.png},
+                                   {QStringLiteral("size"), qMax(img.width(), img.height()) * l.zoom}, {QStringLiteral("alpha"), l.alpha},
+                                   {QStringLiteral("count"), std::max(1, int(std::lround(l.count * weatherLevelFactor(st.weatherLevel))))},
+                                   {QStringLiteral("xs0"), l.xs0}, {QStringLiteral("xs1"), l.xs1}, {QStringLiteral("ys0"), l.ys0}, {QStringLiteral("ys1"), l.ys1},
+                                   {QStringLiteral("anim"), l.anim}, {QStringLiteral("rotate"), l.rotate}};
+        }
     // the cinema draws its own clickable options (the phone call and the map keep their screens under them)
     if (c.kind == CinemaStop::Choice && st.phoneCall.isEmpty() && !st.map) {
         st.choices.clear();
@@ -1257,7 +1280,11 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
             {QStringLiteral("music"), url(c.music)}, {QStringLiteral("musicKey"), c.music},
             {QStringLiteral("ambience"), url(c.ambience)}, {QStringLiteral("ambienceKey"), c.ambience},
             {QStringLiteral("sounds"), sounds}, {QStringLiteral("popups"), popups}, {QStringLiteral("video"), video},
-            {QStringLiteral("moment"), c.moment}, {QStringLiteral("note"), c.note}, {QStringLiteral("time"), st.timeOfDay}};
+            {QStringLiteral("moment"), c.moment}, {QStringLiteral("note"), c.note}, {QStringLiteral("time"), st.timeOfDay},
+            {QStringLiteral("weather"), weather}, {QStringLiteral("weatherKey"), st.weather + QString::number(st.weatherLevel)},
+            {QStringLiteral("eyes"), st.eyesClosed ? QStringLiteral("closed") : st.sleepy ? QStringLiteral("sleepy") : QStringLiteral("open")},
+            {QStringLiteral("eyesSeconds"), st.eyesSeconds},
+            {QStringLiteral("box"), c.kind == CinemaStop::Say && !st.nvlMode && !st.windowHidden}};
 }
 
 QVariantMap Engine::sceneTimeline(const QString& text, int line) const
@@ -3039,6 +3066,17 @@ QImage Engine::providerImage(const QString& rawId, const QSize& req)
             st = m_scenes.value(rest.toInt());
         }
         return fit(m_renderer.render(st, true));
+    }
+    if (kind == QLatin1String("fx")) {               // a weather particle for the cinema, square (its particles are drawn square)
+        const QImage p = weatherParticle(rest);
+        if (p.isNull()) return {};
+        const int n = qMax(p.width(), p.height());
+        QImage sq(n, n, QImage::Format_ARGB32_Premultiplied);
+        sq.fill(Qt::transparent);
+        QPainter pp(&sq);
+        pp.drawImage((n - p.width()) / 2, (n - p.height()) / 2, p);
+        pp.end();
+        return sq;
     }
     if (kind == QLatin1String("cine")) {             // «кино-режим»: the frame as the game shows it, no editor HUD
         SceneState st;

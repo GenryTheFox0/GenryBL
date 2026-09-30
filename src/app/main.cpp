@@ -135,6 +135,11 @@ int main(int argc, char** argv)
     // window hidden and sizes it; here it is shown, cloaked until that frame is swapped.
     if (auto* win = qobject_cast<QQuickWindow*>(qml.rootObjects().first()); win && !win->isVisible()) {
 #ifdef Q_OS_WIN
+        if (shot) {                                    // a self-check picture: cloaked for good - drawn and animated, never seen
+            const HWND hwnd = reinterpret_cast<HWND>(win->winId());
+            BOOL on = TRUE;
+            DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, &on, sizeof on);
+        }
         if (!shot) {
             const HWND hwnd = reinterpret_cast<HWND>(win->winId());
             BOOL on = TRUE;

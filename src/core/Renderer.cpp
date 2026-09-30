@@ -485,7 +485,7 @@ QImage Renderer::render(const SceneState& s, bool hud) const
             p.fillRect(canvas.rect(), QColor(tint.mid(1, 2).toInt(nullptr, 16), tint.mid(3, 2).toInt(nullptr, 16), tint.mid(5, 2).toInt(nullptr, 16),
                                              tint.mid(7, 2).toInt(nullptr, 16)));
         QRandomGenerator rng(1234);
-        for (const WeatherLayer& l : weatherLayers(s.weather)) {
+        for (const WeatherLayer& l : s.liveFx ? QVector<WeatherLayer>() : weatherLayers(s.weather)) {
             const QImage img = particle(l.png);
             const int n = std::max(1, int(std::lround(l.count * weatherLevelFactor(s.weatherLevel))));
             for (int i = 0; i < n; ++i) {
@@ -511,7 +511,7 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         }
     }
     if (s.noteDim > 0 || !s.nvlText.isEmpty()) p.fillRect(canvas.rect(), QColor(0, 0, 0, int((s.nvlText.isEmpty() ? s.noteDim : 0.6) * 255)));
-    if (s.eyesClosed || s.sleepy) {
+    if (!s.liveFx && (s.eyesClosed || s.sleepy)) {
         const QImage up = load(QStringLiteral("images/anim/blink_up.png")), down = load(QStringLiteral("images/anim/blink_down.png"));
         const int off = s.eyesClosed ? 0 : H / 2;
         if (!up.isNull()) p.drawImage(QRectF(0, -off, W, H), up);

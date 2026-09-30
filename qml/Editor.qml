@@ -48,11 +48,12 @@ Item {
             facefixShot.start()
         }
         // «кино-режим»: shotArg = "line [clicks [pick]]"
-        if (shotPage === "editor-cinema") Qt.callLater(() => {
+        if (shotPage === "editor-cinema" || shotPage === "editor-cinema-history") Qt.callLater(() => {
             const a = (shotArg || "1 0").split(" ").map(Number)
             cinemaView.begin(code.text, a[0] || 1)
             for (let i = 0; i < (a[1] || 0); ++i) { if (cinemaView.stop.kind === "choice") cinemaView.pick(a[2] || 0); else { cinemaView.shown = 999; cinemaView.advance() } }
             cinemaView.shown = 999
+            if (shotPage === "editor-cinema-history") cinemaView.openHistory()
         })
         if (shotPage === "editor-dialogue") Qt.callLater(() => { dialogue.openFor(code.text, code.currentLine); dialogue.fillDemo() })
         if (shotPage === "editor-title") Qt.callLater(() => { titleDialog.openFor(code.text); titleDialog.name = "Лето с последствиями"; titleDialog.colorHex = "#b3001b"; titleDialog.size = 44; titleDialog.bold = true })

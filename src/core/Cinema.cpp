@@ -741,6 +741,15 @@ CinemaStop Cinema::run()
             st.seconds = qBound(0.1, sec, 30.0);
             return st;
         }
+        if (cmd == QLatin1String("eyesclose") || cmd == QLatin1String("eyesopen")) {
+            // the game shows its lids and waits (renpy.pause(<seconds>, hard=True)): the cinema's lids move over that time
+            m_path << raw;
+            CinemaStop st = stop(CinemaStop::Timed, i);
+            double sec = 2.0;
+            pyFloat(rest, &sec);
+            st.seconds = qBound(0.1, sec, 30.0);
+            return st;
+        }
         if (cmd == QLatin1String("sms") || cmd == QLatin1String("phonephoto") || cmd == QLatin1String("phonevoice") || cmd == QLatin1String("phonepost") ||
             cmd == QLatin1String("phonepush") || cmd == QLatin1String("phonecomment")) {
             m_path << raw;
