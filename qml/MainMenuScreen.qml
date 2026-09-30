@@ -518,10 +518,13 @@ Item {
         }
     }
 
+    // the dark the menu comes out of: drawn by the launcher over the WHOLE window (introDark), not a 16:9 box
+    readonly property real introDark: fadeIn.opacity
+    readonly property url backdrop: board.currentUrl          // the launcher fills the window's edges with it
     Rectangle {
         id: fadeIn
         anchors.fill: parent
-        color: "black"
+        color: "transparent"
         opacity: menu.intro ? 1 : 0
         NumberAnimation on opacity { running: menu.intro && menu.shown; from: 1; to: 0; duration: 1400; easing.type: Easing.InOutQuad }
         visible: opacity > 0.01

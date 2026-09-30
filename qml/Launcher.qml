@@ -32,6 +32,17 @@ Item {
     }
 
     Rectangle { anchors.fill: parent; color: "black" }
+    // the menu's own picture under the stage, filling the window: a window of any shape has no black edge
+    Image {
+        anchors.fill: parent
+        visible: launcher.screen === "menu"
+        source: mainMenu.backdrop
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        sourceSize.width: 960                        // soft on purpose: only its edges ever show
+        smooth: true
+        Rectangle { anchors.fill: parent; color: "#40000000" }
+    }
 
     Item {
         id: stage
@@ -238,4 +249,11 @@ Item {
     Keys.onEscapePressed: { if (dialog !== "") dialog = ""; else if (screen !== "menu") screen = "menu" }
     focus: true
     ExportDialog { id: publishDialog }
+    // the menu comes out of the dark over the whole window, edges included (the stage alone left the sides lit)
+    Rectangle {
+        anchors.fill: parent
+        color: "black"
+        opacity: launcher.screen === "menu" ? mainMenu.introDark : 0
+        visible: opacity > 0.01
+    }
 }
