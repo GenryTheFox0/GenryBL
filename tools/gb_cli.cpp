@@ -601,7 +601,8 @@ int main(int argc, char** argv)
         Renderer r;
         r.setAssets(&es, root + "/data");
         r.setCustomImages(build::customImageFiles(env.assetsDir));
-        return r.render(sceneAt(story, a[3].toInt(), &es), true).save(a[4]) ? 0 : fail("cannot save " + a[4]);
+        // --clean: the frame as the game shows it (no editor chips: what plays, what the line does) - screenshots
+        return r.render(sceneAt(story, a[3].toInt(), &es), !a.contains("--clean")).save(a[4]) ? 0 : fail("cannot save " + a[4]);
     }
     return fail("unknown command " + cmd);
 }

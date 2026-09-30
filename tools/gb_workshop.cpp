@@ -5,6 +5,7 @@
 //
 //   gb_workshop.exe --dll <steam_api64.dll> --content <dir> --title <text> --desc-file <utf8 file>
 //                   [--preview <jpg/png>] [--item <id>] [--visibility 0|1|2|3] [--note-file <utf8 file>] [--lang russian]
+//                   [--shot <jpg/png>]...   screenshots added to the item's gallery (each run adds them again)
 //                   [--tags "Slavya,Romance,Variative"]   the Workshop's own tags (the item gets exactly these)
 //   gb_workshop.exe --dll <steam_api64.dll> --check          resolve the functions, start nothing
 //   gb_workshop.exe --dll <steam_api64.dll> --subscribe <id> | --unsubscribe <id>   the Center's «Подписаться»
@@ -51,6 +52,7 @@ using FnSubmit = uint64_t (*)(void*, uint64_t, const char*);
 using FnProgress = int (*)(void*, uint64_t, uint64_t*, uint64_t*);
 // SDK 1.50 has (self, handle, tags); later ones add «allow admin tags» - an extra argument the old one never reads
 using FnSetTags = bool (*)(void*, uint64_t, const StringArray*, bool);
+using FnAddPreviewFile = bool (*)(void*, uint64_t, const char*, int);   // EItemPreviewType
 using FnSubscribe = uint64_t (*)(void*, uint64_t);
 
 const uint32_t kApp = 331470;
@@ -110,6 +112,7 @@ struct Api {
     FnSubmit submit = nullptr;
     FnProgress progress = nullptr;
     FnSetTags setTags = nullptr;
+    FnAddPreviewFile addPreviewFile = nullptr;
     FnSubscribe subscribe = nullptr, unsubscribe = nullptr;
 
     template <typename T> bool get(T& fn, const char* name, bool required = true)
@@ -146,6 +149,7 @@ struct Api {
         ok = get(setPreview, "SteamAPI_ISteamUGC_SetItemPreview") && ok;
         get(setLang, "SteamAPI_ISteamUGC_SetItemUpdateLanguage", false);
         get(setTags, "SteamAPI_ISteamUGC_SetItemTags", false);
+        get(addPreviewFile, "SteamAPI_ISteamUGC_AddItemPreviewFile", false);
         get(subscribe, "SteamAPI_ISteamUGC_SubscribeItem", false);
         get(unsubscribe, "SteamAPI_ISteamUGC_UnsubscribeItem", false);
         ok = get(setVisibility, "SteamAPI_ISteamUGC_SetItemVisibility") && ok;
@@ -225,6 +229,7 @@ struct AppIdDir {
 int wmain(int argc, wchar_t** argv)
 {
     std::wstring dllPath, content, title, descFile, preview, noteFile, lang = L"russian", tagList;
+    std::vector<std::wstring> shots;
     bool withTags = false;
     uint64_t item = 0;
     int visibility = -1;
@@ -239,6 +244,7 @@ int wmain(int argc, wchar_t** argv)
         else if (k == L"--title") title = next();
         else if (k == L"--desc-file") descFile = next();
         else if (k == L"--preview") preview = next();
+        else if (k == L"--shot") shots.push_back(next());
         else if (k == L"--note-file") noteFile = next();
         else if (k == L"--lang") lang = next();
         else if (k == L"--tags") { tagList = next(); withTags = true; }
@@ -286,6 +292,11 @@ int wmain(int argc, wchar_t** argv)
         if (sz < 0) { say("ERROR args no preview picture %s", utf8(preview).c_str()); return 2; }
         if (sz > 1024 * 1024) { say("ERROR args the preview picture is over 1 MB"); return 2; }
     }
+    for (const std::wstring& s : shots) {
+        const int64_t sz = fileSize(s);
+        if (sz < 0) { say("ERROR args no screenshot %s", utf8(s).c_str()); return 2; }
+        if (sz > 1024 * 1024) { say("ERROR args the screenshot %s is over 1 MB", utf8(s).c_str()); return 2; }
+    }
 
     AppIdDir appId;
     if (!appId.make()) { say("ERROR steam cannot write steam_appid.txt"); return 1; }
@@ -312,6 +323,11 @@ int wmain(int argc, wchar_t** argv)
         if (!a.setDesc(ugc, h, desc.c_str())) { say("ERROR field description"); break; }
         if (!preview.empty() && !a.setPreview(ugc, h, utf8(preview).c_str())) { say("ERROR field preview"); break; }
         if (visibility >= 0 && !a.setVisibility(ugc, h, visibility)) { say("ERROR field visibility"); break; }
+        if (!shots.empty() && !a.addPreviewFile) { say("ERROR dll the game's Steam library cannot add screenshots"); break; }
+        bool shotsOk = true;
+        for (const std::wstring& s : shots)                 // k_EItemPreviewType_Image = 0
+            if (!a.addPreviewFile(ugc, h, utf8(s).c_str(), 0)) { say("ERROR field screenshot %s", utf8(s).c_str()); shotsOk = false; break; }
+        if (!shotsOk) break;
         if (withTags && a.setTags) {
             std::vector<std::string> tags;
             std::string all = utf8(tagList), cur;
