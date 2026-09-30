@@ -19,7 +19,15 @@ struct LintIssue {
     QString file;         // a project file the issue is about (line 0)
     int col = -1;         // the words the issue is about, in the line as written (-1: the whole line)
     int len = 0;
+    // «Починить» (the doctor): what one click does - 1 the line becomes `fix`, 2 `fix` goes under the line,
+    // 3 the line goes away, 4 `fix` goes to the end of the story, 5 `fix` goes above the line
+    int fixMode = 0;
+    QString fix;
+    QString fixLabel;     // what the button shows: «smile pioneer», «переход lake»
 };
+
+// the story with every fix of `issues` made (bottom up, one per line); the lint is run again by the caller
+QString applyFixes(const QString& text, const QVector<LintIssue>& issues);
 
 struct LintContext {
     const EsAssets* es = nullptr;

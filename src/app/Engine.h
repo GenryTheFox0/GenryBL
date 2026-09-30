@@ -144,6 +144,11 @@ public:
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;
     Q_INVOKABLE QVariantList lint(const QString& text) const;
+    // «Починить всё»: every fix the lint offers, made; the lint again, a few rounds (Lint.h applyFixes)
+    Q_INVOKABLE QString applyFixes(const QString& text, const QVariantList& issues) const;
+    // «Карта сюжета» (src/core/Graph): {nodes: [{name, line, lastLine, lines, words, bg, kind, ending, start, reachable,
+    // chapter, col, row}], edges: [{from, to, kind, text, line}], cols, rows}
+    Q_INVOKABLE QVariantMap storyGraph(const QString& text) const;
     Q_INVOKABLE QVariantMap sceneInfo(const QString& text, int line) const;
     // choiceHover: which option of a 7DL picture menu is drawn lit
     // the characters on the preview frame, to drag: [{tag, image, x, y, w, h (in 1920x1080), line (the «показать»
@@ -181,6 +186,15 @@ public:
     Q_INVOKABLE bool openProject(const QString& id);
     Q_INVOKABLE QString loadStory(const QString& id) const;
     Q_INVOKABLE bool saveStory(const QString& id, const QString& text);
+    // «История версий» (src/core/History): the project's past, newest first: {file, when, ago, tag, lines, add, del}
+    Q_INVOKABLE QVariantList historyList(const QString& id) const;
+    Q_INVOKABLE QString historyText(const QString& id, const QString& file) const;
+    // what bringing that version back does to the text now: [{kind: "=" | "+" (comes back) | "-" (goes away) | "~", text, line}]
+    Q_INVOKABLE QVariantList historyDiff(const QString& id, const QString& file, const QString& currentText) const;
+    // the text now is kept as a version of its own first, then the old one is returned (the editor takes it)
+    Q_INVOKABLE QString restoreHistory(const QString& id, const QString& file, const QString& currentText);
+    // a version kept right now, with why (doctor: before «Починить всё»)
+    Q_INVOKABLE void keepVersion(const QString& id, const QString& text, const QString& tag);
     // --shot: screens type demo text into the editor - it must never land in the user's real project
     void setShotMode(bool on) { m_shotMode = on; }
     Q_INVOKABLE bool renameProject(const QString& id, const QString& name);
@@ -249,6 +263,9 @@ public:
     //  optionOk, seconds, music, musicKey, ambience, ambienceKey, sounds, popups: [{title, text}], video, moment, note}
     Q_INVOKABLE QVariantMap cinemaStart(const QString& text, int line);
     Q_INVOKABLE QVariantMap cinemaNext(int option = -1);
+    // «живое кино»: the story as it is NOW, walked from `line` with the same clicks and picks as before an edit -
+    // the frame the maker was looking at, with the change in it. + {used: how many of `inputs` still made sense}
+    Q_INVOKABLE QVariantMap cinemaReplay(const QString& text, int line, const QVariantList& inputs);
 
     // ---- build / run ----
     Q_INVOKABLE void play(const QString& id, const QString& text, int line);
@@ -325,6 +342,7 @@ private:
     void rememberAudioKind(const QString& file, const QString& kind);
     // @mod_id taken in the game by another copy of GenryBL: a free one from the project, the story rewritten
     QString claimModId(const QString& id, const QString& text);
+    QString historyDir(const QString& id) const { return projectDir(id) + QStringLiteral("/history"); }
     QVariantList customAudio(const QString& kind, const QString& command) const;
 
     static Engine* s_instance;

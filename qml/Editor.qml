@@ -70,6 +70,22 @@ Item {
         if (shotPage === "editor-library") Qt.callLater(() => { libraryBrowser.open(); libraryBrowser.pendingSearch = shotArg })
         if (shotPage === "editor-map") Qt.callLater(() => { mapEditor.openNew(code.text, code.currentLine); mapEditor.toggle("dining_hall"); mapEditor.setField("dining_hall", "chibi", "dv"); mapEditor.hoverId = "beach" })
         if (shotPage === "editor-form-edit") Qt.callLater(() => { code.gotoLine(Number(shotArg) || 14); ed.editLine() })
+        if (shotPage === "editor-storymap") Qt.callLater(() => storyMap.openFor(code.text))
+        if (shotPage === "editor-history") Qt.callLater(() => historyDialog.openFor(projectId, code.text))
+        // «живое кино»: shotArg = "line clicks"
+        if (shotPage === "editor-live") Qt.callLater(() => {
+            const a = (shotArg || "1 2").split(" ").map(Number)
+            cinemaView.beginDocked(code.text, a[0] || 1, preview)
+            for (let i = 0; i < (a[1] || 0); ++i) { if (cinemaView.stop.kind === "choice") cinemaView.pick(0); else { cinemaView.shown = 999; cinemaView.advance() } }
+            cinemaView.shown = 999
+        })
+        // the doctor: a page of the usual slips
+        if (shotPage === "editor-doctor") Qt.callLater(() => {
+            code.setText(qsTr("@mod_id genry_doctor\n@mod_name Доктор\n\n: start\nфон ext_square_dai\nпокзать dv smle pioneer center\nСлава: Привет!\nзвук sunny_day\nпереход finsh\n\n: finish\nтекст Конец.\n"))
+            ed.issues = Engine.lint(code.text)
+            infoTabs.currentIndex = 0
+            code.gotoLine(6)
+        })
         if (shotPage === "editor-dialogue-import") Qt.callLater(() => {
             dialogue.openFor(code.text, code.currentLine)
             dialogue.importUrls(shotArg.split("|").map(p => "file:///" + p))
@@ -101,8 +117,7 @@ Item {
     function expandLine() {
         const r = Engine.expandScreenplayLine(code.text, code.currentLine)
         if (!r.lines.length) { Engine.toast(qsTr("Эта строка — не сценарная: разворачивать нечего"), 1); return }
-        code.replaceLine(code.currentLine, r.lines.join("
-"))
+        code.replaceLine(code.currentLine, r.lines.join("\n"))
         const warn = r.notes.filter(n => n.warn)
         Engine.toast(warn.length ? "⚠ " + warn[0].text : qsTr("Развернул в ") + r.lines.length + qsTr(" стр."), warn.length ? 1 : 0)
     }
@@ -114,6 +129,40 @@ Item {
         if (!p.id) { Engine.toast(qsTr("Эту строку в форме не настроить — выбери команду в палитре"), 1); return }
         if (p.id === "map") mapEditor.openEdit(p.values, code.text, code.currentLine)
         else cmdForm.openEdit(p.id, p.values, code.text, code.currentLine)
+    }
+    // «Починить» (the doctor): one fix the way the lint offers it - through the editor, so Ctrl+Z takes it back
+    function fixOne(issue) {
+        const n = issue.line
+        if (issue.fixMode === 1) code.setLineText(n, issue.fix)
+        else if (issue.fixMode === 2) code.insertAfterLine(n, issue.fix)
+        else if (issue.fixMode === 3) code.removeLine(n)
+        else if (issue.fixMode === 4) {
+            const last = code.starts.length
+            code.insertAfterLine(last, (code.lineText(last).trim() === "" ? "" : "\n") + issue.fix)
+        }
+        else if (issue.fixMode === 5) {
+            if (n > 1) code.insertAfterLine(n - 1, issue.fix)
+            else code.insertLine(issue.fix)
+        }
+        Sfx.click()
+        previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+        if (issue.line > 0 && issue.fixMode !== 4) code.gotoLine(Math.max(1, issue.line))
+    }
+    function fixAll() {
+        const line = code.currentLine
+        ed.save()
+        Engine.keepVersion(projectId, code.text, "doctor")
+        const text = Engine.applyFixes(code.text, ed.issues)
+        if (text === code.text) return
+        const before = ed.issues.length
+        code.setText(text)
+        code.gotoLine(Math.min(line, code.starts.length))
+        ed.issues = Engine.lint(code.text)
+        ed.badges = Engine.choiceBadges(code.text)
+        ed.save()
+        ed.refreshPreview()
+        Engine.toast(qsTr("Доктор починил, что мог: было замечаний ") + before + qsTr(", осталось ") + ed.issues.length +
+                     qsTr(". Прежний текст — в «Истории»"), 0)
     }
     function save() { Engine.saveStory(projectId, code.text) }
     function play() { Engine.play(projectId, code.text, code.currentLine) }
@@ -131,10 +180,11 @@ Item {
     Timer { id: facefixShot; property var args: []; interval: 9000; onTriggered: charBrowser.fixFace(args[0], args.slice(1).join(" "), "") }
     Timer { id: lintTimer; interval: 300; onTriggered: { ed.issues = Engine.lint(code.text); ed.badges = Engine.choiceBadges(code.text) } }
     Timer { id: saveTimer; interval: 900; onTriggered: ed.save() }
+    Timer { id: liveTimer; interval: 450; onTriggered: cinemaView.reload(code.text) }      // «живое кино»: the edit on screen
     onHoverExtraChanged: previewTimer.restart()
     Connections {
         target: code
-        function onEdited() { previewTimer.restart(); lintTimer.restart(); saveTimer.restart() }
+        function onEdited() { previewTimer.restart(); lintTimer.restart(); saveTimer.restart(); if (cinemaView.opened && cinemaView.docked) liveTimer.restart() }
         function onCurrentLineChanged() { previewTimer.restart() }
     }
     Connections {
@@ -157,6 +207,7 @@ Item {
     Shortcut { sequence: "Ctrl+Shift+E"; enabled: !cmdForm.opened; onActivated: ed.expandLine() }
     Shortcut { sequence: "Ctrl+Shift+V"; enabled: !screenplay.opened; onActivated: screenplay.openFor(code.text, code.currentLine, Engine.clipboardText()) }
     Shortcut { sequence: "Ctrl+K"; onActivated: { leftTabs.currentIndex = 0; palette.focusSearch() } }
+    Shortcut { sequence: "Ctrl+M"; enabled: !storyMap.opened; onActivated: storyMap.openFor(code.text) }
     Repeater {                                   // Alt+1..9: the quick inserts of the palette
         model: 9
         Item { required property int index; Shortcut { sequence: "Alt+" + (index + 1); enabled: !cmdForm.opened; onActivated: palette.runPin(index) } }
@@ -166,6 +217,8 @@ Item {
         onGotoLine: (line) => code.gotoLine(line)
         onClosed: code.focusEditor()
     }
+    // the live cinema re-walks the story when a picture / sound comes into the project too
+    Connections { target: Engine; function onAssetsChanged() { if (cinemaView.opened && cinemaView.docked) liveTimer.restart() } }
     CommandForm {
         id: cmdForm
         onAccepted: (line, replace) => {
@@ -205,8 +258,7 @@ Item {
         return /^\s*-(?!>)/.test(t) ? ind + "    " : ind            // under an option: its own lines
     }
     function lastSpeaker() {
-        const lines = code.text.split("
-")
+        const lines = code.text.split("\n")
         for (let i = Math.min(lines.length, code.currentLine) - 1; i >= 0; --i) {
             const m = lines[i].match(/^\s*([^\s\-\[:#@][^:]{0,30}):\s/)
             if (m && m[1].toLowerCase() !== "выбор") return m[1]
@@ -254,6 +306,24 @@ Item {
         onClosed: code.focusEditor()
     }
     ExportDialog { id: exportDialog; onClosed: code.focusEditor() }
+    StoryMap {
+        id: storyMap
+        onGotoLine: (line) => code.gotoLine(line)
+        onCreateScene: (name) => ed.createScene(name)
+        onClosed: code.focusEditor()
+    }
+    // a way leads to a scene that is not there («Создать» on the story map): the scene at the end of the story
+    function createScene(name) {
+        const n = code.starts.length
+        const last = code.lineText(n)
+        code.insertAfterLine(n, (last.trim() === "" ? "" : "\n") + ": " + name + "\nтекст ")
+        Engine.toast(qsTr("Сцена «") + name + qsTr("» добавлена в конец — пиши"), 0)
+    }
+    HistoryDialog {
+        id: historyDialog
+        onRestored: (text) => { code.setText(text); ed.issues = Engine.lint(code.text); ed.badges = Engine.choiceBadges(code.text); ed.refreshPreview() }
+        onClosed: code.focusEditor()
+    }
     ModTitleDialog {
         id: titleDialog
         onApplied: (text) => { code.setText(text); ed.save(); ed.issues = Engine.lint(code.text); ed.refreshPreview(); Engine.toast(qsTr("Название мода обновлено"), 0) }
@@ -396,6 +466,20 @@ Item {
                     PillButton { dark: true; text: qsTr("Папка мода"); onClicked: Engine.openFolder(Engine.projectDir(ed.projectId)) }
                     PillButton {
                         dark: true
+                        text: qsTr("🗺 Карта сюжета")
+                        onClicked: storyMap.openFor(code.text)
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Все сцены и пути между ними: что недостижимо, что ведёт в никуда, где мод обрывается (Ctrl+M)")
+                    }
+                    PillButton {
+                        dark: true
+                        text: qsTr("🕘 История")
+                        onClicked: { ed.save(); historyDialog.openFor(ed.projectId, code.text) }
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("История версий: GenryBL сам хранит копии сценария — вернуть любую можно одним кликом")
+                    }
+                    PillButton {
+                        dark: true
                         text: qsTr("Проверить движком")
                         enabled: !Engine.busy
                         onClicked: Engine.engineCheck(ed.projectId, code.text)
@@ -422,6 +506,8 @@ Item {
                     MenuItem { text: qsTr("Библиотека картинок"); onTriggered: libraryBrowser.open() }
                     MenuSeparator {}
                     MenuItem { text: qsTr("Папка мода"); onTriggered: Engine.openFolder(Engine.projectDir(ed.projectId)) }
+                    MenuItem { text: qsTr("Карта сюжета"); onTriggered: storyMap.openFor(code.text) }
+                    MenuItem { text: qsTr("История версий"); onTriggered: { ed.save(); historyDialog.openFor(ed.projectId, code.text) } }
                     MenuItem { text: qsTr("Проверить движком игры"); enabled: !Engine.busy; onTriggered: Engine.engineCheck(ed.projectId, code.text) }
                 }
             }
@@ -548,6 +634,7 @@ Item {
                     onSeek: (n) => code.gotoLine(n)
                     onStep: (d) => ed.stepLine(d)
                     onEnlarge: big.open = true
+                    onLiveCinema: { ed.save(); cinemaView.beginDocked(code.text, code.currentLine, preview) }
                     // a character dragged on the frame: its «показать» line takes the new place / distance
                     onMoveSprite: (n, pos, dist) => {
                         code.setLineText(n, Engine.placeSprite(code.lineText(n), pos, dist))
@@ -569,9 +656,34 @@ Item {
 
                     // ---- problems
                     Item {
+                        readonly property int fixable: ed.issues.filter(i => i.fixMode > 0).length
+                        // «Починить всё»: every fix the doctor offers, in one go (the old text stays in the history)
+                        Rectangle {
+                            id: fixAllBar
+                            visible: parent.fixable > 0
+                            width: parent.width
+                            height: visible ? 42 : 0
+                            color: Theme.bg2
+                            Text {
+                                x: 12; anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - fixAllBtn.width - 36
+                                elide: Text.ElideRight
+                                text: qsTr("Доктор может сам починить: ") + parent.parent.fixable
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14
+                            }
+                            PillButton {
+                                id: fixAllBtn
+                                anchors.right: parent.right; anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                accent: true
+                                text: qsTr("🩺 Починить всё")
+                                onClicked: ed.fixAll()
+                            }
+                        }
                         ListView {
                             id: issueList
                             anchors.fill: parent
+                            anchors.topMargin: fixAllBar.height + 6
                             anchors.margins: 6
                             clip: true
                             spacing: 2
@@ -586,12 +698,26 @@ Item {
                                 Text { x: 30; anchors.verticalCenter: parent.verticalCenter; text: modelData.line > 0 ? qsTr("стр. ") + modelData.line : qsTr("файл"); color: Theme.dim; font.family: Theme.mono; font.pixelSize: 13; width: 70 }
                                 Text {
                                     id: msg
-                                    x: 104; width: parent.width - 114
+                                    x: 104; width: parent.width - 114 - (fixBtn.visible ? fixBtn.width + 10 : 0)
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: modelData.msg; wrapMode: Text.Wrap
                                     color: Theme.text; font.family: Theme.ui; font.pixelSize: 14
                                 }
                                 MouseArea { id: ia; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: modelData.line > 0 ? code.gotoLine(modelData.line) : Engine.revealFile(modelData.file) }
+                                PillButton {
+                                    id: fixBtn
+                                    visible: modelData.fixMode > 0
+                                    anchors.right: parent.right; anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: Math.min(implicitWidth, 190)
+                                    dark: true
+                                    text: qsTr("Починить")
+                                    onClicked: ed.fixOne(modelData)
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: modelData.fixMode === 3 ? qsTr("Убрать эту строку")
+                                                : modelData.fixMode === 1 ? qsTr("Строка станет: ") + modelData.fix.trim()
+                                                : qsTr("Допишу: ") + modelData.fix.trim()
+                                }
                             }
                         }
                         Column {

@@ -10,13 +10,23 @@ import GenryBL
 Popup {
     id: cv
     parent: Overlay.overlay
-    x: 0; y: 0
-    width: parent ? parent.width : 1600
-    height: parent ? parent.height : 900
-    modal: true
+    // «живое кино»: docked over the editor's preview, the editor stays in hand; every edit re-walks the story to the
+    // same moment (Engine.cinemaReplay) - the change is on screen without a restart, no game to load
+    property bool docked: false
+    property Item dockTo: null
+    readonly property point dockAt: docked && dockTo && dockTo.width > 0 && dockTo.height > 0 && parent ? dockTo.mapToItem(parent, 0, 0) : Qt.point(0, 0)
+    x: docked && dockTo ? dockAt.x : 0
+    y: docked && dockTo ? dockAt.y : 0
+    width: docked && dockTo ? dockTo.width : (parent ? parent.width : 1600)
+    height: docked && dockTo ? dockTo.height : (parent ? parent.height : 900)
+    modal: !docked
+    dim: !docked
+    focus: !docked
     padding: 0
-    closePolicy: Popup.CloseOnEscape
+    closePolicy: docked ? Popup.NoAutoClose : Popup.CloseOnEscape
     signal gotoLine(int line)
+    property var inputs: []                     // every click / pick since the start: what a re-walk repeats
+    property bool quiet: false                  // a re-walk: no typing again, no sounds and popups again
 
     property var stop: ({})
     property string storyText: ""
@@ -34,18 +44,43 @@ Popup {
     readonly property bool waitsClick: stop.kind === "say" || stop.kind === "note"
 
     function begin(text, line) {
+        docked = false
+        start(text, line)
+    }
+    function beginDocked(text, line, item) {
+        dockTo = item
+        docked = true
+        start(text, line)
+    }
+    function start(text, line) {
         storyText = text
         startLine = line
         auto = false
         skipping = false
         musicKey = ""
         ambienceKey = ""
+        inputs = []
         popupModel.clear()
         open()
         Music.fadeTo(0)                          // the constructor's own theme steps aside
         apply(Engine.cinemaStart(text, line))
     }
-    function restart() { musicKey = ""; ambienceKey = ""; popupModel.clear(); apply(Engine.cinemaStart(storyText, startLine)) }
+    function restart() { musicKey = ""; ambienceKey = ""; inputs = []; popupModel.clear(); apply(Engine.cinemaStart(storyText, startLine)) }
+    // one step on, remembered for the re-walk
+    function next(arg) {
+        inputs = inputs.concat([arg])
+        apply(Engine.cinemaNext(arg))
+    }
+    // the story was edited: the same route through the new text, to the same step
+    function reload(text) {
+        if (!opened) return
+        storyText = text
+        const s = Engine.cinemaReplay(text, startLine, inputs)
+        if (s.used < inputs.length) inputs = inputs.slice(0, s.used)
+        quiet = true
+        apply(s)
+        quiet = false
+    }
 
     function apply(s) {
         stop = s
@@ -53,8 +88,8 @@ Popup {
         // the frame: a quick crossfade like ES's dissolve
         if (useA) { imgB.source = s.frame; fadeToB.restart() } else { imgA.source = s.frame; fadeToA.restart() }
         useA = !useA
-        shown = s.typed ? 0 : (s.text || "").length
-        if (s.typed) typer.restart()
+        shown = s.typed && !quiet ? 0 : (s.text || "").length
+        if (s.typed && !quiet) typer.restart()
         // audio
         if (s.musicKey !== musicKey) {
             musicKey = s.musicKey
@@ -64,14 +99,16 @@ Popup {
             ambienceKey = s.ambienceKey
             if (s.ambience) { ambiencePlayer.source = s.ambience; ambiencePlayer.play() } else ambiencePlayer.stop()
         }
-        for (const u of (s.sounds || [])) {
-            const p = [sfx0, sfx1, sfx2][soundTurn++ % 3]
-            p.stop(); p.source = u; p.play()
+        if (!quiet) {
+            for (const u of (s.sounds || [])) {
+                const p = [sfx0, sfx1, sfx2][soundTurn++ % 3]
+                p.stop(); p.source = u; p.play()
+            }
+            for (const p of (s.popups || [])) popupModel.append({ title: p.title, text: p.text, born: Date.now() })
+            if (s.moment === "shake") shake.restart()
+            if (s.moment === "flash") flash.restart()
+            if (s.moment === "blink" || s.moment === "pixels") blink.restart()
         }
-        for (const p of (s.popups || [])) popupModel.append({ title: p.title, text: p.text, born: Date.now() })
-        if (s.moment === "shake") shake.restart()
-        if (s.moment === "flash") flash.restart()
-        if (s.moment === "blink" || s.moment === "pixels") blink.restart()
         // what makes it go on by itself
         if (s.kind === "card" || s.kind === "timed") { autoTimer.interval = skipping ? 60 : Math.max(200, s.seconds * 1000); autoTimer.start() }
         if (s.kind === "choice" && s.seconds > 0) { remain = s.seconds; choiceTimer.start() }
@@ -80,19 +117,19 @@ Popup {
             else { autoTimer.interval = 700; autoTimer.start() }
         }
         if (s.kind !== "choice" && (auto || skipping) && waitsClick && !s.typed) readTimer.restart()
-        keys.forceActiveFocus()
+        if (!docked) keys.forceActiveFocus()        // docked: the keyboard stays with the editor
     }
     function advance() {
         if (!stop.kind || stop.kind === "end" || stop.kind === "choice") return
         if (typing) { shown = stop.text.length; return }
         videoPlayer.stop()
-        apply(Engine.cinemaNext(-1))
+        next(-1)
     }
     function pick(i) {
         if (stop.kind !== "choice" || i >= (stop.options || []).length) return
         if (stop.optionHints && stop.optionHints[i]) return          // locked: «нужно …»
         Sfx.click()
-        apply(Engine.cinemaNext(i))
+        next(i)
     }
     onClosed: {
         musicPlayer.stop(); ambiencePlayer.stop(); videoPlayer.stop(); sfx0.stop(); sfx1.stop(); sfx2.stop()
@@ -142,7 +179,7 @@ Popup {
         repeat: true
         onTriggered: {
             cv.remain -= 0.05
-            if (cv.remain <= 0) { stop(); cv.apply(Engine.cinemaNext(-1)) }   // time is up
+            if (cv.remain <= 0) { stop(); cv.next(-1) }   // time is up
         }
     }
 
@@ -340,11 +377,18 @@ Popup {
             anchors.verticalCenter: parent.verticalCenter
             x: 14
             spacing: 8
-            InkText { text: qsTr("Кино"); size: 22; color: Theme.gold; anchors.verticalCenter: parent.verticalCenter }
+            InkText { text: cv.docked ? qsTr("Живое кино") : qsTr("Кино"); size: 22; color: Theme.gold; anchors.verticalCenter: parent.verticalCenter }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
+                visible: !cv.docked
                 text: qsTr("строка ") + (cv.stop.line || "—") + qsTr("  ·  клик / пробел — дальше  ·  A — авто  ·  Ctrl — промотать  ·  Esc — выход")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: cv.docked
+                text: qsTr("стр. ") + (cv.stop.line || "—")
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 13
             }
         }
         Row {
@@ -352,9 +396,25 @@ Popup {
             anchors.right: parent.right
             anchors.rightMargin: 12
             spacing: 6
-            PillButton { dark: !cv.auto; accent: cv.auto; text: cv.auto ? qsTr("Авто: вкл") : qsTr("Авто"); onClicked: { cv.auto = !cv.auto; if (cv.auto && !cv.typing) readTimer.restart(); keys.forceActiveFocus() } }
-            PillButton { dark: true; text: qsTr("↺ Сначала"); onClicked: cv.restart() }
-            PillButton { dark: true; text: qsTr("К строке в редакторе"); onClicked: { cv.gotoLine(cv.stop.line || 1); cv.close() } }
+            PillButton { visible: !cv.docked; dark: !cv.auto; accent: cv.auto; text: cv.auto ? qsTr("Авто: вкл") : qsTr("Авто"); onClicked: { cv.auto = !cv.auto; if (cv.auto && !cv.typing) readTimer.restart(); keys.forceActiveFocus() } }
+            PillButton { dark: true; text: cv.docked ? "↺" : qsTr("↺ Сначала"); onClicked: cv.restart(); ToolTip.visible: cv.docked && hovered; ToolTip.text: qsTr("Сначала") }
+            PillButton {
+                visible: cv.docked
+                dark: true
+                text: qsTr("к строке")
+                onClicked: cv.gotoLine(cv.stop.line || 1)
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Курсор редактора — на строку, которую сейчас показывает кино")
+            }
+            PillButton {
+                visible: cv.docked
+                dark: true
+                text: "⛶"
+                onClicked: { cv.docked = false; cv.forceActiveFocus(); keys.forceActiveFocus() }
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("На весь экран")
+            }
+            PillButton { visible: !cv.docked; dark: true; text: qsTr("К строке в редакторе"); onClicked: { cv.gotoLine(cv.stop.line || 1); cv.close() } }
             PillButton { dark: true; text: "✕"; onClicked: cv.close() }
         }
     }

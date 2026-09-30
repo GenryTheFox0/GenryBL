@@ -180,6 +180,16 @@ Rectangle {
         flash.flashAt(a)
         area.forceActiveFocus()
     }
+    // Line n goes away altogether (the doctor: a stray «конецвыбора»)
+    function removeLine(n) {
+        const b = lineBounds(lineStartPos(n))
+        const t = area.text
+        const from = b.end < t.length ? b.start : Math.max(0, b.start - 1)
+        const to = b.end < t.length ? b.end + 1 : b.end
+        area.remove(from, to)
+        area.cursorPosition = Math.min(from, area.text.length)
+        area.forceActiveFocus()
+    }
     // New line(s) right under line n; the cursor at the end of the first one, ready to type
     function insertAfterLine(n, t) {
         const b = lineBounds(lineStartPos(n))

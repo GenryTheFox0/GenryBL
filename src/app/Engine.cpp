@@ -4,6 +4,8 @@
 #include "Screenplay.h"
 #include "Compiler.h"
 #include "Lint.h"
+#include "History.h"
+#include "Graph.h"
 #include "Py.h"
 #include "Text.h"
 
@@ -73,7 +75,8 @@ QString localPath(const QString& fileUrl)
 QVariantMap issueMap(const LintIssue& i)
 {
     return {{QStringLiteral("line"), i.line}, {QStringLiteral("level"), i.level}, {QStringLiteral("msg"), i.msg}, {QStringLiteral("file"), i.file},
-            {QStringLiteral("col"), i.col}, {QStringLiteral("len"), i.len}};
+            {QStringLiteral("col"), i.col}, {QStringLiteral("len"), i.len},
+            {QStringLiteral("fixMode"), i.fixMode}, {QStringLiteral("fix"), i.fix}, {QStringLiteral("fixLabel"), i.fixLabel}};
 }
 
 // the looks of a mod's line in ES «Моды и пользовательские сценарии» (fonts: game/fonts with Cyrillic; kis/kisi have none)
@@ -200,6 +203,7 @@ bool Engine::start(const QString& esRoot)
     QDir().mkpath(m_root + QStringLiteral("/projects"));
     m_ready = true;
     build::removeHook(esRoot);            // a leftover from a crashed test run
+    build::removeGate(esRoot);            // … or from a check GenryBL was closed in the middle of
     m_watch.setInterval(1500);
     connect(&m_watch, &QTimer::timeout, this, [this] {
         if (m_gamePid && !build::isRunning(m_gamePid)) {
@@ -277,6 +281,11 @@ CompileOptions Engine::options() const
     CompileOptions o;
     for (auto it = m_es.characters.begin(); it != m_es.characters.end(); ++it) o.knownSpeakers.insert(it.key());
     o.knownSpeakers << QStringLiteral("narrator") << QStringLiteral("th") << QStringLiteral("genry") << QStringLiteral("scar");
+    // «сам расставит»: music / sounds / ambience of the game and what the project's own files were imported as
+    for (auto it = m_es.music.begin(); it != m_es.music.end(); ++it) o.esMusic.insert(it.key());
+    for (auto it = m_es.sounds.begin(); it != m_es.sounds.end(); ++it) o.esSounds.insert(it.key());
+    for (auto it = m_es.ambience.begin(); it != m_es.ambience.end(); ++it) o.esAmbience.insert(it.key());
+    o.audioKinds = audioKinds();
     return o;
 }
 
@@ -946,6 +955,32 @@ QVariantList Engine::lint(const QString& text) const
     return out;
 }
 
+QString Engine::applyFixes(const QString& text, const QVariantList& issues) const
+{
+    auto toIssues = [](const QVariantList& list) {
+        QVector<LintIssue> v;
+        for (const QVariant& x : list) {
+            const QVariantMap m = x.toMap();
+            LintIssue i;
+            i.line = m.value(QStringLiteral("line")).toInt();
+            i.fixMode = m.value(QStringLiteral("fixMode")).toInt();
+            i.fix = m.value(QStringLiteral("fix")).toString();
+            if (i.fixMode > 0) v.push_back(i);
+        }
+        return v;
+    };
+    QString out = gb::applyFixes(text, toIssues(issues));
+    // a fix can open the way to the next one (a scene made, its line checked): a few rounds, never forever
+    for (int round = 0; round < 3; ++round) {
+        const QVector<LintIssue> more = toIssues(lint(out));
+        if (more.isEmpty()) break;
+        const QString next = gb::applyFixes(out, more);
+        if (next == out) break;
+        out = next;
+    }
+    return out;
+}
+
 static QVariantList notesList(const QVector<ScreenplayNote>& notes, int base)
 {
     QVariantList out;
@@ -1126,6 +1161,24 @@ QVariantMap Engine::cinemaStart(const QString& text, int line)
 
 QVariantMap Engine::cinemaNext(int option) { return cinemaMap(m_cinema.next(option)); }
 
+QVariantMap Engine::cinemaReplay(const QString& text, int line, const QVariantList& inputs)
+{
+    m_cinema.load(text, &m_es);
+    CinemaStop st = m_cinema.start(line);
+    int used = 0;
+    for (const QVariant& in : inputs) {
+        if (st.kind == CinemaStop::End) break;
+        const int arg = in.toInt();
+        // a pick that is not there any more (the option was deleted): the replay stops at that choice
+        if (st.kind == CinemaStop::Choice && arg >= int(st.options.size())) break;
+        st = m_cinema.next(arg);
+        ++used;
+    }
+    QVariantMap m = cinemaMap(st);
+    m.insert(QStringLiteral("used"), used);
+    return m;
+}
+
 QVariantMap Engine::cinemaMap(const CinemaStop& c)
 {
     static const char* const kinds[] = {"say", "choice", "note", "card", "timed", "video", "end"};
@@ -1169,6 +1222,22 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
             {QStringLiteral("ambience"), url(c.ambience)}, {QStringLiteral("ambienceKey"), c.ambience},
             {QStringLiteral("sounds"), sounds}, {QStringLiteral("popups"), popups}, {QStringLiteral("video"), video},
             {QStringLiteral("moment"), c.moment}, {QStringLiteral("note"), c.note}, {QStringLiteral("time"), st.timeOfDay}};
+}
+
+QVariantMap Engine::storyGraph(const QString& text) const
+{
+    const StoryGraph g = gb::storyGraph(text, options());
+    QVariantList nodes, edges;
+    for (const GraphNode& n : g.nodes)
+        nodes << QVariantMap{{QStringLiteral("name"), n.name}, {QStringLiteral("line"), n.line}, {QStringLiteral("lastLine"), n.lastLine},
+                             {QStringLiteral("lines"), n.lines}, {QStringLiteral("words"), n.words}, {QStringLiteral("bg"), n.bg},
+                             {QStringLiteral("kind"), n.kind}, {QStringLiteral("ending"), n.ending}, {QStringLiteral("start"), n.start},
+                             {QStringLiteral("reachable"), n.reachable}, {QStringLiteral("chapter"), n.chapter},
+                             {QStringLiteral("col"), n.col}, {QStringLiteral("row"), n.row}};
+    for (const GraphEdge& e : g.edges)
+        edges << QVariantMap{{QStringLiteral("from"), e.from}, {QStringLiteral("to"), e.to}, {QStringLiteral("kind"), e.kind},
+                             {QStringLiteral("text"), e.text}, {QStringLiteral("line"), e.line}};
+    return {{QStringLiteral("nodes"), nodes}, {QStringLiteral("edges"), edges}, {QStringLiteral("cols"), g.cols}, {QStringLiteral("rows"), g.rows}};
 }
 
 QVariantList Engine::lineStarts(const QString& text) const
@@ -1662,6 +1731,8 @@ QString Engine::createProject(const QString& name, bool example)
 bool Engine::openProject(const QString& id)
 {
     if (!QFileInfo::exists(projectDir(id) + QStringLiteral("/story.txt"))) return false;
+    // the story as it was when the maker sat down to it: always one version to come back to
+    if (!m_shotMode) history::snapshot(historyDir(id), loadStory(id), QStringLiteral("open"));
     m_current = id;
     m_renderer.setCustomImages(build::customImageFiles(assetsDir(id)));
     setSetting(QStringLiteral("lastProject"), id);
@@ -1684,10 +1755,64 @@ bool Engine::saveStory(const QString& id, const QString& text)
     if (id.isEmpty()) return false;
     if (m_shotMode) return true;
     const QString path = projectDir(id) + QStringLiteral("/story.txt");
-    if (loadStory(id) == text) return true;
+    const QString onDisk = loadStory(id);
+    if (onDisk == text) return true;
+    history::onSave(historyDir(id), onDisk, text);
     const bool ok = writeFile(path, text.toUtf8());
     if (!ok) emit toast(gbTr("Не удалось сохранить %1").arg(QDir::toNativeSeparators(path)), 2);
     return ok;
+}
+
+QVariantList Engine::historyList(const QString& id) const
+{
+    const QVector<history::Version> all = history::list(historyDir(id));
+    const QDateTime now = QDateTime::currentDateTime();
+    QVariantList out;
+    // what each version changed against the one before it (the list is newest first: the pair is [i + 1] -> [i])
+    QVector<QString> texts;
+    for (const history::Version& v : all) texts << history::read(historyDir(id), v.file);
+    for (int i = 0; i < all.size(); ++i) {
+        const history::Version& v = all[i];
+        const qint64 secs = v.when.secsTo(now);
+        QString ago;
+        if (secs < 60) ago = gbTr("только что");
+        else if (secs < 3600) ago = gbTr("%1 мин назад").arg(secs / 60);
+        else if (v.when.date() == now.date()) ago = gbTr("сегодня %1").arg(v.when.toString(QStringLiteral("HH:mm")));
+        else if (v.when.date() == now.date().addDays(-1)) ago = gbTr("вчера %1").arg(v.when.toString(QStringLiteral("HH:mm")));
+        else ago = v.when.toString(QStringLiteral("dd.MM.yyyy HH:mm"));
+        const QPair<int, int> c = i + 1 < all.size() ? history::diffCount(texts[i + 1], texts[i]) : qMakePair(v.lines, 0);
+        out << QVariantMap{{QStringLiteral("file"), v.file}, {QStringLiteral("when"), v.when.toString(QStringLiteral("dd.MM.yyyy HH:mm:ss"))},
+                           {QStringLiteral("ago"), ago}, {QStringLiteral("tag"), v.tag}, {QStringLiteral("lines"), v.lines},
+                           {QStringLiteral("add"), c.first}, {QStringLiteral("del"), c.second}};
+    }
+    return out;
+}
+
+QString Engine::historyText(const QString& id, const QString& file) const { return history::read(historyDir(id), file); }
+
+void Engine::keepVersion(const QString& id, const QString& text, const QString& tag)
+{
+    if (id.isEmpty() || m_shotMode) return;
+    history::snapshot(historyDir(id), text, tag);
+}
+
+QVariantList Engine::historyDiff(const QString& id, const QString& file, const QString& currentText) const
+{
+    QVariantList out;
+    const QString old = history::read(historyDir(id), file);
+    for (const history::DiffLine& d : history::diff(currentText, old, 3))
+        out << QVariantMap{{QStringLiteral("kind"), QString(QLatin1Char(d.kind))}, {QStringLiteral("text"), d.text},
+                           {QStringLiteral("line"), d.kind == '+' ? d.newLine : d.oldLine}};
+    return out;
+}
+
+QString Engine::restoreHistory(const QString& id, const QString& file, const QString& currentText)
+{
+    const QString old = history::read(historyDir(id), file);
+    if (old.isEmpty()) return {};
+    history::snapshot(historyDir(id), currentText, QStringLiteral("restore"));
+    saveStory(id, old);
+    return old;
 }
 
 bool Engine::renameProject(const QString& id, const QString& name)
@@ -2122,6 +2247,7 @@ QString Engine::claimModId(const QString& id, const QString& text)
     QString fresh = base;
     for (int n = 2; takenByOther(fresh) || fresh == modId; ++n) fresh = QStringLiteral("%1_%2").arg(base).arg(n);
     static const QRegularExpression line(QStringLiteral("(?m)^@mod_id[ \\t].*$"));
+    history::snapshot(historyDir(id), text, QStringLiteral("modid"));
     QString out = text;
     if (out.contains(line)) out.replace(line, QStringLiteral("@mod_id ") + fresh);
     else out.prepend(QStringLiteral("@mod_id ") + fresh + QLatin1Char('\n'));
@@ -2180,7 +2306,7 @@ void Engine::engineCheck(const QString& id, const QString& storyText)
     const QString text = claimModId(id, storyText);
     const BuildEnv env = envFor(id);
     const CompileOptions opt = options();
-    setBusy(true, gbTr("Проверка движком БЛ (Ren'Py lint)… до пары минут"));
+    setBusy(true, gbTr("Мод проверяет сама игра: строит каждый экран мода и прогоняет свой lint… до пары минут"));
     auto* w = new QFutureWatcher<QPair<bool, QStringList>>(this);
     connect(w, &QFutureWatcher<QPair<bool, QStringList>>::finished, this, [this, w] {
         const auto res = w->result();
@@ -2192,10 +2318,9 @@ void Engine::engineCheck(const QString& id, const QString& storyText)
         waitForWardrobe({});
         const BuildReport r = build::install(env, text, opt, {});
         if (!r.ok) return qMakePair(false, QStringList{r.error});
-        QString err;
-        const QStringList hits = build::lint(env.esRoot, r.meta.modId, &err, 600000);
-        if (!err.isEmpty()) return qMakePair(false, QStringList{err});
-        return qMakePair(hits.isEmpty(), hits);
+        const build::GameCheck c = build::gameCheck(env.esRoot, env.dataDir, {r.meta.modId});
+        if (!c.ran) return qMakePair(false, QStringList{c.error});
+        return qMakePair(c.hits.isEmpty(), c.hits);
     }));
 }
 
@@ -2244,10 +2369,11 @@ void Engine::exportMod(const QString& id, const QString& storyText, const QStrin
         const BuildReport r = build::install(env, text, opt, log);
         if (!r.ok) { res.message = r.error; return res; }
         res.modId = r.meta.modId;
-        log(gbTr("Экспорт: мод проверяет сама игра (Ren'Py lint) — до пары минут…"));
+        log(gbTr("Экспорт: мод проверяет сама игра — строит каждый экран и прогоняет свой lint, до пары минут…"));
         QString err;
-        const QStringList hits = build::lint(env.esRoot, r.meta.modId, &err, 600000);
-        if (!err.isEmpty()) { res.message = err; return res; }
+        const build::GameCheck c = build::gameCheck(env.esRoot, env.dataDir, {r.meta.modId});
+        if (!c.ran) { res.message = c.error; return res; }
+        const QStringList hits = c.hits;
         if (!hits.isEmpty()) {
             res.message = gbTr("Игра нашла в моде ошибки — экспорт остановлен, чтобы люди не получили сломанный мод:\n") +
                           QStringList(hits.mid(0, 8)).join(QLatin1Char('\n'));

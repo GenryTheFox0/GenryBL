@@ -56,6 +56,22 @@ void removeHook(const QString& esRoot);
 bool isRunning(qint64 pid);
 // "Everlasting Summer.exe" <root> lint -> the lines of the report that mention this mod (empty = clean)
 QStringList lint(const QString& esRoot, const QString& modId, QString* err, int timeoutMs = 180000);
+
+// The game itself checks installed mods in ONE start: «genry_smoke» (data/gate/genry_gate_smoke.rpy, put into
+// game/mods/_genry_gate only for the run) builds every screen of the mods once with the arguments the mods call
+// them with and checks every name their python reads - what the game's lint never looks at (V2.0 died on a menu
+// that way) - and then the game's own lint checks on the mods' statements (the whole game with the workshop takes
+// minutes). Hits: "mods/<id>/<id>.rpy:<line>: <what>" (empty = clean).
+struct GameCheck {
+    bool ran = false;            // the game started, checked and reported
+    QString error;               // why it did not
+    QStringList hits;
+    QStringList lintHits;        // the part of `hits` that is the game's lint (the rest: crashes the game would have)
+    int statements = 0, screens = 0;
+    QString console;             // what the game printed (a mod that does not even parse: its «File "…", line N»)
+};
+GameCheck gameCheck(const QString& esRoot, const QString& dataDir, const QStringList& modIds, int timeoutMs = 900000);
+void removeGate(const QString& esRoot);          // a check that never finished (GenryBL was closed) leaves no trace
 bool zipMod(const QString& modDir, const QString& zipPath, QString* err);
 // «Экспорт» (V1): the mod as OTHER people get it.
 // every "mods/<id>/..." file the mod's .rpy point at that is not inside its folder (empty = self-contained)

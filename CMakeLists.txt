@@ -42,6 +42,8 @@ add_library(gb_core STATIC
     src/core/Overlays.cpp
     src/core/Wardrobe.cpp
     src/core/Cinema.cpp
+    src/core/History.cpp
+    src/core/Graph.cpp
 )
 target_include_directories(gb_core PUBLIC src/core)
 target_link_libraries(gb_core PUBLIC Qt6::Core Qt6::Gui Qt6::Concurrent PRIVATE Qt6::CorePrivate)
@@ -93,6 +95,8 @@ qt_add_qml_module(GenryBL
         qml/ChoiceDialog.qml
         qml/ModTitleDialog.qml
         qml/ExportDialog.qml
+        qml/HistoryDialog.qml
+        qml/StoryMap.qml
         qml/Editor.qml
         qml/CodeEditor.qml
         qml/Palette.qml

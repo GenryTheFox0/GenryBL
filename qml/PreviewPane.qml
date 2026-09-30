@@ -17,6 +17,7 @@ Rectangle {
     signal seek(int line)
     signal step(int dir)
     signal enlarge()
+    signal liveCinema()                    // «живое кино» right here, over this pane
     // a character dragged to a place (fleft…fright) or its distance wheeled (-1 far, 0, 1 close; -2 = keep)
     signal moveSprite(int line, string pos, int dist)
 
@@ -182,6 +183,13 @@ Rectangle {
                 onClicked: pp.playing = !pp.playing
             }
             PillButton { dark: true; text: "›"; onClicked: pp.step(1) }
+            PillButton {
+                dark: true
+                text: qsTr("🎬 Живое кино")
+                onClicked: pp.liveCinema()
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Мод играет прямо тут, а ты пишешь дальше: каждая правка сразу видна в кино — без запуска БЛ")
+            }
             Slider {
                 id: scrub
                 Layout.fillWidth: true

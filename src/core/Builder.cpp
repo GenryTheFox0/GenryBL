@@ -597,6 +597,99 @@ QStringList lint(const QString& esRoot, const QString& modId, QString* err, int 
     return hits;
 }
 
+void removeGate(const QString& esRoot)
+{
+    QDir(esRoot + QStringLiteral("/game/mods/_genry_gate")).removeRecursively();
+}
+
+GameCheck gameCheck(const QString& esRoot, const QString& dataDir, const QStringList& modIds, int timeoutMs)
+{
+    GameCheck res;
+    const QString gate = esRoot + QStringLiteral("/game/mods/_genry_gate");
+    removeGate(esRoot);
+    QDir().mkpath(gate);
+    if (!QFile::copy(dataDir + QStringLiteral("/gate/genry_gate_smoke.rpy"), gate + QStringLiteral("/genry_gate_smoke.rpy"))) {
+        res.error = QStringLiteral("не положить проверку в игру: ") + QDir::toNativeSeparators(gate);
+        removeGate(esRoot);
+        return res;
+    }
+    const QString tag = QStringLiteral("%1_%2").arg(QCoreApplication::applicationPid()).arg(QDateTime::currentMSecsSinceEpoch());
+    const QString lintPath = QDir::tempPath() + QStringLiteral("/genrybl_lint_") + tag + QStringLiteral(".txt");
+    const QString smokePath = QDir::tempPath() + QStringLiteral("/genrybl_smoke_") + tag + QStringLiteral(".txt");
+    QProcess p;
+    p.setWorkingDirectory(esRoot);
+    QProcessEnvironment env = gameEnvironment();
+    env.insert(QStringLiteral("RENPY_LESS_UPDATES"), QStringLiteral("1"));      // no «Loading…» window for two minutes
+    env.insert(QStringLiteral("GENRY_SMOKE_OUT"), QDir::toNativeSeparators(smokePath));
+    env.insert(QStringLiteral("GENRY_SMOKE_MODS"), modIds.join(QLatin1Char(',')));
+    p.setProcessEnvironment(env);
+    p.setStandardOutputFile(lintPath);
+    p.setStandardErrorFile(lintPath, QIODevice::Append);
+    p.start(esExe(esRoot), {esRoot, QStringLiteral("genry_smoke")});
+    const bool started = p.waitForStarted(15000);
+    const bool finished = started && p.waitForFinished(timeoutMs);
+    if (started && !finished) p.kill();
+    removeGate(esRoot);
+    auto slurp = [](const QString& path) {
+        QFile f(path);
+        const QString s = f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.readAll()) : QString();
+        f.close();
+        QFile::remove(path);
+        return s;
+    };
+    const QString console = slurp(lintPath), smoke = slurp(smokePath);
+    res.console = console;
+    if (!started) { res.error = QStringLiteral("игра не запустилась для проверки"); return res; }
+    if (!finished) { res.error = QStringLiteral("игра проверяет слишком долго"); return res; }
+    // «genry_smoke»: ERROR <file> <line> <what> | LINT <file>:<line> <what> (+ LINT+ <the why>) | SMOKE DONE …
+    static const QRegularExpression err(QStringLiteral("^ERROR\\s+'?([^'\\s]+)'?\\s+(\\d+)\\s+(.*)$"));
+    static const QRegularExpression done(QStringLiteral("^SMOKE DONE (\\d+) statements, (\\d+) screens"));
+    bool smokeDone = false;
+    for (const QString& raw : smoke.split(QLatin1Char('\n'))) {
+        const QString line = raw.trimmed();
+        const QRegularExpressionMatch m = err.match(line);
+        if (m.hasMatch()) {
+            QString file = m.captured(1);
+            if (file.startsWith(QLatin1String("game/"))) file = file.mid(5);
+            res.hits << QStringLiteral("%1:%2: %3").arg(file, m.captured(2), m.captured(3));
+            continue;
+        }
+        if (line.startsWith(QLatin1String("LINT+ "))) {
+            res.hits << QStringLiteral("    ") + line.mid(6);
+            res.lintHits << res.hits.last();
+            continue;
+        }
+        if (line.startsWith(QLatin1String("LINT "))) {
+            QString l = line.mid(5);
+            if (l.startsWith(QLatin1String("game/"))) l = l.mid(5);
+            res.hits << l;
+            res.lintHits << l;
+            continue;
+        }
+        const QRegularExpressionMatch d = done.match(line);
+        if (d.hasMatch()) {
+            smokeDone = true;
+            res.statements = d.captured(1).toInt();
+            res.screens = d.captured(2).toInt();
+        }
+    }
+    if (!smokeDone) {
+        // the game died while starting (a broken .rpy of some mod): its traceback is the answer
+        QString why = console;
+        if (why.trimmed().isEmpty()) {
+            QFile tb(esRoot + QStringLiteral("/traceback.txt"));
+            if (tb.open(QIODevice::ReadOnly)) why = QString::fromUtf8(tb.readAll());
+            res.console = why;
+        }
+        QStringList tail = why.split(QLatin1Char('\n'));
+        tail = tail.mid(qMax(0, int(tail.size()) - 14));
+        res.error = QStringLiteral("игра не довела проверку до конца:\n") + tail.join(QLatin1Char('\n')).trimmed();
+        return res;
+    }
+    res.ran = true;
+    return res;
+}
+
 QString modOwnerFile(const QString& esRoot, const QString& modId)
 {
     return esRoot + QStringLiteral("/game/mods/") + modId + QStringLiteral("/.genrybl_owner");

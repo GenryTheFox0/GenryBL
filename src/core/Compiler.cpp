@@ -8,6 +8,7 @@
 #include "Wardrobe.h"
 #include "Weather.h"
 
+#include <QFileInfo>
 #include <QRegularExpression>
 #include <algorithm>
 #include <cmath>
@@ -373,7 +374,8 @@ SL compileConflictFocus(const QString& rest, const Ctx& c)
 
 SL compileFullheight(const QString& rest, const Ctx& c)
 {
-    const SL p = c.pipes(rest);
+    // V1: «полныйрост dv smile pioneer right 1.3» (words, no «|») is read word by word, not as one image name
+    const SL p = !c.opt.legacy && !rest.contains(QLatin1Char('|')) ? SL() : c.pipes(rest);
     QString image, pos, zoom, mirrorMode, alpha, effect;
     if (!p.isEmpty()) {
         image = p[0];
@@ -2300,6 +2302,7 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
             pos = w.takeLast();
         }
         QString image = pyStrip(joinW(w));
+        if (image.isEmpty() && !opt.legacy) return {U("    # показать: кого? («показать dv smile pioneer center»)")};
         if (!opt.legacy) {       // V1 «показать dv smile pioneer румянец пот»: the sprite with its overlay picture
             image = withOverlays(image);
             if (image.contains(QLatin1String(" genry_ov_"))) st.overlayImages.insert(image);
@@ -2409,6 +2412,8 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         SL w = words(rest);
         QString effect;
         if (!w.isEmpty() && isEffect(w.last())) effect = w.takeLast();
+        // V1: «убрать» with nobody named is no line of Ren'Py at all («hide» alone does not parse)
+        if (w.isEmpty() && !opt.legacy) return {U("    # убрать: кого? («убрать dv» или «убратьвсех»)")};
         return {withEffectLine(QStringLiteral("    hide ") + joinW(w), effect)};
     }
     if (cmd == QLatin1String("music")) return compileMusicPlay(rest, c);
@@ -2677,7 +2682,14 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
     if (cmd == QLatin1String("callscene")) return {QStringLiteral("    call ") + c.lab(rest)};
     if (cmd == QLatin1String("return")) return {QStringLiteral("    return")};
     if (cmd == QLatin1String("endgame")) return endgameTerminator();
-    if (cmd == QLatin1String("pause")) return {QStringLiteral("    $ renpy.pause(%1, hard=True)").arg(rest.isEmpty() ? QStringLiteral("1.0") : rest)};
+    if (cmd == QLatin1String("pause")) {
+        QString secs = rest.isEmpty() ? QStringLiteral("1.0") : rest;
+        if (!opt.legacy) {                           // V1: «пауза 2,5» / «пауза abc» never reach Python as they are
+            secs.replace(QLatin1Char(','), QLatin1Char('.'));
+            if (!pyIsNumber(secs)) secs = QStringLiteral("1.0");
+        }
+        return {QStringLiteral("    $ renpy.pause(%1, hard=True)").arg(secs)};
+    }
     if (cmd == QLatin1String("renpy")) return {I4 + rest};
     if (cmd == QLatin1String("unlockgallery")) return {QStringLiteral("    $ persistent.%1 = True").arg(persistentKey(modId, rest, QStringLiteral("cg01"), opt))};
     if (cmd == QLatin1String("itemget") || cmd == QLatin1String("replayunlock")) {
@@ -3156,7 +3168,73 @@ bool quietUnderLids(const QString& cmd)
     return quiet.contains(cmd);
 }
 
+QString rightAudioKind(const QString& line, const CompileOptions& opt, QString* kind)
+{
+    if (opt.legacy) return line;
+    const int indent = int(line.size() - pyLStrip(line).size());
+    const QString s = pyStrip(line);
+    const QString first = firstWord(s);
+    const QString cmd = normalizeCommand(first);
+    static const QSet<QString> audio{QStringLiteral("music"), QStringLiteral("sound"), QStringLiteral("ambience"),
+                                     QStringLiteral("musicfile"), QStringLiteral("soundfile")};
+    if (!audio.contains(cmd)) return line;
+    const QString rest = pyStrip(s.mid(first.size()));
+    const QString name = firstWord(rest);
+    if (name.isEmpty()) return line;
+    const QString tail = rest.mid(name.size());          // «fadein 2», «once»… stay as they were
+    QString is;                                          // what the name really is
+    const bool file = name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('.'));
+    if (file) {
+        if (!name.startsWith(QLatin1String("audio/"))) return line;         // the game's own paths: as written
+        is = opt.audioKinds.value(QFileInfo(name).fileName());
+        if (is == QLatin1String("voice")) is = QStringLiteral("sfx");
+        if (is.isEmpty()) is = cmd == QLatin1String("music") || cmd == QLatin1String("musicfile") ? QStringLiteral("music")
+                             : cmd == QLatin1String("ambience") ? QStringLiteral("ambience") : QStringLiteral("sfx");
+    } else {
+        const bool m = opt.esMusic.contains(name), x = opt.esSounds.contains(name), a = opt.esAmbience.contains(name);
+        if (!m && !x && !a) return line;                                    // not known: the lint says so, the line stays
+        const QString want = cmd == QLatin1String("music") || cmd == QLatin1String("musicfile") ? QStringLiteral("music")
+                           : cmd == QLatin1String("ambience") ? QStringLiteral("ambience") : QStringLiteral("sfx");
+        if ((want == QLatin1String("music") && m) || (want == QLatin1String("sfx") && x) || (want == QLatin1String("ambience") && a)) return line;
+        is = m ? QStringLiteral("music") : a ? QStringLiteral("ambience") : QStringLiteral("sfx");
+    }
+    if (kind) *kind = is;
+    QString word;
+    if (is == QLatin1String("music")) word = file ? QString::fromUtf8("музыкафайл") : QString::fromUtf8("музыка");
+    else if (is == QLatin1String("ambience")) word = QString::fromUtf8("атмосфера");
+    else word = file ? QString::fromUtf8("звукфайл") : QString::fromUtf8("звук");
+    // already that command (in either language): the line stays as the writer has it
+    if (normalizeCommand(word) == cmd) return line;
+    QString t = tail;
+    // a sound has no «fadein» / «once»: those words would be read as a part of its name
+    if (is == QLatin1String("sfx")) t.clear();
+    return line.left(indent) + word + QLatin1Char(' ') + name + t;
+}
+
+// V1 net under every line: a Ren'Py statement left without what it needs («show» with no image, «jump» with no
+// label…) does not parse, and one such line stops the WHOLE game from starting (every mod with it). Whatever
+// input made it, it becomes a comment that says so.
+static QStringList safeStatements(QStringList out)
+{
+    static const QRegularExpression bare(QStringLiteral("^(\\s*)(show|hide|jump|call|play\\s+\\w+|queue\\s+\\w+|with)\\s*(with\\s+\\w+\\s*)?:?$"));
+    for (QString& l : out) {
+        const QRegularExpressionMatch m = bare.match(l);
+        if (m.hasMatch()) l = m.captured(1) + QStringLiteral("# (") + pyStrip(l) + QStringLiteral(" - nothing to do: skipped)");
+    }
+    return out;
+}
+
+static QStringList compileLineEyes(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt);
+
 QStringList compileLine(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt)
+{
+    if (opt.legacy) return compileLineEyes(line, modId, st, opt);
+    const QString right = rightAudioKind(line, opt);
+    if (right != line) return compileLine(right, modId, st, opt);
+    return safeStatements(compileLineEyes(line, modId, st, opt));
+}
+
+static QStringList compileLineEyes(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt)
 {
     if (opt.legacy || !st.eyesClosed) return compileLineCore(line, modId, st, opt);
     const QString stripped = pyStrip(line);
@@ -3754,6 +3832,27 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
                 const ChoiceItemSpec it = parseChoiceItem(s);
                 for (const QString& n : choiceConditionVars(it.cond) + choiceConditionVars(it.need)) {
                     const QString v = slugOf(n, QStringLiteral("value"), opt);
+                    if (!modVars.contains(v)) { modVars.insert(v); varOrder << v; }
+                }
+                continue;
+            }
+            if (cmd == QLatin1String("ifjump") && s.contains(QLatin1String("->"))) {
+                // a Russian name is the mod's own points (a Latin one may be the game's: those stay as written)
+                static const QRegularExpression cyr(QStringLiteral("[\\x{0400}-\\x{04FF}]"));
+                for (const QString& n : choiceConditionVars(pyStrip(s.mid(w.size())).section(QStringLiteral("->"), 0, 0))) {
+                    if (!n.contains(cyr)) continue;
+                    const QString v = slugOf(n, QStringLiteral("value"), opt);
+                    if (!modVars.contains(v)) { modVars.insert(v); varOrder << v; }
+                }
+                continue;
+            }
+            if (cmd == QLatin1String("bestmeter")) {
+                for (const QString& part : s.mid(w.size()).split(QLatin1Char('|'))) {
+                    if (!part.contains(QLatin1String("->"))) continue;
+                    const QString left = pyStrip(part.section(QStringLiteral("->"), 0, 0));
+                    const QString l = left.toLower();
+                    if (left.isEmpty() || l == QString::fromUtf8("иначе") || l == QLatin1String("else") || l == QString::fromUtf8("ничья")) continue;
+                    const QString v = slugOf(left, QStringLiteral("value"), opt);
                     if (!modVars.contains(v)) { modVars.insert(v); varOrder << v; }
                 }
                 continue;
@@ -4646,7 +4745,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         if (meters || memories) block(kV1Popups);
         if (memories) out << QString() << QStringLiteral("default %1 = []").arg(c.sys(QStringLiteral("memories")));
         if (meters) block(kV1Meters);
-        if (!meterList.isEmpty()) {
+        if (!meterList.isEmpty() || all.contains(c.sys(QStringLiteral("meters")))) {
             SL m;
             for (const Meter& x : meterList)
                 m << QStringLiteral("(%1, %2, %3, %4, %5)").arg(pyUQ(x.title), pyQ(x.color), pyQ(c.var(x.raw)), x.lo, x.hi);

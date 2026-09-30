@@ -7,9 +7,14 @@
 //   gb_cli frame   <story.txt> <line> <out.png>    render what the player sees at that line
 //   gb_cli chibis  <any story.txt>                 (re)draw data/mod_assets/chibi/*.png from the ES sprites
 //   gb_cli wardrobe <any story.txt> <tag | "image"> [out.png]   the workshop wardrobe (--no-wardrobe skips loading it)
+//   gb_cli gate [--keep] [--only <word>]           «замок»: every story GenryBL must build (tests/gate, the golden stories,
+//                                                  the lab, every command form, the mod menu in every style with every
+//                                                  particle…) installed as mods at once and checked by the game itself -
+//                                                  each screen built, each python name, the game's lint. Exit 1 = broken.
 #include "Builder.h"
 #include "Cinema.h"
 #include "EsAssets.h"
+#include "Forms.h"
 #include "Library.h"
 #include "Lint.h"
 #include "Renderer.h"
@@ -38,18 +43,154 @@ static int fail(const QString& m)
     return 1;
 }
 
+namespace {
+
+struct GateStory { QString name, text, assets; };
+
+QString readText(const QString& path)
+{
+    QFile f(path);
+    return f.open(QIODevice::ReadOnly) ? stripBom(QString::fromUtf8(f.readAll())) : QString();
+}
+
+// the story under another mod name: the gate's own, so nothing of the maker's is touched
+QString withModId(const QString& text, const QString& modId)
+{
+    static const QRegularExpression line(QStringLiteral("(?m)^@mod_id[ \\t].*$"));
+    QString out = text;
+    if (out.contains(line)) out.replace(line, QStringLiteral("@mod_id ") + modId);
+    else out.prepend(QStringLiteral("@mod_id ") + modId + QLatin1Char('\n'));
+    return out;
+}
+
+QVector<GateStory> gateStories(const QString& root, const QString& only)
+{
+    QVector<GateStory> all;
+    auto addDir = [&](const QString& dir, const QString& prefix) {
+        for (const QFileInfo& fi : QDir(dir).entryInfoList({QStringLiteral("*.txt")}, QDir::Files, QDir::Name)) {
+            if (QFileInfo::exists(fi.absolutePath() + QLatin1Char('/') + fi.completeBaseName() + QStringLiteral(".error"))) continue;
+            const QString text = readText(fi.absoluteFilePath());
+            if (!text.trimmed().isEmpty()) all.push_back({prefix + fi.completeBaseName(), text, fi.absolutePath() + QStringLiteral("/assets")});
+        }
+    };
+    addDir(root + QStringLiteral("/tests/gate"), QStringLiteral("gate/"));
+    addDir(root + QStringLiteral("/data/lab"), QStringLiteral("lab/"));
+    addDir(root + QStringLiteral("/tests/golden/stories"), QStringLiteral("golden/"));
+    // the maker's showcase mods, when this is the developer's tree
+    for (const QString& p : {QStringLiteral("genrybl_demo"), QStringLiteral("genrybl_workshop")}) {
+        const QString dir = root + QStringLiteral("/projects/") + p;
+        const QString text = readText(dir + QStringLiteral("/story.txt"));
+        if (!text.isEmpty()) all.push_back({QStringLiteral("project/") + p, text, dir + QStringLiteral("/assets")});
+    }
+    // every command form, every variant, with its default values: one scene each
+    Forms forms;
+    QString err;
+    if (forms.load(root + QStringLiteral("/data/forms.json"), &err)) {
+        QString story = QStringLiteral("@mod_name Gate forms\n\n");
+        int n = 0;
+        QStringList menus;
+        for (const QVariant& fv : forms.forms()) {
+            const QVariantMap form = fv.toMap();
+            const QString id = form.value(QStringLiteral("id")).toString();
+            const QString by = form.value(QStringLiteral("by")).toString();
+            QStringList variants{QString()};
+            if (!by.isEmpty()) {
+                variants.clear();
+                for (const QVariant& f : form.value(QStringLiteral("fields")).toList())
+                    if (f.toMap().value(QStringLiteral("k")).toString() == by)
+                        for (const QVariant& o : f.toMap().value(QStringLiteral("opts")).toList()) variants << o.toList().value(0).toString();
+            }
+            for (const QString& v : variants) {
+                QVariantMap preset;
+                if (!by.isEmpty()) preset.insert(by, v);
+                const QString line = forms.build(id, forms.defaults(id, preset));
+                if (id == QLatin1String("modmenu")) { menus << line; continue; }
+                story += QStringLiteral(": f%1\nфон ext_square_day\n%2\nтекст ок\nпереход f%3\n\n").arg(n).arg(line).arg(n + 1);
+                ++n;
+            }
+        }
+        story += QStringLiteral(": f%1\nтекст конец\nконецигры\n").arg(n);
+        // the forms' own example files (audio/theme.ogg, images/…): there, empty - the game only asks if they exist
+        const QString fake = QDir::tempPath() + QStringLiteral("/genrybl_gate_forms/assets");
+        QDir(fake).removeRecursively();
+        static const QRegularExpression file(QStringLiteral("\\b((?:audio|images|video|fonts)/[^\\s|\"]+\\.[A-Za-z0-9]+)"));
+        for (auto m = file.globalMatch(story); m.hasNext();) {
+            const QString rel = m.next().captured(1);
+            QDir().mkpath(QFileInfo(fake + QLatin1Char('/') + rel).absolutePath());
+            QFile f(fake + QLatin1Char('/') + rel);
+            if (f.open(QIODevice::WriteOnly)) f.write("0");
+        }
+        all.push_back({QStringLiteral("forms/all"), story, fake});
+        // the mod's main menu: every style with every particle; «свой» in every layout and look
+        static const char* const styles[] = {"свой", "бл", "7дл", "панель", "тетрадь", "дневник", "доска", "монитор", "нуар", "живое", "кино", "карта"};
+        static const char* const fxs[] = {"по часам", "пыль", "листья", "светлячки", "дождь", "снег", "сердца", "нет"};
+        static const char* const layouts[] = {"слева", "справа", "по центру", "снизу"};
+        static const char* const looks[] = {"текст", "таблички", "бл", "неон"};
+        static const char* const enters[] = {"выезд", "проявление", "снизу", "печать"};
+        const QVariantList buttons{
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Заселиться")}, {QStringLiteral("scene"), QStringLiteral("start")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Продолжить")}, {QStringLiteral("scene"), QStringLiteral("загрузить")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Дни лагеря")}, {QStringLiteral("scene"), QStringLiteral("главы")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Фото")}, {QStringLiteral("scene"), QStringLiteral("галерея")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Значки")}, {QStringLiteral("scene"), QStringLiteral("достижения")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Дружба")}, {QStringLiteral("scene"), QStringLiteral("отношения")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Опции")}, {QStringLiteral("scene"), QStringLiteral("настройки")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Как звать")}, {QStringLiteral("scene"), QStringLiteral("имя")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Бонус")}, {QStringLiteral("scene"), QStringLiteral("bonus")}},
+            QVariantMap{{QStringLiteral("cap"), QStringLiteral("Выселение")}, {QStringLiteral("scene"), QStringLiteral("выход")}}};
+        const QString tail = QStringLiteral("\n\n: start\nфон ext_square_day\nтекст начало\nконецигры\n: bonus\nтекст бонус\nконецигры\n");
+        int k = 0;
+        for (const char* st : styles)
+            for (const char* fx : fxs) {
+                QVariantMap v = forms.defaults(QStringLiteral("modmenu"), {{QStringLiteral("style"), QString::fromUtf8(st)}});
+                v.insert(QStringLiteral("fx"), QString::fromUtf8(fx));
+                v.insert(QStringLiteral("buttons"), buttons);
+                all.push_back({QStringLiteral("menu/%1+%2").arg(QString::fromUtf8(st), QString::fromUtf8(fx)),
+                               QStringLiteral("@mod_name Gate menu\n") + forms.build(QStringLiteral("modmenu"), v) + tail, QString()});
+                ++k;
+            }
+        for (int l = 0; l < 4; ++l)
+            for (int o = 0; o < 4; ++o) {
+                QVariantMap v = forms.defaults(QStringLiteral("modmenu"), {{QStringLiteral("style"), QString::fromUtf8("свой")}});
+                v.insert(QStringLiteral("layout"), QString::fromUtf8(layouts[l]));
+                v.insert(QStringLiteral("look"), QString::fromUtf8(looks[o]));
+                v.insert(QStringLiteral("enter"), QString::fromUtf8(enters[(l + o) % 4]));
+                v.insert(QStringLiteral("fx"), QString::fromUtf8(fxs[(l * 4 + o) % 8]));
+                v.insert(QStringLiteral("accent"), QStringLiteral("#8be9fd"));
+                v.insert(QStringLiteral("buttons"), buttons);
+                all.push_back({QStringLiteral("menu/свой %1 %2").arg(QString::fromUtf8(layouts[l]), QString::fromUtf8(looks[o])),
+                               QStringLiteral("@mod_name Gate menu\n") + forms.build(QStringLiteral("modmenu"), v) + tail, QString()});
+            }
+        for (const QString& m : menus) all.push_back({QStringLiteral("forms/menu"), QStringLiteral("@mod_name Gate menu\n") + m + tail, QString()});
+    }
+    if (only.isEmpty()) return all;
+    QVector<GateStory> some;
+    for (const GateStory& s : all) if (s.name.contains(only, Qt::CaseInsensitive)) some.push_back(s);
+    return some;
+}
+
+void clearGateMods(const QString& esRoot)
+{
+    for (const QFileInfo& fi : QDir(esRoot + QStringLiteral("/game/mods")).entryInfoList({QStringLiteral("gbgate_*")}, QDir::Dirs | QDir::NoDotAndDotDot))
+        QDir(fi.absoluteFilePath()).removeRecursively();
+    build::removeGate(esRoot);
+}
+
+} // namespace
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
     const QStringList a = app.arguments();
-    if (a.size() < 3) {
-        out << "usage: gb_cli compile|install|lint|run|frame <story.txt> ...\n";
+    const bool gate = a.value(1) == QLatin1String("gate");
+    if (a.size() < 3 && !gate) {
+        out << "usage: gb_cli compile|install|lint|run|frame <story.txt> ... | gb_cli gate\n";
         return 2;
     }
-    QFile f(a[2]);
-    if (!f.open(QIODevice::ReadOnly)) return fail("cannot read " + a[2]);
-    const QString story = QString::fromUtf8(f.readAll());
+    QFile f(a.value(2));
+    if (!gate && !f.open(QIODevice::ReadOnly)) return fail("cannot read " + a[2]);
+    const QString story = gate ? QString() : QString::fromUtf8(f.readAll());
     const QString root = QStringLiteral(GB_SOURCE_DIR);
     static EsAssets es;
     QString err;
@@ -59,6 +200,11 @@ int main(int argc, char** argv)
     CompileOptions opt;
     opt.legacy = a.contains("--legacy");
     if (esOk) for (auto it = es.characters.begin(); it != es.characters.end(); ++it) opt.knownSpeakers.insert(it.key());
+    if (esOk && !opt.legacy) {
+        for (auto it = es.music.begin(); it != es.music.end(); ++it) opt.esMusic.insert(it.key());
+        for (auto it = es.sounds.begin(); it != es.sounds.end(); ++it) opt.esSounds.insert(it.key());
+        for (auto it = es.ambience.begin(); it != es.ambience.end(); ++it) opt.esAmbience.insert(it.key());
+    }
     const QString cmd = a[1];
     // the workshop wardrobe (workshop outfits on ES bodies): compile/lint/preview know its sprites
     static Library wlib;
@@ -167,7 +313,7 @@ int main(int argc, char** argv)
     BuildEnv env;
     env.esRoot = esRoot;
     env.dataDir = root + "/data";
-    env.assetsDir = QFileInfo(a[2]).absolutePath() + "/assets";
+    env.assetsDir = QFileInfo(a.value(2)).absolutePath() + "/assets";
     env.backupsDir = root + "/work/backups";
     env.saveDir = root + "/work/es_saves";
     if (cmd == "install" || cmd == "lint" || cmd == "run" || cmd == "export") {
@@ -211,6 +357,86 @@ int main(int argc, char** argv)
             out << "started ES pid " << pid << "\n";
         }
         return 0;
+    }
+    if (cmd == "gate") {
+        if (!esOk) return fail(err);
+        const QString only = a.indexOf("--only") > 0 ? a.value(a.indexOf("--only") + 1) : QString();
+        const QVector<GateStory> stories = gateStories(root, only);
+        out << "gate: " << stories.size() << " stories\n";
+        out.flush();
+        clearGateMods(esRoot);
+        QHash<QString, QString> nameOf;
+        QStringList ids, failed;
+        QElapsedTimer t;
+        t.start();
+        for (int i = 0; i < stories.size(); ++i) {
+            const QString modId = QStringLiteral("gbgate_%1").arg(i, 3, 10, QLatin1Char('0'));
+            BuildEnv env;
+            env.esRoot = esRoot;
+            env.dataDir = root + "/data";
+            env.assetsDir = stories[i].assets.isEmpty() ? QDir::tempPath() + "/genrybl_gate_noassets/assets" : stories[i].assets;
+            env.es = &es;
+            const BuildReport r = build::install(env, withModId(stories[i].text, modId), opt, {});
+            if (!r.ok) {
+                // «нечего собирать» is a story's own business (an empty test), everything else is a failure
+                if (!r.error.contains(QString::fromUtf8("собирать нечего"))) failed << stories[i].name + ": BUILD " + r.error;
+                continue;
+            }
+            ids << modId;
+            nameOf.insert(modId, stories[i].name);
+        }
+        out << "installed " << ids.size() << " mods in " << t.elapsed() / 1000 << " s; the game checks them...\n";
+        out.flush();
+        if (a.contains("--dry")) {                       // only the builds (no game start)
+            for (const QString& fl : failed) out << "  FAIL " << fl << "\n";
+            if (!a.contains("--keep")) clearGateMods(esRoot);
+            return failed.isEmpty() ? 0 : 1;
+        }
+        build::GameCheck c;
+        for (int round = 0; round < 5; ++round) {
+            c = build::gameCheck(esRoot, root + "/data", ids);
+            if (c.ran) break;
+            // a mod that does not even parse stops the whole game: its errors go to the report, it leaves the run
+            static const QRegularExpression parseErr(QStringLiteral("^File \"game/mods/(gbgate_\\d+)/[^\"]+\", line (\\d+): (.*)$"));
+            const QStringList con = c.console.split('\n');
+            QSet<QString> broken;
+            for (int i = 0; i < con.size(); ++i) {
+                const QRegularExpressionMatch m = parseErr.match(con[i].trimmed());
+                if (!m.hasMatch()) continue;
+                broken.insert(m.captured(1));
+                failed << nameOf.value(m.captured(1), QStringLiteral("?")) + ": PARSE " + m.captured(1) + ".rpy:" + m.captured(2) + ": " + m.captured(3) +
+                              "  |  " + con.value(i + 1).trimmed();
+            }
+            if (broken.isEmpty()) break;
+            for (const QString& id : broken) {
+                ids.removeAll(id);
+                QDir(esRoot + "/game/mods/" + id).removeRecursively();
+            }
+            out << "  " << broken.size() << " mods do not parse - out of the run, again...\n";
+            out.flush();
+        }
+        if (!a.contains("--keep")) clearGateMods(esRoot);
+        if (!c.ran) {
+            for (const QString& fl : failed) out << "  FAIL " << fl << "\n";
+            out << "GATE: the game did not finish: " << c.error << "\n";
+            return 1;
+        }
+        out << "the game checked " << c.statements << " statements, built " << c.screens << " screens in " << t.elapsed() / 1000 << " s\n";
+        static const QRegularExpression modOf(QStringLiteral("(gbgate_\\d+)"));
+        int notes = 0;
+        QString lastId;
+        for (const QString& h : c.hits) {
+            const QString id = h.startsWith(QLatin1String("    ")) ? lastId : modOf.match(h).captured(1);
+            lastId = id;
+            // the golden stories are garbage on purpose (typos, empty commands): a picture that is not there is the
+            // game's red text there, not a crash - only what would stop the game counts for them
+            if (nameOf.value(id).startsWith(QLatin1String("golden/")) && c.lintHits.contains(h)) { ++notes; continue; }
+            failed << (nameOf.value(id, QStringLiteral("?")) + ": " + h);
+        }
+        if (notes) out << "  (" << notes << " lint notes on the garbage-on-purpose golden stories - not counted)\n";
+        for (const QString& fl : failed) out << "  FAIL " << fl << "\n";
+        out << (failed.isEmpty() ? "GATE CLEAN\n" : QStringLiteral("GATE: %1 problems\n").arg(failed.size()));
+        return failed.isEmpty() ? 0 : 1;
     }
     if (cmd == "chibis") {
         // data/mod_assets/chibi/<id>.png: round faces for the camp map (the Steam build has no map_icon_nXX.png)

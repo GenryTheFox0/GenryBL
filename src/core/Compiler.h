@@ -30,6 +30,11 @@ struct CompileOptions {
     // an unknown speaker becomes genry_sp_<name> and gets its own Character() declaration
     // instead of crashing the game with a NameError.
     QSet<QString> knownSpeakers;
+    // V1 «сам расставит»: the game's audio by kind and the project's own files by what they were imported as
+    // (file name -> music | sfx | ambience | voice). A track written with «звук» still plays as music, a sound
+    // written with «музыка» as a sound, «музыка audio/x.ogg» as the project's file (rightAudioKind).
+    QSet<QString> esMusic, esSounds, esAmbience;
+    QHash<QString, QString> audioKinds;
 };
 
 // Per-story state the old builder threaded through compile_line.
@@ -61,6 +66,10 @@ struct CustomImage {
 ModMeta parseMeta(const QStringList& lines, QStringList* body, const CompileOptions& opt = {});
 bool hasPlayableBody(const QStringList& body, const CompileOptions& opt = {});
 QStringList compileLine(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt = {});
+// V1: an audio line in the right command for what it plays («звук sunny_day» -> «музыка sunny_day», «музыкафайл
+// audio/door.ogg» of a file imported as a sound -> «звукфайл …»); the line as it was when it is right already.
+// `kind` = what the audio really is: music | sfx | ambience
+QString rightAudioKind(const QString& line, const CompileOptions& opt, QString* kind = nullptr);
 // «менюмода»: a button's kind by its target or caption (Дни -> главы, Фотографии -> галерея, Выселиться -> выход…)
 QString menuButtonKind(const QString& word);
 // «менюмода <стиль>»: panel | es | 7dl | notebook | diary | board | monitor | noir | live | cinema | map

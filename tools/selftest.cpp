@@ -10,6 +10,8 @@
 #include "Cinema.h"
 #include "Compiler.h"
 #include "EsAssets.h"
+#include "History.h"
+#include "Graph.h"
 #include "Forms.h"
 #include "Library.h"
 #include "Lint.h"
@@ -30,6 +32,7 @@
 #include <QJsonObject>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QTemporaryDir>
 #include <QTextStream>
 
 using namespace gb;
@@ -1336,6 +1339,113 @@ static void testAchievements2()
     check(notDigits, "lint: a code the digits cannot type");
 }
 
+static void testHistory()
+{
+    out << "[11] history of versions\n";
+    QTemporaryDir tmp;
+    const QString dir = tmp.path() + QStringLiteral("/history");
+    const QDateTime t0 = QDateTime::fromString(QStringLiteral("2026-09-30T12:00:00"), Qt::ISODate);
+    QString story;
+    for (int i = 1; i <= 40; ++i) story += QStringLiteral("line %1\n").arg(i);
+    check(history::snapshot(dir, story, QStringLiteral("open"), t0) && !history::snapshot(dir, story, QStringLiteral("open"), t0.addSecs(5)),
+          "a snapshot on open; the same text twice is one version");
+    // a few minutes of typing: no new version until the gap, then one
+    const QString typed = story + QStringLiteral("line 41\n");
+    check(history::onSave(dir, story, typed, t0.addSecs(60)) == 0 && history::onSave(dir, story, typed, t0.addSecs(300)) == 1,
+          "ordinary work: one version every few minutes");
+    // Ctrl+A + a letter: the text BEFORE the cut is kept, right then
+    const QString more = typed + QStringLiteral("line 42\n");
+    const int quiet = history::onSave(dir, typed, more, t0.addSecs(310));
+    const int kept = history::onSave(dir, more, QStringLiteral("x\n"), t0.addSecs(320));
+    const QVector<history::Version> v = history::list(dir);
+    check(quiet == 0 && kept == 1 && v.size() == 3 && v.first().tag == QStringLiteral("cut") && history::read(dir, v.first().file) == more,
+          "a big cut keeps the text as it was before it");
+    // the diff: what bringing a version back does
+    const QString a = QStringLiteral("a\nb\nc\nd\ne\nf\ng\nh\n"), b = QStringLiteral("a\nb\nX\nd\ne\nf\ng\nh\nY\n");
+    const QVector<history::DiffLine> d = history::diff(a, b, 1);
+    QString shape;
+    for (const history::DiffLine& l : d) shape += QLatin1Char(l.kind) + l.text + QLatin1Char(' ');
+    check(shape == QStringLiteral("~ =b -c +X =d ~ =h +Y "), "diff: changed lines, context, folded runs: " + shape);
+    check(history::diffCount(a, b) == qMakePair(2, 1) && history::diffCount(a, a) == qMakePair(0, 0), "diff counts");
+    // thinning: the newest are all kept, older ones one a day
+    for (int i = 0; i < 90; ++i) history::snapshot(dir, story + QString::number(i), QString(), t0.addDays(-(i / 3)).addSecs(-i * 60));
+    const QVector<history::Version> after = history::list(dir);
+    QSet<QString> days;
+    int oldOnes = 0;
+    for (int i = 60; i < after.size(); ++i) { days.insert(after[i].when.date().toString()); ++oldOnes; }
+    check(after.size() >= 60 && after.size() < 93 && days.size() == oldOnes, "old versions thin out to one a day");
+}
+
+// [12] the doctor (fixes the lint offers) and the story map
+static void testDoctor()
+{
+    out << "[12] doctor + story map\n";
+    CompileOptions v1;
+    v1.knownSpeakers = {QStringLiteral("sl"), QStringLiteral("dv"), QStringLiteral("me")};
+    v1.esMusic = {QStringLiteral("sunny_day")};
+    v1.esSounds = {QStringLiteral("sfx_door_open")};
+    v1.audioKinds = {{QStringLiteral("door.ogg"), QStringLiteral("sfx")}};
+    // «сам расставит»: the audio plays as what it is, whatever the command
+    check(rightAudioKind(QString::fromUtf8("звук sunny_day"), v1) == QString::fromUtf8("музыка sunny_day") &&
+              rightAudioKind(QString::fromUtf8("  музыка sfx_door_open fadein 2"), v1) == QString::fromUtf8("  звук sfx_door_open") &&
+              rightAudioKind(QString::fromUtf8("музыкафайл audio/door.ogg"), v1) == QString::fromUtf8("звукфайл audio/door.ogg") &&
+              rightAudioKind(QString::fromUtf8("музыка audio/door.ogg"), v1) == QString::fromUtf8("звукфайл audio/door.ogg") &&
+              rightAudioKind(QString::fromUtf8("музыка sunny_day"), v1) == QString::fromUtf8("музыка sunny_day"),
+          "audio in the right command: music / sound / the project's files by what they were imported as");
+    const QString rpy = compileText(QString::fromUtf8("@mod_id genry_t\n: start\nзвук sunny_day\nпоказать\nубрать\nпауза abc\nконецигры\n"), v1);
+    check(rpy.contains(QStringLiteral("genry_resolve_music(\"sunny_day\")")) && !rpy.contains(QStringLiteral("\n    show \n")) &&
+              !rpy.contains(QStringLiteral("\n    hide \n")) && !rpy.contains(QStringLiteral("\n    show with")) &&
+              rpy.contains(QStringLiteral("renpy.pause(1.0, hard=True)")),
+          "compiled: the track plays as music, «показать» / «убрать» with nobody and «пауза abc» break nothing");
+    const QString story = QString::fromUtf8(
+        "@mod_id genry_t\n"
+        ": start\n"                      // 2
+        "покзать dv smile pioneer\n"     // 3  a slip of a command
+        "переход finsh\n"                // 4  a slip of a scene
+        ": finish\n"                     // 5
+        "звук sunny_day\n"               // 6  music as a sound
+        "убрать\n"                       // 7  nobody
+        "конецвыбора\n"                  // 8  stray
+        "текст всё\n"                    // 9  ends without a way on
+        ": lost\n"                       // 10 nobody leads here
+        "текст никто\n"
+        "конецигры\n"
+        ": finish\n"                     // 13 twice
+        "переход nowhere_at_all\n");     // 14 no such scene, nothing like it
+    LintContext ctx;
+    ctx.opt = v1;
+    const QVector<LintIssue> is = lintStory(story, ctx);
+    auto fixAt = [&](int line) { for (const LintIssue& i : is) if (i.line == line && i.fixMode) return i; return LintIssue{}; };
+    check(fixAt(3).fix == QString::fromUtf8("показать dv smile pioneer"), "doctor: a command with a slip -> «" + fixAt(3).fix + "»");
+    check(fixAt(4).fix == QString::fromUtf8("переход finish"), "doctor: a scene with a slip -> «" + fixAt(4).fix + "»");
+    check(fixAt(6).fix == QString::fromUtf8("музыка sunny_day"), "doctor: music written as a sound");
+    check(fixAt(7).fix == QString::fromUtf8("убратьвсех"), "doctor: «убрать» with nobody");
+    check(fixAt(8).fixMode == 3, "doctor: a stray «конецвыбора» goes");
+    check(fixAt(13).fix == QString::fromUtf8(": finish_2"), "doctor: a scene twice gets a name of its own -> «" + fixAt(13).fix + "»");
+    check(fixAt(14).fixMode == 4 && fixAt(14).fix.startsWith(QString::fromUtf8(": nowhere_at_all")), "doctor: a scene nothing is like is made");
+    bool lostSaid = false;
+    for (const LintIssue& i : is) if (i.line == 10 && i.msg.contains(QString::fromUtf8("игрок не увидит"))) lostSaid = true;
+    check(lostSaid, "lint: a scene nobody reaches is said");
+    const QString fixed = applyFixes(story, is);
+    check(fixed.contains(QString::fromUtf8("показать dv smile pioneer\nпереход finish\n: finish\nмузыка sunny_day\nубратьвсех\nтекст всё\n")) &&
+              fixed.contains(QString::fromUtf8(": finish_2\n")) && fixed.contains(QString::fromUtf8(": nowhere_at_all\nтекст ")),
+          "«Починить всё» makes every fix at once:\n" + fixed);
+    // the story map
+    const StoryGraph g = storyGraph(story, v1);
+    auto node = [&](const QString& n) { for (const GraphNode& x : g.nodes) if (x.name == n) return x; return GraphNode{}; };
+    check(node(QStringLiteral("start")).start && !node(QStringLiteral("finish")).reachable && !node(QStringLiteral("lost")).reachable &&
+              node(QStringLiteral("finsh")).kind == QStringLiteral("missing") && node(QStringLiteral("lost")).ending == QStringLiteral("end"),
+          "map: the start, reached / lost scenes, a way into nowhere, how scenes end");
+    const QString menu = QString::fromUtf8("@mod_id genry_t\nменюмода бл\nкнопка Начать -> start\nкнопка Бонус -> bonus\nкнопка Главы\nконецменюмода\n"
+                                           ": start\nвыбор\n- Да -> yes\n- Нет -> no\nконецвыбора\n: yes\nноваяглава Вторая\nконецигры\n: no\nконецигры\n"
+                                           ": bonus\nтекст б\nконецигры\n");
+    const StoryGraph mg = storyGraph(menu, v1);
+    int reachable = 0;
+    for (const GraphNode& x : mg.nodes) reachable += x.reachable;
+    check(mg.nodes.value(0).kind == QStringLiteral("menu") && mg.nodes.value(0).start && reachable == 5 && mg.edges.size() >= 5,
+          QStringLiteral("map: the mod menu is the start, its buttons, the options, chapters (%1 reached, %2 ways)").arg(reachable).arg(mg.edges.size()));
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -1352,6 +1462,8 @@ int main(int argc, char** argv)
     testCinema();
     testChoice2();
     testAchievements2();
+    testHistory();
+    testDoctor();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

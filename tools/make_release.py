@@ -111,7 +111,7 @@ def main():
     subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'bundle_patch.py')])
     print('== build the public edition')
     vs_shell(f'cmake -S "{ROOT}" -B "{BUILD}" -G Ninja -DCMAKE_BUILD_TYPE=Release -DGB_RELEASE=ON -DCMAKE_PREFIX_PATH="{QT}" >nul')
-    vs_shell(f'cmake --build "{BUILD}" --target GenryBL GenryBL_Setup gb_selftest')
+    vs_shell(f'cmake --build "{BUILD}" --target GenryBL GenryBL_Setup gb_selftest gb_cli')
     env = dict(os.environ)
     env['PATH'] = os.path.join(QT, 'bin') + os.pathsep + env['PATH']
     r = subprocess.run([os.path.join(BUILD, 'gb_selftest.exe')], env=env, capture_output=True, text=True, encoding='utf-8', errors='replace')
@@ -119,6 +119,17 @@ def main():
     print('   selftest:', ' | '.join(last))
     if r.returncode != 0:
         sys.exit('selftest failed - no release')
+    # «замок»: every story GenryBL must build, installed as mods and checked by the game itself - each screen built,
+    # each python name, the game's lint (gb_cli gate, ~4 min). A mod that would crash a player stops the release.
+    if '--skip-gate' in sys.argv:
+        print('   gate: SKIPPED on request (--skip-gate) - this release was NOT checked by the game')
+    else:
+        print('== gate: the game checks every story GenryBL must build (a few minutes)')
+        g = subprocess.run([os.path.join(BUILD, 'gb_cli.exe'), 'gate'], env=env, capture_output=True, text=True, encoding='utf-8', errors='replace')
+        tail = [l for l in g.stdout.splitlines() if l.startswith(('the game checked', '  FAIL', 'GATE'))]
+        print('\n'.join('   ' + l for l in tail[:40]))
+        if g.returncode != 0:
+            sys.exit('gate failed - no release')
 
     print('== stage dist/stage/GenryBL')
     shutil.rmtree(os.path.join(DIST, 'stage'), ignore_errors=True)
@@ -160,6 +171,7 @@ def main():
     copy_tree(os.path.join(ROOT, 'data', 'menu'), os.path.join(data, 'menu'))           # the living menu: a picture + a wind mask per time of day
     copy_tree(os.path.join(ROOT, 'data', 'i18n'), os.path.join(data, 'i18n'))           # 20 languages (ru = the source, no file)
     copy_tree(os.path.join(ROOT, 'data', 'flags'), os.path.join(data, 'flags'))         # the language chooser's flags
+    copy_tree(os.path.join(ROOT, 'data', 'gate'), os.path.join(data, 'gate'))           # «замок»: the game checks a mod's screens and names
     langs = [f for f in os.listdir(os.path.join(data, 'i18n')) if f.endswith('.json') and not f.startswith('_')]
     if len(langs) < 19:
         sys.exit(f'only {len(langs)} translations in data/i18n - no release')

@@ -27,7 +27,7 @@ screen genry_codelock(code, hint=u"", tries=0):
     default genry_left = tries
     default genry_wrong = False
     $ genry_try = If(genry_typed == code, Return(True), [SetScreenVariable("genry_wrong", True), SetScreenVariable("genry_typed", u""), SetScreenVariable("genry_left", genry_left - 1), If(tries > 0 and genry_left <= 1, Return(False))])
-    $ genry_put = lambda d: [SetScreenVariable("genry_typed", (genry_typed + d)[:len(code)]), SetScreenVariable("genry_wrong", False)]
+    $ genry_put = lambda d, t=genry_typed, n=len(code): [SetScreenVariable("genry_typed", (t + d)[:n]), SetScreenVariable("genry_wrong", False)]
     add get_image("gui/o_rly/base.png")
     text (hint or u"Какой код?") text_align 0.5 xalign 0.5 yalign 0.415 color "#64483c" font header_font size 32
     text u"  ".join([(genry_typed[i] if i < len(genry_typed) else u"_") for i in range(len(code))]) at (genry_code_shake if genry_wrong else genry_code_still):
