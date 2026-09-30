@@ -1019,6 +1019,78 @@ QVariantMap Engine::sceneInfo(const QString& text, int line) const
             {QStringLiteral("nvl"), s.nvlMode}, {QStringLiteral("vars"), varList}};
 }
 
+// ---- drag a character on the preview: where each one stands and which line put it there
+namespace {
+const QStringList& kSpritePlaces()
+{
+    static const QStringList p{QStringLiteral("fleft"), QStringLiteral("left"), QStringLiteral("cleft"), QStringLiteral("center"),
+                               QStringLiteral("cright"), QStringLiteral("right"), QStringLiteral("fright"), QStringLiteral("truecenter")};
+    return p;
+}
+}
+
+QVariantList Engine::spriteBoxes(const QString& text, int line) const
+{
+    QVariantList out;
+    const QStringList lines = pySplitLines(text);
+    const int upto = qBound(0, line, int(lines.size()));
+    const SceneState st = sceneAt(text, upto, &m_es);
+    for (const SpriteShow& sp : st.sprites) {
+        const QImage img = m_renderer.sprite(sp.image, st.spriteTime);
+        double w = 400, h = 900, x = sp.xpos * 1920 - 200, y = 180;
+        if (!img.isNull()) {
+            w = img.width() * sp.zoom;
+            h = img.height() * sp.zoom;
+            x = sp.xpos * 1920 - sp.xanchor * w;
+            y = sp.ypos * 1080 - sp.yanchor * h;
+        }
+        // the «показать» that put it where it stands: the last one of its tag up to this line
+        int showLine = 0;
+        QString pos;
+        for (int i = upto - 1; i >= 0 && !showLine; --i) {
+            const QString t = lines[i].trimmed();
+            const QString cmd = t.section(QLatin1Char(' '), 0, 0);
+            if (normalizeCommand(cmd) != QLatin1String("show")) continue;
+            const QStringList w = pySplit(t.mid(cmd.size()));
+            if (w.isEmpty()) continue;
+            const QString who = w.first().toLower();
+            if (who != sp.tag.toLower() && !sp.image.toLower().startsWith(who + QLatin1Char(' '))) continue;
+            showLine = i + 1;
+            for (const QString& x : w) if (kSpritePlaces().contains(x)) pos = x;
+        }
+        const QStringList iw = sp.image.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        const int dist = iw.contains(QLatin1String("close")) ? 1 : iw.contains(QLatin1String("far")) ? -1 : 0;
+        out << QVariantMap{{QStringLiteral("tag"), sp.tag}, {QStringLiteral("image"), sp.image}, {QStringLiteral("x"), x}, {QStringLiteral("y"), y},
+                           {QStringLiteral("w"), w}, {QStringLiteral("h"), h}, {QStringLiteral("line"), showLine},
+                           {QStringLiteral("pos"), pos}, {QStringLiteral("dist"), dist}, {QStringLiteral("cx"), sp.xpos}};
+    }
+    return out;
+}
+
+QString Engine::placeSprite(const QString& lineText, const QString& pos, int distance) const
+{
+    const QString t = lineText.trimmed();
+    const QString cmd = t.section(QLatin1Char(' '), 0, 0);
+    QStringList w = pySplit(t.mid(cmd.size()));
+    QStringList tail;                                           // «dissolve», «with fade»… stay at the end
+    while (!w.isEmpty() && isEffect(w.last())) tail.prepend(w.takeLast());
+    QString curPos;
+    int curDist = 0;
+    QStringList keep;
+    for (const QString& x : w) {
+        if (kSpritePlaces().contains(x)) { curPos = x; continue; }
+        if (x == QLatin1String("close")) { curDist = 1; continue; }
+        if (x == QLatin1String("far")) { curDist = -1; continue; }
+        keep << x;
+    }
+    const int d = distance == -2 ? curDist : qBound(-1, distance, 1);
+    if (d == 1) keep << QStringLiteral("close");
+    else if (d == -1) keep << QStringLiteral("far");
+    const QString p = pos.isEmpty() ? curPos : pos;
+    if (!p.isEmpty()) keep << p;
+    return lineText.left(lineText.indexOf(t)) + cmd + QLatin1Char(' ') + (keep + tail).join(QLatin1Char(' '));
+}
+
 QString Engine::previewUrl(const QString& text, int line, const QString& extra, int choiceHover)
 {
     // above the first picture (the @meta lines, the first label) the preview shows the mod's

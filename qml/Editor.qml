@@ -80,6 +80,7 @@ Item {
     function refreshPreview() {
         previewSrc = Engine.previewUrl(code.text, code.currentLine, hoverExtra)
         scene = Engine.sceneInfo(code.text, code.currentLine)
+        preview.boxes = hoverExtra === "" ? Engine.spriteBoxes(code.text, code.currentLine) : []
     }
     function insert(cmd) { hoverExtra = ""; code.insertLine(cmd) }
     // palette row -> its window: the choice and dialogue masters, or the command's form
@@ -547,6 +548,11 @@ Item {
                     onSeek: (n) => code.gotoLine(n)
                     onStep: (d) => ed.stepLine(d)
                     onEnlarge: big.open = true
+                    // a character dragged on the frame: its «показать» line takes the new place / distance
+                    onMoveSprite: (n, pos, dist) => {
+                        code.setLineText(n, Engine.placeSprite(code.lineText(n), pos, dist))
+                        previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+                    }
                 }
                 TabBar {
                     id: infoTabs

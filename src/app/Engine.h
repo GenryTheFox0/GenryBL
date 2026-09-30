@@ -146,6 +146,11 @@ public:
     Q_INVOKABLE QVariantList lint(const QString& text) const;
     Q_INVOKABLE QVariantMap sceneInfo(const QString& text, int line) const;
     // choiceHover: which option of a 7DL picture menu is drawn lit
+    // the characters on the preview frame, to drag: [{tag, image, x, y, w, h (in 1920x1080), line (the «показать»
+    // that placed it, 1-based; 0 = placed some other way - not draggable), pos, dist (-1 far, 0 normal, 1 close)}]
+    Q_INVOKABLE QVariantList spriteBoxes(const QString& text, int line) const;
+    // a «показать» line with its place (fleft…fright, "" = keep) and distance (-1 far, 0 normal, 1 close, -2 keep)
+    Q_INVOKABLE QString placeSprite(const QString& lineText, const QString& pos, int distance) const;
     Q_INVOKABLE QString previewUrl(const QString& text, int line, const QString& extra = QString(), int choiceHover = -2);   // -2: the option under the cursor
     Q_INVOKABLE QVariantList lineStarts(const QString& text) const;
     Q_INVOKABLE int lineAt(const QString& text, int pos) const;
