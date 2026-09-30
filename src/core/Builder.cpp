@@ -1,4 +1,5 @@
 #include "Builder.h"
+#include "Tr.h"
 #include "EsAssets.h"
 #include "Overlays.h"
 #include "Py.h"
@@ -609,7 +610,7 @@ GameCheck gameCheck(const QString& esRoot, const QString& dataDir, const QString
     removeGate(esRoot);
     QDir().mkpath(gate);
     if (!QFile::copy(dataDir + QStringLiteral("/gate/genry_gate_smoke.rpy"), gate + QStringLiteral("/genry_gate_smoke.rpy"))) {
-        res.error = QStringLiteral("не положить проверку в игру: ") + QDir::toNativeSeparators(gate);
+        res.error = gbTr("не положить проверку в игру: ") + QDir::toNativeSeparators(gate);
         removeGate(esRoot);
         return res;
     }
@@ -639,8 +640,8 @@ GameCheck gameCheck(const QString& esRoot, const QString& dataDir, const QString
     };
     const QString console = slurp(lintPath), smoke = slurp(smokePath);
     res.console = console;
-    if (!started) { res.error = QStringLiteral("игра не запустилась для проверки"); return res; }
-    if (!finished) { res.error = QStringLiteral("игра проверяет слишком долго"); return res; }
+    if (!started) { res.error = gbTr("игра не запустилась для проверки"); return res; }
+    if (!finished) { res.error = gbTr("игра проверяет слишком долго"); return res; }
     // «genry_smoke»: ERROR <file> <line> <what> | LINT <file>:<line> <what> (+ LINT+ <the why>) | SMOKE DONE …
     static const QRegularExpression err(QStringLiteral("^ERROR\\s+'?([^'\\s]+)'?\\s+(\\d+)\\s+(.*)$"));
     static const QRegularExpression done(QStringLiteral("^SMOKE DONE (\\d+) statements, (\\d+) screens"));
@@ -683,7 +684,7 @@ GameCheck gameCheck(const QString& esRoot, const QString& dataDir, const QString
         }
         QStringList tail = why.split(QLatin1Char('\n'));
         tail = tail.mid(qMax(0, int(tail.size()) - 14));
-        res.error = QStringLiteral("игра не довела проверку до конца:\n") + tail.join(QLatin1Char('\n')).trimmed();
+        res.error = gbTr("игра не довела проверку до конца:\n") + tail.join(QLatin1Char('\n')).trimmed();
         return res;
     }
     res.ran = true;

@@ -1,4 +1,5 @@
 #include "Graph.h"
+#include "Tr.h"
 #include "EsAssets.h"
 #include "Py.h"
 #include "Screenplay.h"
@@ -131,7 +132,7 @@ StoryGraph storyGraph(const QString& storyText, const CompileOptions& opt)
             continue;
         }
         if (s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0))) {
-            to(s.section(QStringLiteral("->"), 1), QStringLiteral("timeout"), U("время вышло"));
+            to(s.section(QStringLiteral("->"), 1), QStringLiteral("timeout"), gbTr("время вышло"));
             continue;
         }
         if (cmd == QLatin1String("jump")) { to(rest, QStringLiteral("jump")); continue; }
@@ -142,8 +143,8 @@ StoryGraph storyGraph(const QString& storyText, const CompileOptions& opt)
         }
         if (cmd == QLatin1String("codelock")) {
             const CodeLockSpec k = parseCodeLock(rest);
-            to(k.okTarget, QStringLiteral("code"), U("верный код"));
-            to(k.badTarget, QStringLiteral("code"), U("неверный код"));
+            to(k.okTarget, QStringLiteral("code"), gbTr("верный код"));
+            to(k.badTarget, QStringLiteral("code"), gbTr("неверный код"));
             continue;
         }
         if (cmd == QLatin1String("phonecall")) {
@@ -159,7 +160,7 @@ StoryGraph storyGraph(const QString& storyText, const CompileOptions& opt)
                     const EsMapZone* z = esMapZone(p.zone);
                     to(p.target, QStringLiteral("map"), z ? z->title : p.raw);
                 }
-                to(m.done, QStringLiteral("map"), U("всё обошёл"));
+                to(m.done, QStringLiteral("map"), gbTr("всё обошёл"));
             } else {
                 for (const QString& e : rest.split(QLatin1Char(','))) {
                     const QString entry = e.section(QLatin1Char('@'), 0, 0);
@@ -260,7 +261,7 @@ StoryGraph storyGraph(const QString& storyText, const CompileOptions& opt)
     if (showsChapters)
         for (int n = 0; n < g.nodes.size(); ++n)
             if (g.nodes[n].chapter) {
-                if (menuNode >= 0) g.edges.push_back({menuNode, n, QStringLiteral("chapter"), U("глава"), g.nodes[n].line});
+                if (menuNode >= 0) g.edges.push_back({menuNode, n, QStringLiteral("chapter"), gbTr("глава"), g.nodes[n].line});
                 else roots << n;
             }
     QVector<int> depth(g.nodes.size(), -1);

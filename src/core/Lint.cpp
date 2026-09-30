@@ -389,7 +389,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                     QString fixed = swapIn(i, QStringLiteral("->"), QString());
                     while (fixed.endsWith(QLatin1Char(' '))) fixed.chop(1);
                     withFix({ln, LintIssue::Warning, gbTr("После «->» нужна сцена — или убери стрелку, и история пойдёт дальше")},
-                            fixed.isEmpty() ? 0 : 1, fixed, QString::fromUtf8("убрать «->»"));
+                            fixed.isEmpty() ? 0 : 1, fixed, gbTr("убрать «->»"));
                 }
                 if (!it.image.isEmpty()) {
                     QString kind;
@@ -472,7 +472,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                 const QString best = closest(who, known, 1);
                 if (who.size() >= 3 && nearMiss(who, best) && best.compare(who, Qt::CaseInsensitive) != 0) {
                     const QString fixed = swapIn(i, who + QLatin1Char(':'), best + QLatin1Char(':'));
-                    withFix({ln, LintIssue::Warning, U("«%1» — может, «%2»? Сейчас это новый говорящий, отдельный от «%2»").arg(who, best)},
+                    withFix({ln, LintIssue::Warning, gbTr("«%1» — может, «%2»? Сейчас это новый говорящий, отдельный от «%2»").arg(who, best)},
                             fixed.isEmpty() ? 0 : 1, fixed, best);
                 } else {
                     add(ln, LintIssue::Info, gbTr("Новый говорящий «%1» — объявлю его сам (или «персонаж id Имя #цвет»)").arg(who));
@@ -490,7 +490,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             if (!hw.isEmpty() && isEffect(hw.last())) hw.removeLast();
             if (hw.isEmpty()) {
                 const QString raw = rawAt(i);
-                withFix({ln, LintIssue::Error, U("Кого убрать? «убрать dv» — или «убратьвсех», чтобы убрать всех")},
+                withFix({ln, LintIssue::Error, gbTr("Кого убрать? «убрать dv» — или «убратьвсех», чтобы убрать всех")},
                         lines.value(i) == raw ? 1 : 0, raw.left(raw.size() - pyLStrip(raw).size()) + U("убратьвсех"), U("убратьвсех"));
                 continue;
             }
@@ -501,8 +501,8 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             QString kind;
             const QString right = rightAudioKind(rawAt(i), ctx.opt, &kind);
             if (right != rawAt(i)) {
-                const QString what = kind == QLatin1String("music") ? U("музыка") : kind == QLatin1String("ambience") ? U("атмосфера") : U("звук");
-                withFix({ln, LintIssue::Info, U("«%1» — это %2: так и сыграю. Поправить строку, чтобы было видно?").arg(firstWord(rest), what)},
+                const QString what = kind == QLatin1String("music") ? gbTr("музыка") : kind == QLatin1String("ambience") ? gbTr("атмосфера") : gbTr("звук");
+                withFix({ln, LintIssue::Info, gbTr("«%1» — это %2: так и сыграю. Поправить строку, чтобы было видно?").arg(firstWord(rest), what)},
                         1, right, firstWord(pyStrip(right)));
                 continue;
             }
@@ -549,7 +549,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             timedChoice = !ctx.opt.legacy && choiceStyleOf(rest) == QLatin1String("timed");
             continue;
         }
-        if (cmd == QLatin1String("endchoice")) { withFix({ln, LintIssue::Info, gbTr("«конецвыбора» без «выбор»")}, 3, QString(""), U("убрать строку")); continue; }
+        if (cmd == QLatin1String("endchoice")) { withFix({ln, LintIssue::Info, gbTr("«конецвыбора» без «выбор»")}, 3, QString(""), gbTr("убрать строку")); continue; }
         if (cmd == QLatin1String("jump") || cmd == QLatin1String("callscene")) {
             if (rest.isEmpty()) add(ln, LintIssue::Error, gbTr("Куда? переход <сцена>"));
             else targets.push_back({ln, rest, curI});
@@ -755,8 +755,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
     // a scene no way leads to: the player never sees it
     if (!ctx.opt.legacy)
         for (const auto& u : unreachableScenes(text, ctx.opt))
-            add(u.first, LintIssue::Warning, U("Сцену «%1» игрок не увидит: в неё не ведёт ни переход, ни выбор, ни кнопка. "
-                                               "Посмотри «Карту сюжета» (Ctrl+M)").arg(u.second));
+            add(u.first, LintIssue::Warning, gbTr("Сцену «%1» игрок не увидит: в неё не ведёт ни переход, ни выбор, ни кнопка. Посмотри «Карту сюжета» (Ctrl+M)").arg(u.second));
     for (const Ref& t : targets) {
         QString l = sl(t.name);
         if (l == QLatin1String("start")) l = meta.modId;
@@ -766,7 +765,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         const QString best = closest(t.name, sceneTitles, 1);
         const QString fixed = nearMiss(t.name, best) ? swapIn(t.idx, t.name, best) : QString();
         if (!fixed.isEmpty()) withFix(x, 1, fixed, best);
-        else withFix(x, 4, U(": %1\nтекст ").arg(t.name), U("создать «%1»").arg(t.name));
+        else withFix(x, 4, U(": %1\nтекст ").arg(t.name), gbTr("создать «%1»").arg(t.name));
     }
     std::sort(out.begin(), out.end(), [](const LintIssue& a, const LintIssue& b) { return a.line < b.line; });
     return out;
