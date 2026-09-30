@@ -229,6 +229,7 @@ void Cinema::load(const QString& storyText, const EsAssets* es)
             if (!f.value(0).isEmpty()) m_vars.insert(slug(f[0], QStringLiteral("value"), false), qMax(0.0, f.value(3).toDouble()));
         }
     }
+    m_defaults = m_vars;
 }
 
 CinemaStop Cinema::stop(CinemaStop::Kind k, int idx)
@@ -236,7 +237,7 @@ CinemaStop Cinema::stop(CinemaStop::Kind k, int idx)
     CinemaStop st;
     st.kind = k;
     st.line = idx >= 0 && idx < m_srcOf.size() ? m_srcOf[idx] + 1 : 0;
-    st.scene = sceneAt((m_prefix + m_path).join(QLatin1Char('\n')), -1, m_es);
+    if (!m_blind) st.scene = sceneAt((m_prefix + m_path).join(QLatin1Char('\n')), -1, m_es);
     st.music = m_music;
     st.ambience = m_ambience;
     st.sounds = m_sounds;
@@ -258,7 +259,7 @@ bool Cinema::jumpTo(const QString& scene, QString* note, bool keepBranches)
     }
     if (!keepBranches) m_branches.clear();    // a jump leaves the choices it was inside; a call comes back into them
     m_pc = *it + 1;
-    m_scene = pyStrip(scene);
+    enterScene(pyStrip(scene));
     return true;
 }
 
@@ -273,6 +274,10 @@ CinemaStop Cinema::start(int line)
     m_popups.clear();
     m_moment.clear();
     m_scene.clear();
+    m_visited.clear();
+    m_mapSeen.clear();
+    m_mapTour = false;
+    m_vars = m_defaults;                     // a new game: the mod's own starting values
     m_ended = false;
     m_steps = 0;
     m_targets.clear();
@@ -305,11 +310,12 @@ CinemaStop Cinema::start(int line)
                 if (w != U("кнопка") && w != QLatin1String("button")) continue;
                 const QString cap = pyStrip(rest.section(QStringLiteral("->"), 0, 0));
                 const QString target = rest.contains(QLatin1String("->")) ? pyStrip(rest.section(QStringLiteral("->"), 1)) : QString();
-                const QString key = (target.isEmpty() ? cap : target).toLower();
-                static const QStringList special{U("галерея"), QStringLiteral("gallery"), U("достижения"), QStringLiteral("achievements"), U("шкалы"),
-                                                 U("отношения"), QStringLiteral("meters"), U("главы"), QStringLiteral("chapters"), U("настройки"),
-                                                 QStringLiteral("settings"), U("загрузить"), U("продолжить"), QStringLiteral("load"), U("выход"),
-                                                 U("выйти"), QStringLiteral("exit")};
+                // the buttons the game gives its own screens (the same words as the compiler: «Выселиться» is «выход» too)
+                const QString key = menuButtonKind(target.isEmpty() ? cap : target);
+                static const QStringList special{U("галерея"), U("достижения"), U("шкалы"), U("отношения"), U("главы"), U("настройки"),
+                                                 U("загрузить"), U("продолжить"), U("выход"), U("выйти"), U("имя"), U("статистика"),
+                                                 U("стример"), QStringLiteral("gallery"), QStringLiteral("achievements"), QStringLiteral("meters"),
+                                                 QStringLiteral("chapters"), QStringLiteral("settings"), QStringLiteral("load"), QStringLiteral("exit")};
                 if (special.contains(key)) continue;
                 options << cap;
                 m_targets << (target.isEmpty() ? QStringLiteral("start") : target);
@@ -378,6 +384,7 @@ CinemaStop Cinema::next(int option)
     if (m_ended) {
         CinemaStop st = stop(CinemaStop::End, m_pc - 1);
         st.note = U("Конец");
+        st.endKind = CinemaStop::Finale;
         return st;
     }
     if (m_choiceLine >= 0) {      // «выбор» is waiting for its answer
@@ -392,6 +399,7 @@ CinemaStop Cinema::next(int option)
                     m_ended = true;
                     CinemaStop st = stop(CinemaStop::End, m_choiceAfter - 1);
                     st.note = note;
+                    st.endKind = CinemaStop::Missing;
                     return st;
                 }
             } else {
@@ -406,6 +414,8 @@ CinemaStop Cinema::next(int option)
     if (m_resume >= 0) {          // a choice is waiting for its answer
         const int resume = m_resume;
         m_resume = -1;
+        if (m_mapTour && option >= 0 && option < m_mapZones.size()) m_mapSeen[m_mapKey].insert(m_mapZones[option]);
+        m_mapTour = false;
         QString target;
         bool go = false;
         if (option >= 0 && option < m_targets.size()) {
@@ -427,6 +437,7 @@ CinemaStop Cinema::next(int option)
                 m_ended = true;
                 CinemaStop st = stop(CinemaStop::End, resume - 1);
                 st.note = note;
+                st.endKind = CinemaStop::Missing;
                 return st;
             }
         } else {
@@ -521,21 +532,22 @@ void Cinema::absorb(const QString& s)
 
 CinemaStop Cinema::run()
 {
-    auto finish = [&](int idx, const QString& note) {
+    auto finish = [&](int idx, const QString& note, CinemaStop::EndKind why = CinemaStop::FellOff) {
         m_ended = true;
         CinemaStop st = stop(CinemaStop::End, idx);
         st.note = note;
+        st.endKind = why;
         return st;
     };
     int guard = 0;
     while (m_pc < m_lines.size() || (!m_branches.isEmpty() && m_pc == m_branches.last().end)) {
-        if (++guard > 200000) return finish(m_pc - 1, U("История ходит по кругу без единой реплики — проверь переходы"));
+        if (++guard > 200000) return finish(m_pc - 1, U("История ходит по кругу без единой реплики — проверь переходы"), CinemaStop::Loop);
         // an option's own lines are over: its scene, back to its «по кругу» menu, or on after the choice
         if (!m_branches.isEmpty() && m_pc == m_branches.last().end) {
             const Branch b = m_branches.takeLast();
             if (!b.target.isEmpty()) {
                 QString note;
-                if (!jumpTo(b.target, &note)) return finish(m_pc - 1, note);
+                if (!jumpTo(b.target, &note)) return finish(m_pc - 1, note, CinemaStop::Missing);
             } else if (b.loopHeader >= 0) {
                 m_again = b.loopHeader;
                 m_pc = b.loopHeader;
@@ -556,7 +568,7 @@ CinemaStop Cinema::run()
         if (s.startsWith(QLatin1Char(':')) || cmd == QLatin1String("label")) {
             const QString name = s.startsWith(QLatin1Char(':')) ? pyStrip(s.mid(1)) : rest;
             if (m_scene.isEmpty() || label(name) == label(m_scene) + QStringLiteral("_next")) {
-                m_scene = name;
+                enterScene(name);
                 m_path << raw;
                 continue;
             }
@@ -583,7 +595,7 @@ CinemaStop Cinema::run()
         if (cmd == QLatin1String("choice")) {
             // Выбор 2.0: the question lines are the frame; its own options (a choice under an option is that option's)
             const ChoiceHead h = parseChoiceHead(rest);
-            QVector<int> itemAt;
+            QVector<int> itemAt, cuts;                // cuts: where an option's own lines stop (the next option, «время вышло»)
             int end = int(m_lines.size()), depth = 1;
             bool endLine = false;
             m_timeoutTarget.clear();
@@ -598,10 +610,13 @@ CinemaStop Cinema::run()
                     continue;
                 }
                 if (depth != 1) continue;
-                if (isChoiceItemLine(t)) itemAt << k;
-                else if (t.contains(QLatin1String("->")) && isTimeoutWord(t.section(QStringLiteral("->"), 0, 0))) {
+                if (isChoiceItemLine(t)) {
+                    itemAt << k;
+                    cuts << k;
+                } else if (t.contains(QLatin1String("->")) && isTimeoutWord(t.section(QStringLiteral("->"), 0, 0))) {
                     m_timeoutTarget = pyStrip(t.section(QStringLiteral("->"), 1));
                     m_timeoutSet = true;
+                    cuts << k;
                 }
             }
             m_choiceAfter = endLine ? end + 1 : end;
@@ -613,15 +628,19 @@ CinemaStop Cinema::run()
                 m_path << m_lines[k];
             }
             m_opts.clear();
-            QStringList options, hints;
+            QStringList options, hints, every;
+            QVector<int> ords;
             for (int k = 0; k < itemAt.size(); ++k) {
                 const ChoiceItemSpec it = parseChoiceItem(pyStrip(m_lines[itemAt[k]]));
+                every << (it.caption.isEmpty() ? QStringLiteral("...") : it.caption);
                 if (!it.cond.isEmpty() && !test(it.cond)) continue;                    // [если …]: not offered
                 if (h.loop && m_seen.value(i).contains(k)) continue;                   // asked already
                 ChoiceOpt o;
                 o.ord = k;
                 o.from = itemAt[k] + 1;
-                o.to = k + 1 < itemAt.size() ? itemAt[k + 1] : end;
+                o.to = end;
+                for (int cut : cuts)
+                    if (cut > itemAt[k]) { o.to = cut; break; }
                 o.target = it.target;
                 o.exit = it.exit;
                 o.always = it.always;
@@ -630,6 +649,7 @@ CinemaStop Cinema::run()
                 m_opts.push_back(o);
                 options << (it.caption.isEmpty() ? QStringLiteral("...") : it.caption);
                 hints << (o.locked ? (it.hint.isEmpty() ? U("нужно: ") + it.need : it.hint) : QString());
+                ords << k;
             }
             m_choiceLine = i;
             m_choiceLoop = h.loop;
@@ -652,6 +672,8 @@ CinemaStop Cinema::run()
             if ((h.style != QLatin1String("es") && h.style != QLatin1String("buttons")) || qEnd <= i + 1) st.scene.text.clear();
             st.options = options;
             st.optionHints = hints;
+            st.optionOrd = ords;
+            st.everyOption = every;
             for (const ChoiceOpt& o : m_opts) st.optionOk << (o.target.isEmpty() || m_labels.contains(label(o.target)));
             if (h.style == QLatin1String("timed")) {
                 st.seconds = h.secs.toDouble();
@@ -789,19 +811,38 @@ CinemaStop Cinema::run()
             m_path << raw;
             QStringList options;
             m_targets.clear();
+            m_mapTour = false;
             if (cmd == QLatin1String("map")) {
-                for (QString e : rest.split(QLatin1Char(','))) {
-                    e = e.trimmed();
-                    const int atSign = int(e.lastIndexOf(QLatin1Char('@')));
-                    if (atSign >= 0) e = e.left(atSign).trimmed();
-                    const int sep = e.contains(QLatin1Char(':')) ? int(e.indexOf(QLatin1Char(':'))) : int(e.indexOf(QLatin1String("->")));
-                    if (sep < 0) continue;
-                    const QString zone = e.left(sep).trimmed(), target = e.mid(sep + (e.at(sep) == QLatin1Char(':') ? 1 : 2)).trimmed();
-                    QString title = zone;
-                    for (const EsMapZone& z : esMapZones()) if (z.id == zone) title = z.title;
-                    options << title;
-                    m_targets << target;
+                // as the game builds it (Compiler: genry_camp_map): only the places the game knows; «обход» - a visited
+                // place goes out, all visited -> «готово» (none: the list starts over)
+                const MapSpec ms = parseMapSpec(rest);
+                QStringList ids;
+                for (const MapEntry& p : ms.places) if (!p.zone.isEmpty()) ids << p.zone;
+                const QString key = ids.join(QLatin1Char(','));
+                auto build = [&] {
+                    options.clear();
+                    m_targets.clear();
+                    m_mapZones.clear();
+                    for (const MapEntry& p : ms.places) {
+                        const EsMapZone* z = esMapZone(p.zone);
+                        if (!z || (ms.tour && m_mapSeen.value(key).contains(z->id))) continue;
+                        options << z->title;
+                        m_targets << p.target;
+                        m_mapZones << z->id;
+                    }
+                };
+                build();
+                if (ms.tour && options.isEmpty() && !ids.isEmpty()) {
+                    if (!ms.done.isEmpty()) {
+                        QString note;
+                        if (!jumpTo(ms.done, &note)) return finish(i, note, CinemaStop::Missing);
+                        continue;
+                    }
+                    m_mapSeen.remove(key);
+                    build();
                 }
+                m_mapTour = ms.tour;
+                m_mapKey = key;
             } else {
                 for (const QString& it : fieldsOf(rest).mid(1))
                     if (it.contains(QLatin1String("->"))) {
@@ -823,7 +864,7 @@ CinemaStop Cinema::run()
             QString note;
             if (!jumpTo(rest, &note, cmd == QLatin1String("callscene"))) {
                 if (cmd == QLatin1String("callscene")) m_calls.removeLast();
-                return finish(i, note);
+                return finish(i, note, CinemaStop::Missing);
             }
             continue;
         }
@@ -835,13 +876,13 @@ CinemaStop Cinema::run()
                 m_scene = c.second;
                 continue;
             }
-            return finish(i, U("«конецсцены»: в игре тут мод завершается"));
+            return finish(i, U("«конецсцены»: в игре тут мод завершается"), CinemaStop::SceneEnd);
         }
         if (cmd == QLatin1String("endgame")) {
             m_path << raw;
             m_music.clear();
             m_ambience.clear();
-            return finish(i, U("Конец мода"));
+            return finish(i, U("Конец мода"), CinemaStop::Finale);
         }
         if ((cmd == QLatin1String("ifjump") || cmd == QLatin1String("ifitem") || cmd == QLatin1String("ifpersistent")) && rest.contains(QLatin1String("->"))) {
             m_path << raw;
@@ -860,7 +901,7 @@ CinemaStop Cinema::run()
             }
             if (yes) {
                 QString note;
-                if (!jumpTo(target, &note)) return finish(i, note);
+                if (!jumpTo(target, &note)) return finish(i, note, CinemaStop::Missing);
             }
             continue;
         }
@@ -882,7 +923,7 @@ CinemaStop Cinema::run()
             const QString go = (!any || tie || top <= 0) ? otherwise : best;
             if (!go.isEmpty()) {
                 QString note;
-                if (!jumpTo(go, &note)) return finish(i, note);
+                if (!jumpTo(go, &note)) return finish(i, note, CinemaStop::Missing);
             }
             continue;
         }

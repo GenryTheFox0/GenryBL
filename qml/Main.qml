@@ -52,9 +52,9 @@ ApplicationWindow {
         }
     }
 
-    function openEditor(id, animated) {
+    function openEditor(id, animated, line, find) {
         if (!Engine.openProject(id)) return
-        stack.replace(null, editorComp, { projectId: id }, animated === false ? StackView.Immediate : StackView.Transition)
+        stack.replace(null, editorComp, { projectId: id, startLine: line || 0, startFind: find || "" }, animated === false ? StackView.Immediate : StackView.Transition)
     }
     function openLauncher(panel) {
         stack.replace(null, launcherComp, { intro: false, startScreen: panel || "" })
@@ -69,7 +69,7 @@ ApplicationWindow {
     }
     Component {
         id: editorComp
-        Editor { objectName: "editor"; onBack: win.openLauncher("mods") }
+        Editor { objectName: "editor"; onBack: win.openLauncher("mods"); onOpenOther: (id, line, find) => win.openEditor(id, true, line, find) }
     }
 
     StackView {

@@ -12,6 +12,9 @@ class StoryHighlighter : public QSyntaxHighlighter {
     QML_ELEMENT
     Q_PROPERTY(QQuickTextDocument* document READ document WRITE setDocument NOTIFY documentChanged)
     Q_PROPERTY(QVariantList issues READ issues WRITE setIssues NOTIFY issuesChanged)
+    // the find bar (Ctrl+F): every match gets a gold tint
+    Q_PROPERTY(QString findText READ findText WRITE setFindText NOTIFY findChanged)
+    Q_PROPERTY(bool findCase READ findCase WRITE setFindCase NOTIFY findChanged)
 
 public:
     explicit StoryHighlighter(QObject* parent = nullptr);
@@ -19,10 +22,17 @@ public:
     void setDocument(QQuickTextDocument* doc);
     QVariantList issues() const { return m_issues; }
     void setIssues(const QVariantList& issues);
+    QString findText() const { return m_find; }
+    void setFindText(const QString& t);
+    bool findCase() const { return m_findCase; }
+    void setFindCase(bool on);
+    // «Заменить все»: every match at once, as ONE step of Ctrl+Z; how many were replaced
+    Q_INVOKABLE int replaceAll(const QString& find, const QString& with, bool caseSensitive);
 
 signals:
     void documentChanged();
     void issuesChanged();
+    void findChanged();
 
 protected:
     void highlightBlock(const QString& text) override;
@@ -32,4 +42,6 @@ private:
     QVariantList m_issues;
     QHash<int, int> m_lineLevel;    // line -> worst lint level
     QHash<int, QVector<QVector<int>>> m_ranges;   // line -> {col, len, level}: the issue's own words
+    QString m_find;
+    bool m_findCase = false;
 };

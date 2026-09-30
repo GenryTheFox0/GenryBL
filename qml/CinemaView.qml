@@ -65,6 +65,17 @@ Popup {
         Music.fadeTo(0)                          // the constructor's own theme steps aside
         apply(Engine.cinemaStart(text, line))
     }
+    // «Сломай мой мод» -> «▶ Как туда попасть»: the mod from its start along that route (the clicks and picks of a walk)
+    function beginRoute(text, route) {
+        docked = false
+        start(text, 1)
+        inputs = route.slice()
+        const s = Engine.cinemaReplay(text, 1, inputs)
+        if (s.used < inputs.length) inputs = inputs.slice(0, s.used)
+        quiet = true
+        apply(s)
+        quiet = false
+    }
     function restart() { musicKey = ""; ambienceKey = ""; inputs = []; popupModel.clear(); apply(Engine.cinemaStart(storyText, startLine)) }
     // one step on, remembered for the re-walk
     function next(arg) {

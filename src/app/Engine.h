@@ -208,6 +208,9 @@ public:
     Q_INVOKABLE void keepVersion(const QString& id, const QString& text, const QString& tag);
     // --shot: screens type demo text into the editor - it must never land in the user's real project
     void setShotMode(bool on) { m_shotMode = on; }
+    // «Поиск по всем модам» (Ctrl+Shift+F): every line with `query` in every project's story, the open one first
+    // (its text as it is in the editor): [{id, name, line, text, col, len}] (at most 3000)
+    Q_INVOKABLE QVariantList searchProjects(const QString& query, bool caseSensitive, const QString& openId, const QString& openText) const;
     Q_INVOKABLE bool renameProject(const QString& id, const QString& name);
     Q_INVOKABLE QString duplicateProject(const QString& id);
     Q_INVOKABLE bool trashProject(const QString& id);
@@ -289,6 +292,10 @@ public:
     // «Файлы мода»: the mod is built and every file that goes to players is counted -> modFilesReady({files: [{path,
     // size, kind}], total, missing: [...], unused: [{path, size}]}); kind: code images audio video fonts wardrobe patch genrybl
     Q_INVOKABLE void modFiles(const QString& id, const QString& text);
+    // «Сломай мой мод» (src/core/Fuzz): hundreds of walks by the cinema, in the background -> breakModReady({runs, clicksMin,
+    // clicksMax, clicksAvg, minutesMin, minutesMax, scenes, scenesSeen, choices, endings, problems, locked, unseen, never});
+    // every find: {kind, line, scene, detail, hint, count, share (% of the walks), route (the cinema replays it)}
+    Q_INVOKABLE void breakMod(const QString& storyText);
     // the project's files nobody uses go to projects/<id>/_unused (out of the mod, not deleted); how many moved
     Q_INVOKABLE int tidyUnused(const QString& id, const QStringList& paths);
     Q_INVOKABLE void revealFile(const QString& path) const;
@@ -332,6 +339,7 @@ signals:
     void lastCrashChanged();
     void exportFinished(bool ok, const QString& message, const QString& path);
     void modFilesReady(const QVariantMap& report);
+    void breakModReady(const QVariantMap& report);
     // the story was changed by GenryBL itself (a free @mod_id): the editor takes the new text
     void storyRewritten(const QString& id, const QString& text);
     void languageChanged();

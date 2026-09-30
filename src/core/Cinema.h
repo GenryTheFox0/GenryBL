@@ -20,12 +20,18 @@ class EsAssets;
 
 struct CinemaStop {
     enum Kind { Say, Choice, Note, Card, Timed, Video, End };
+    // End: how the mod ended - «конецигры», «конецсцены», fell off (a scene over with no way on, the story over),
+    // a way into a scene that is not there, a loop with no line to stop at
+    enum EndKind { Finale, SceneEnd, FellOff, Missing, Loop };
     Kind kind = End;
+    EndKind endKind = FellOff;
     int line = 0;                 // the story line (1-based) the player is at
     SceneState scene;             // what the player sees
     QStringList options;          // Choice: captions
     QVector<bool> optionOk;       // false: that option leads nowhere in this story
     QStringList optionHints;      // "" = open; else the option is locked («[нужно …]») and this says why
+    QVector<int> optionOrd;       // Choice («выбор»): each option's place in its block
+    QStringList everyOption;      // Choice («выбор»): every option of the block, the ones «[если …]» hides as well
     double seconds = 0;           // Card / Timed: auto-advance; Choice: the timer of a timed choice (0 = none)
     QString music, ambience;      // what plays now: "es:<id>" | "file:audio/x.ogg" | "" (silence)
     QStringList sounds;           // sfx / voice starting with this stop: "es:<id>" | "file:audio/x.ogg"
@@ -41,6 +47,10 @@ public:
     CinemaStop start(int line);             // from this story line (<= the first scene: the mod's very start)
     CinemaStop next(int option = -1);       // after a click / the option picked (-1 on a Choice = its timer ran out)
     int steps() const { return m_steps; }
+    // «Сломай мой мод»: no frames (hundreds of walks in a second); the scenes this walk went into (label names)
+    void setBlind(bool on) { m_blind = on; }
+    const QSet<QString>& visited() const { return m_visited; }
+    QString labelOf(const QString& scene) const { return label(scene); }
 
 private:
     struct Target { QString scene; bool timeout = false; };
@@ -68,6 +78,10 @@ private:
     QString m_scene;
     QVector<QPair<int, QString>> m_calls;     // return address, scene
     QHash<QString, double> m_vars;            // «установить / прибавить» (persistent ones as "p:<name>")
+    QHash<QString, double> m_defaults;        // the mod's «переменная» / «шкала» values: every walk starts from them
+    QSet<QString> m_visited;
+    bool m_blind = false;
+    void enterScene(const QString& name) { m_scene = name; m_visited.insert(label(name)); }
     QSet<QString> m_items;
     QString m_music, m_ambience;
     QStringList m_sounds, m_popups;
@@ -87,6 +101,11 @@ private:
     int m_again = -1;
     bool m_ended = false;
     bool m_fromMenu = false;                  // the mod's main menu is up: its music stops when a route starts
+    // the camp map «обход» (as the game: a visited place goes out, all visited -> «готово»): places seen per map
+    QHash<QString, QSet<QString>> m_mapSeen;
+    QStringList m_mapZones;                   // the map on screen: each option's place
+    QString m_mapKey;
+    bool m_mapTour = false;
 };
 
 } // namespace gb

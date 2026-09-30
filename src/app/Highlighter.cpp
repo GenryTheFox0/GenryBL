@@ -93,6 +93,41 @@ void StoryHighlighter::setDocument(QQuickTextDocument* doc)
     emit documentChanged();
 }
 
+void StoryHighlighter::setFindText(const QString& t)
+{
+    if (t == m_find) return;
+    m_find = t;
+    rehighlight();
+    emit findChanged();
+}
+
+void StoryHighlighter::setFindCase(bool on)
+{
+    if (on == m_findCase) return;
+    m_findCase = on;
+    if (!m_find.isEmpty()) rehighlight();
+    emit findChanged();
+}
+
+int StoryHighlighter::replaceAll(const QString& find, const QString& with, bool caseSensitive)
+{
+    QTextDocument* doc = m_doc ? m_doc->textDocument() : nullptr;
+    if (!doc || find.isEmpty()) return 0;
+    const QTextDocument::FindFlags flags = caseSensitive ? QTextDocument::FindCaseSensitively : QTextDocument::FindFlags();
+    QTextCursor block(doc);
+    block.beginEditBlock();                        // the whole replace is one undo step
+    int n = 0;
+    QTextCursor at(doc);
+    for (;;) {
+        at = doc->find(find, at, flags);
+        if (at.isNull()) break;
+        at.insertText(with);                       // the cursor ends after the new text: «a» -> «aa» never loops
+        ++n;
+    }
+    block.endEditBlock();
+    return n;
+}
+
 void StoryHighlighter::setIssues(const QVariantList& issues)
 {
     if (issues == m_issues) return;
@@ -228,4 +263,15 @@ void StoryHighlighter::highlightBlock(const QString& text)
     if (level >= 1) mark(0, int(text.size()), level, false);
     for (const QVector<int>& r : m_ranges.value(currentBlock().blockNumber() + 1))
         if (r.value(2) >= 1) mark(r.value(0), r.value(0) + r.value(1), r.value(2), true);
+    // the find bar: every match on the line
+    if (!m_find.isEmpty()) {
+        const Qt::CaseSensitivity cs = m_findCase ? Qt::CaseSensitive : Qt::CaseInsensitive;
+        for (int i = int(text.indexOf(m_find, 0, cs)); i >= 0; i = int(text.indexOf(m_find, i + int(m_find.size()), cs))) {
+            for (int k = i; k < i + m_find.size() && k < text.size(); ++k) {
+                QTextCharFormat f = format(k);
+                f.setBackground(QColor(0xff, 0xc8, 0x57, 95));
+                setFormat(k, 1, f);
+            }
+        }
+    }
 }

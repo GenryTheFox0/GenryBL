@@ -8,6 +8,7 @@ Rectangle {
     id: ce
     color: Theme.bg
     property alias text: area.text
+    readonly property string selectedText: area.selectedText.indexOf("\u2029") < 0 ? area.selectedText : ""
     property var issues: []
     readonly property int currentLine: Engine.lineAt(area.text, area.cursorPosition)
     readonly property var starts: Engine.lineStarts(area.text)
@@ -19,6 +20,74 @@ Rectangle {
     property var badges: []
     signal edited()
     signal lineToolClicked(int line, Item anchor)
+    signal replaced(int count)
+
+    // ---- the find bar (Ctrl+F, Ctrl+H - with «Заменить»): every match tinted, Enter - the next one
+    property bool findOpen: false
+    property bool replaceOpen: false
+    property bool findCase: false
+    property string findWhat: ""
+    readonly property var matches: findOpen ? findAll(area.text, findWhat, findCase) : []
+    readonly property int matchIndex: {                  // the match that is selected right now, or -1
+        for (let i = 0; i < matches.length; ++i)
+            if (matches[i] === area.selectionStart && area.selectionEnd - area.selectionStart === findWhat.length) return i
+        return -1
+    }
+    function findAll(t, q, cs) {
+        if (!q) return []
+        const hay = cs ? t : t.toLowerCase(), needle = cs ? q : q.toLowerCase()
+        const out = []
+        for (let i = hay.indexOf(needle); i >= 0 && out.length < 5000; i = hay.indexOf(needle, i + needle.length)) out.push(i)
+        return out
+    }
+    function openFind(withReplace) {
+        const sel = area.selectedText
+        if (sel !== "" && sel.indexOf("\n") < 0 && sel.indexOf("\u2029") < 0) findWhat = sel
+        findOpen = true
+        if (withReplace) replaceOpen = true
+        findField.text = findWhat
+        findField.forceActiveFocus()
+        findField.selectAll()
+    }
+    function openFindWith(q, cs) {
+        findCase = cs
+        findWhat = q
+        findOpen = true
+        findField.text = q
+        findFrom(lineStartPos(currentLine))
+        findField.forceActiveFocus()                     // Enter - the next match right away
+    }
+    function closeFind() { findOpen = false; replaceOpen = false; area.forceActiveFocus() }
+    function selectMatch(i) {
+        if (i < 0 || i >= matches.length) return
+        area.select(matches[i], matches[i] + findWhat.length)
+    }
+    function findFrom(pos) {                             // the first match at / after pos, round the end to the top
+        if (!matches.length) return
+        for (let i = 0; i < matches.length; ++i) if (matches[i] >= pos) { selectMatch(i); return }
+        selectMatch(0)
+    }
+    function findNext() { if (!findOpen && findWhat) findOpen = true; findFrom(area.selectionEnd > area.selectionStart ? area.selectionStart + 1 : area.cursorPosition) }
+    function findPrev() {
+        if (!findOpen && findWhat) findOpen = true
+        if (!matches.length) return
+        const from = area.selectionStart
+        for (let i = matches.length - 1; i >= 0; --i) if (matches[i] < from) { selectMatch(i); return }
+        selectMatch(matches.length - 1)
+    }
+    function replaceOne() {
+        if (matchIndex < 0) { findNext(); return }
+        const at = area.selectionStart
+        area.remove(at, area.selectionEnd)
+        area.insert(at, replField.text)
+        area.cursorPosition = at + replField.text.length
+        findFrom(at + replField.text.length)
+    }
+    function replaceEvery() {
+        if (!findWhat) return
+        const n = hl.replaceAll(findWhat, replField.text, findCase)
+        ce.replaced(n)
+    }
 
     function setText(t) { programmatic = true; area.text = t; area.cursorPosition = 0; programmatic = false }
     // --shot: type like a person - text at the cursor, "\n" = the Enter key (smart Enter first)
@@ -338,7 +407,10 @@ Rectangle {
             background: null
             placeholderText: qsTr("Пиши историю…")
             placeholderTextColor: Theme.faint
+            property string seen: ""
             onTextChanged: {
+                if (text === seen) return                // the highlighter re-tinted (the find bar): nothing was typed
+                seen = text
                 ce.edited()
                 if (!ce.programmatic && activeFocus) completeTimer.restart()
             }
@@ -403,7 +475,98 @@ Rectangle {
         }
     }
 
-    StoryHighlighter { document: area.textDocument; issues: ce.issues }
+    StoryHighlighter { id: hl; document: area.textDocument; issues: ce.issues; findText: ce.findOpen ? ce.findWhat : ""; findCase: ce.findCase }
+
+    // ---- the find bar
+    component FindBtn: Rectangle {
+        property string label
+        property bool on: false
+        property string tip
+        signal clicked()
+        width: Math.max(30, fbt.implicitWidth + 16); height: 30; radius: 7
+        color: on ? Theme.accent : fba.containsMouse ? Theme.panel3 : Theme.bg
+        border.color: on ? Theme.accent : Theme.line
+        Text { id: fbt; anchors.centerIn: parent; text: parent.label; color: parent.on ? "#16240c" : Theme.text; font.family: Theme.ui; font.pixelSize: 14; font.bold: parent.on }
+        MouseArea { id: fba; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.clicked() }
+        ToolTip.visible: fba.containsMouse && tip !== ""
+        ToolTip.text: tip
+    }
+    Rectangle {
+        id: findBar
+        visible: ce.findOpen
+        z: 10
+        anchors.top: parent.top; anchors.topMargin: 8
+        anchors.right: parent.right; anchors.rightMargin: 22
+        width: Math.min(parent.width - gutter.width - 30, 560)
+        height: findCol.implicitHeight + 16
+        radius: 10
+        color: Theme.panel2
+        border.color: Theme.accent
+        Column {
+            id: findCol
+            x: 8; y: 8
+            width: parent.width - 16
+            spacing: 6
+            Row {
+                spacing: 5
+                FindBtn { label: ce.replaceOpen ? "▾" : "▸"; tip: qsTr("Заменить (Ctrl+H)"); onClicked: ce.replaceOpen = !ce.replaceOpen }
+                TextField {
+                    id: findField
+                    width: findCol.width - 35 - 5 * 5 - countText.width - 30 * 3 - 40
+                    height: 30
+                    placeholderText: qsTr("Найти в истории…")
+                    placeholderTextColor: Theme.faint
+                    color: Theme.text
+                    font.family: Theme.mono; font.pixelSize: 14
+                    selectByMouse: true
+                    leftPadding: 8; topPadding: 4; bottomPadding: 4
+                    background: Rectangle { radius: 7; color: Theme.bg; border.color: findField.activeFocus ? Theme.accent : Theme.line }
+                    onTextEdited: { ce.findWhat = text; ce.findFrom(area.selectionStart) }
+                    Keys.onPressed: (e) => {
+                        if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { (e.modifiers & Qt.ShiftModifier) ? ce.findPrev() : ce.findNext(); e.accepted = true }
+                        else if (e.key === Qt.Key_Escape) { ce.closeFind(); e.accepted = true }
+                    }
+                }
+                Text {
+                    id: countText
+                    width: 74
+                    height: 30
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    text: !ce.findWhat ? "" : !ce.matches.length ? qsTr("нет") : (ce.matchIndex >= 0 ? (ce.matchIndex + 1) + " / " : "") + ce.matches.length
+                    color: ce.findWhat && !ce.matches.length ? Theme.bad : Theme.dim
+                    font.family: Theme.mono; font.pixelSize: 13
+                }
+                FindBtn { label: "↑"; tip: qsTr("Предыдущее (Shift+Enter, Shift+F3)"); onClicked: ce.findPrev() }
+                FindBtn { label: "↓"; tip: qsTr("Следующее (Enter, F3)"); onClicked: ce.findNext() }
+                FindBtn { label: "Aa"; on: ce.findCase; tip: qsTr("Учитывать большие и маленькие буквы"); onClicked: ce.findCase = !ce.findCase }
+                FindBtn { label: "✕"; tip: "Esc"; onClicked: ce.closeFind() }
+            }
+            Row {
+                visible: ce.replaceOpen
+                spacing: 5
+                Item { width: 30; height: 30 }
+                TextField {
+                    id: replField
+                    width: findField.width
+                    height: 30
+                    placeholderText: qsTr("Заменить на…")
+                    placeholderTextColor: Theme.faint
+                    color: Theme.text
+                    font.family: Theme.mono; font.pixelSize: 14
+                    selectByMouse: true
+                    leftPadding: 8; topPadding: 4; bottomPadding: 4
+                    background: Rectangle { radius: 7; color: Theme.bg; border.color: replField.activeFocus ? Theme.accent : Theme.line }
+                    Keys.onPressed: (e) => {
+                        if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { ce.replaceOne(); e.accepted = true }
+                        else if (e.key === Qt.Key_Escape) { ce.closeFind(); e.accepted = true }
+                    }
+                }
+                FindBtn { label: qsTr("Заменить"); tip: qsTr("Заменить это и перейти к следующему (Enter)"); onClicked: ce.replaceOne() }
+                FindBtn { label: qsTr("Все"); tip: qsTr("Заменить все сразу — Ctrl+Z вернёт всё одним нажатием"); onClicked: ce.replaceEvery() }
+            }
+        }
+    }
 
     // ---- completion
     Timer { id: completeTimer; interval: 140; onTriggered: ce.suggestNow() }

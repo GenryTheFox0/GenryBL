@@ -13,6 +13,7 @@
 #include "History.h"
 #include "Graph.h"
 #include "Timeline.h"
+#include "Fuzz.h"
 #include "Forms.h"
 #include "Library.h"
 #include "Lint.h"
@@ -1546,6 +1547,98 @@ static void testTimelineAndroid()
           "android: xpos / size / xysize / hotspot scaled, the rest untouched: " + build::scalePixels(QStringLiteral("    text \"x\" xpos 300 ypos 90 size 36 xalign 0.5"), 2.0 / 3.0));
 }
 
+// [15] «Сломай мой мод»: what only a playthrough shows; the cinema's timed choice and «обход» map as the game has them
+static void testBreakMod()
+{
+    out << "[15] break my mod\n";
+    static EsAssets esa;
+    QString err;
+    if (!esa.load(QStringLiteral(GB_SOURCE_DIR "/data/es_catalog.json"), esRootForTests(), &err)) {
+        check(false, "ES for the break test " + err);
+        return;
+    }
+    const QString story = QString::fromUtf8(
+        "@mod_id genry_f\n"                              // 1
+        "шкала славя | Славя | #ff7a00 | 0 | 10\n"       // 2
+        ": start\n"                                      // 3
+        "фон ext_square_day\n"                           // 4
+        "выбор\n"                                        // 5
+        "Славя: Куда?\n"                                 // 6
+        "- На площадь [+1 Славя]\n"                      // 7
+        "    Славя: Пошли.\n"                            // 8
+        "- Поцеловать [нужно славя 5]\n"                 // 9
+        "    Славя: Ой.\n"                               // 10
+        "- Секрет [если ключ]\n"                         // 11
+        "    Славя: Тсс.\n"                              // 12
+        "- На пляж -> beach\n"                           // 13
+        "- В лес -> forest\n"                            // 14
+        "конецвыбора\n"                                  // 15
+        "если славя >= 3 -> good_end\n"                  // 16
+        "переход ordinary\n"                             // 17
+        ": beach\n"                                      // 18
+        "текст Пляж.\n"                                  // 19
+        "переход nowhere\n"                              // 20
+        ": forest\n"                                     // 21
+        "выбор\n"                                        // 22
+        "- Дальше [нужно славя 9]\n"                     // 23
+        "конецвыбора\n"                                  // 24
+        "текст Лес.\n"                                   // 25
+        "конецигры\n"                                    // 26
+        ": ordinary\n"                                   // 27
+        "текст Обычный конец.\n"                         // 28
+        "конецигры\n"                                    // 29
+        ": good_end\n"                                   // 30
+        "текст Хороший конец.\n"                         // 31
+        "конецигры\n");                                  // 32
+    const FuzzReport r = breakMod(story, &esa, 300, 2000);
+    auto has = [](const QVector<FuzzHit>& v, const char* kind, int line) {
+        for (const FuzzHit& h : v) if (h.kind == QLatin1String(kind) && h.line == line) return &h;
+        return static_cast<const FuzzHit*>(nullptr);
+    };
+    check(r.runs >= 24 && r.endings.size() == 1 && has(r.endings, "finale", 29),
+          QStringLiteral("break: the one ending the walks reach (%1 walks, %2 endings)").arg(r.runs).arg(r.endings.size()));
+    const FuzzHit* miss = has(r.problems, "missing", 20);
+    check(miss && miss->detail == QStringLiteral("nowhere") && !miss->route.isEmpty(), "break: a way into a scene that is not there, with its route");
+    check(has(r.problems, "stuck", 22) != nullptr, "break: a choice with every option locked and no timer - the player is stuck");
+    const FuzzHit* kiss = nullptr;
+    for (const FuzzHit& h : r.locked) if (h.detail == QString::fromUtf8("Поцеловать")) kiss = &h;
+    bool hidden = false;
+    for (const FuzzHit& h : r.locked) if (h.kind == QLatin1String("hidden") && h.detail == QString::fromUtf8("Секрет")) hidden = true;
+    check(kiss && kiss->kind == QLatin1String("lock") && kiss->hint.contains(QString::fromUtf8("5")) && hidden,
+          "break: a lock that never opens (with its «нужно»), an «если» option never offered");
+    check(r.unseen.size() == 1 && r.unseen[0].scene == QStringLiteral("good_end") && r.unseen[0].kind == QLatin1String("blocked"),
+          "break: an ending the points never let anyone into");
+    check(r.never.size() == 1 && r.never[0].line == 26, "break: «конецигры» after the stuck choice is never reached");
+    // the route replays: the cinema walked along it stops right before the missing scene
+    Cinema replay;
+    replay.load(story, &esa);
+    CinemaStop st = replay.start(1);
+    for (int x : miss ? miss->route : QVector<int>()) st = replay.next(x);
+    check(st.line == 19 && replay.next(-1).kind == CinemaStop::End, QStringLiteral("break: the route leads to that very moment (line %1)").arg(st.line));
+
+    // the cinema's own fixes: the last option above «время вышло» goes to ITS scene; «обход»: a visited place goes out
+    Cinema c;
+    c.load(QString::fromUtf8("@mod_id genry_f\n: start\nвыбор на время 5\n- А -> a\n- Б -> b\nвремя вышло -> t\nконецвыбора\n"
+                             ": a\nтекст А.\nконецигры\n: b\nтекст Б.\nконецигры\n: t\nтекст Время.\nконецигры\n"), &esa);
+    st = c.start(1);
+    const bool timed = st.kind == CinemaStop::Choice && st.seconds == 5;
+    st = c.next(1);
+    check(timed && st.line == 12, QStringLiteral("cinema: the last option of a timed choice goes to its scene (line %1)").arg(st.line));
+    c.load(QString::fromUtf8("@mod_id genry_f\n: start\nкарта обход площадь: sq, пляж: be, готово: fin\n"
+                             ": sq\nтекст Площадь.\nпереход start\n: be\nтекст Пляж.\nпереход start\n: fin\nтекст Финал.\nконецигры\n"), &esa);
+    st = c.start(1);
+    const QStringList first = st.options;
+    st = c.next(0);                                            // the square
+    st = c.next(-1);                                           // back on the map
+    const QStringList second = st.options;
+    st = c.next(0);                                            // the beach
+    st = c.next(-1);                                           // all walked: «готово» by itself
+    check(first == QStringList{QString::fromUtf8("Площадь"), QString::fromUtf8("Пляж")} && second == QStringList{QString::fromUtf8("Пляж")} &&
+              st.line == 11,
+          QStringLiteral("cinema: the «обход» map - places go out, «готово» when all are walked (%1 | %2 | line %3)")
+              .arg(first.join(','), second.join(',')).arg(st.line));
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -1566,6 +1659,7 @@ int main(int argc, char** argv)
     testDoctor();
     test7dl();
     testTimelineAndroid();
+    testBreakMod();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

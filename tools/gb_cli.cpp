@@ -13,6 +13,7 @@
 //                                                  each screen built, each python name, the game's lint. Exit 1 = broken.
 #include "Builder.h"
 #include "Cinema.h"
+#include "Fuzz.h"
 #include "EsAssets.h"
 #include "Forms.h"
 #include "Library.h"
@@ -290,6 +291,26 @@ int main(int argc, char** argv)
             st = cin.next(pick);
         }
         out << "steps " << cin.steps() << "\n";
+        return 0;
+    }
+    if (cmd == "break") {
+        //   gb_cli break <story>   «Сломай мой мод»: hundreds of walks by the cinema, what they found
+        if (!esOk) return fail(err);
+        QElapsedTimer t;
+        t.start();
+        const FuzzReport r = breakMod(story, &es);
+        out << "walks " << r.runs << " in " << t.elapsed() << " ms, clicks " << r.clicksMin << ".." << r.clicksMax << " (avg " << r.clicksAvg
+            << "), reading " << r.minutesMin << ".." << r.minutesMax << " min, scenes " << r.scenesSeen << "/" << r.scenes << ", choices " << r.choices << "\n";
+        auto dump = [&](const char* head, const QVector<FuzzHit>& v) {
+            for (const FuzzHit& h : v)
+                out << head << " " << h.kind << " line " << h.line << " [" << h.scene << "] x" << h.count << " route " << h.route.size()
+                    << (h.detail.isEmpty() ? QString() : "  " + h.detail) << (h.hint.isEmpty() ? QString() : "  (" + h.hint + ")") << "\n";
+        };
+        dump("ENDING ", r.endings);
+        dump("PROBLEM", r.problems);
+        dump("LOCKED ", r.locked);
+        dump("UNSEEN ", r.unseen);
+        dump("NEVER  ", r.never);
         return 0;
     }
     if (cmd == "screenplay") {          // pasted text -> story lines (--expand: plain commands)

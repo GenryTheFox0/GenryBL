@@ -7,6 +7,7 @@
 #include "History.h"
 #include "Graph.h"
 #include "Timeline.h"
+#include "Fuzz.h"
 #include "Py.h"
 #include "Text.h"
 
@@ -1766,6 +1767,31 @@ void Engine::refreshProjects()
     emit projectsChanged();
 }
 
+QVariantList Engine::searchProjects(const QString& query, bool caseSensitive, const QString& openId, const QString& openText) const
+{
+    QVariantList out;
+    if (query.trimmed().isEmpty()) return out;
+    const Qt::CaseSensitivity cs = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    QVariantList order;                            // the open project first, then the rest as the launcher lists them
+    for (const QVariant& v : m_projects) if (v.toMap().value(QStringLiteral("id")).toString() == openId) order << v;
+    for (const QVariant& v : m_projects) if (v.toMap().value(QStringLiteral("id")).toString() != openId) order << v;
+    for (const QVariant& v : order) {
+        const QVariantMap p = v.toMap();
+        const QString id = p.value(QStringLiteral("id")).toString();
+        const QString text = id == openId ? openText : loadStory(id);
+        const QStringList lines = pySplitLines(text);
+        for (int i = 0; i < lines.size(); ++i) {
+            const int col = int(lines[i].indexOf(query, 0, cs));
+            if (col < 0) continue;
+            out << QVariantMap{{QStringLiteral("id"), id}, {QStringLiteral("name"), p.value(QStringLiteral("name"))},
+                               {QStringLiteral("line"), i + 1}, {QStringLiteral("text"), lines[i]},
+                               {QStringLiteral("col"), col}, {QStringLiteral("len"), int(query.size())}};
+            if (out.size() >= 3000) return out;
+        }
+    }
+    return out;
+}
+
 QString Engine::createProject(const QString& name, bool example)
 {
     const QString clean = pyStrip(name).isEmpty() ? U("Мой мод") : pyStrip(name);
@@ -2464,6 +2490,35 @@ void Engine::exportMod(const QString& id, const QString& storyText, const QStrin
         }
         res.ok = true;
         return res;
+    }));
+}
+
+void Engine::breakMod(const QString& storyText)
+{
+    auto* w = new QFutureWatcher<QVariantMap>(this);
+    connect(w, &QFutureWatcher<QVariantMap>::finished, this, [this, w] {
+        const QVariantMap r = w->result();
+        w->deleteLater();
+        emit breakModReady(r);
+    });
+    w->setFuture(QtConcurrent::run([this, storyText]() -> QVariantMap {
+        const FuzzReport r = gb::breakMod(storyText, &m_es);
+        auto list = [&r](const QVector<FuzzHit>& v) {
+            QVariantList out;
+            for (const FuzzHit& h : v) {
+                QVariantList route;
+                for (int x : h.route) route << x;
+                out << QVariantMap{{QStringLiteral("kind"), h.kind}, {QStringLiteral("line"), h.line}, {QStringLiteral("scene"), h.scene},
+                                   {QStringLiteral("detail"), h.detail}, {QStringLiteral("hint"), h.hint}, {QStringLiteral("count"), h.count},
+                                   {QStringLiteral("share"), r.runs ? (h.count * 100 + r.runs / 2) / r.runs : 0}, {QStringLiteral("route"), route}};
+            }
+            return out;
+        };
+        return {{QStringLiteral("runs"), r.runs}, {QStringLiteral("clicksMin"), r.clicksMin}, {QStringLiteral("clicksMax"), r.clicksMax},
+                {QStringLiteral("clicksAvg"), r.clicksAvg}, {QStringLiteral("minutesMin"), r.minutesMin}, {QStringLiteral("minutesMax"), r.minutesMax},
+                {QStringLiteral("scenes"), r.scenes}, {QStringLiteral("scenesSeen"), r.scenesSeen}, {QStringLiteral("choices"), r.choices},
+                {QStringLiteral("endings"), list(r.endings)}, {QStringLiteral("problems"), list(r.problems)}, {QStringLiteral("locked"), list(r.locked)},
+                {QStringLiteral("unseen"), list(r.unseen)}, {QStringLiteral("never"), list(r.never)}};
     }));
 }
 

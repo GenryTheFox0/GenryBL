@@ -9,7 +9,10 @@ import GenryBL
 Item {
     id: ed
     property string projectId
+    property int startLine: 0                // opened from «Поиск по всем модам»: that line, the word in the find bar
+    property string startFind: ""
     signal back()
+    signal openOther(string id, int line, string find)
     property string hoverExtra: ""
     property var issues: []
     property var badges: []                  // the options' marks («🔒», «★», «+1», «↪») after their lines
@@ -92,6 +95,10 @@ Item {
             dialogue.openFor(code.text, code.currentLine)
             dialogue.importUrls(shotArg.split("|").map(p => "file:///" + p))
         })
+        if (shotPage === "editor-find") Qt.callLater(() => { code.gotoLine(1); code.openFindWith(shotArg || "Славя", false); code.replaceOpen = true })
+        if (shotPage === "editor-search") Qt.callLater(() => searchAll.openWith(shotArg || "Славя"))
+        if (shotPage === "editor-break") Qt.callLater(() => breakDialog.openFor(code.text))
+        if (startLine > 0) Qt.callLater(() => { code.gotoLine(startLine); if (startFind) code.openFindWith(startFind, false) })
         refreshPreview()
     }
 
@@ -215,6 +222,29 @@ Item {
     Shortcut { sequence: "Ctrl+K"; onActivated: { leftTabs.currentIndex = 0; palette.focusSearch() } }
     Shortcut { sequence: "Ctrl+M"; enabled: !storyMap.opened; onActivated: storyMap.openFor(code.text) }
     Shortcut { sequence: "Ctrl+T"; onActivated: ed.showTimeline = !ed.showTimeline }
+    Shortcut { sequences: [StandardKey.Find]; onActivated: code.openFind(false) }
+    Shortcut { sequence: "Ctrl+H"; onActivated: code.openFind(true) }
+    Shortcut { sequence: "F3"; onActivated: code.findNext() }
+    Shortcut { sequence: "Shift+F3"; onActivated: code.findPrev() }
+    Shortcut { sequence: "Ctrl+Shift+F"; enabled: !searchAll.opened; onActivated: { ed.save(); searchAll.openWith(code.selectedText) } }
+    Shortcut { sequence: "F7"; enabled: !breakDialog.opened; onActivated: { ed.save(); breakDialog.openFor(code.text) } }
+    BreakDialog {
+        id: breakDialog
+        onGotoLine: (line) => { breakDialog.close(); code.gotoLine(line) }
+        onWatch: (route) => { breakDialog.close(); cinemaView.beginRoute(code.text, route) }
+        onClosed: code.focusEditor()
+    }
+    SearchAllDialog {
+        id: searchAll
+        projectId: ed.projectId
+        storyText: code.text
+        onOpenAt: (id, line, query, cs) => {
+            searchAll.close()
+            if (id === ed.projectId) { code.gotoLine(line); code.openFindWith(query, cs) }
+            else { ed.save(); ed.openOther(id, line, query) }
+        }
+        onClosed: code.focusEditor()
+    }
     Repeater {                                   // Alt+1..9: the quick inserts of the palette
         model: 9
         Item { required property int index; Shortcut { sequence: "Alt+" + (index + 1); enabled: !cmdForm.opened; onActivated: palette.runPin(index) } }
@@ -508,6 +538,13 @@ Item {
                     }
                     PillButton {
                         dark: true
+                        text: qsTr("💥 Сломай мой мод")
+                        onClicked: { ed.save(); breakDialog.openFor(code.text) }
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("GenryBL пройдёт мод сотни раз, как разные игроки, и покажет, где он ломается: недостижимые концовки, вечные замки, тупики, петли (F7)")
+                    }
+                    PillButton {
+                        dark: true
                         text: qsTr("🗺 Карта сюжета")
                         onClicked: storyMap.openFor(code.text)
                         ToolTip.visible: hovered
@@ -547,10 +584,13 @@ Item {
                     MenuItem { text: qsTr("Диалог + озвучка"); onTriggered: dialogue.openFor(code.text, code.currentLine) }
                     MenuItem { text: qsTr("Библиотека картинок"); onTriggered: libraryBrowser.open() }
                     MenuSeparator {}
+                    MenuItem { text: qsTr("Найти и заменить (Ctrl+F, Ctrl+H)"); onTriggered: code.openFind(true) }
+                    MenuItem { text: qsTr("Поиск по всем модам (Ctrl+Shift+F)"); onTriggered: { ed.save(); searchAll.openWith(code.selectedText) } }
                     MenuItem { text: qsTr("Папка мода"); onTriggered: Engine.openFolder(Engine.projectDir(ed.projectId)) }
                     MenuItem { text: qsTr("Лаборатория механик"); onTriggered: labDialog.openLab() }
                     MenuItem { text: qsTr("Таймлайн сцены"); onTriggered: ed.showTimeline = !ed.showTimeline }
                     MenuItem { text: qsTr("Карта сюжета"); onTriggered: storyMap.openFor(code.text) }
+                    MenuItem { text: qsTr("Сломай мой мод (F7)"); onTriggered: { ed.save(); breakDialog.openFor(code.text) } }
                     MenuItem { text: qsTr("Файлы мода — что уедет к игрокам"); enabled: !Engine.busy; onTriggered: modFilesDialog.openFor(ed.projectId, code.text) }
                     MenuItem { text: qsTr("История версий"); onTriggered: { ed.save(); historyDialog.openFor(ed.projectId, code.text) } }
                     MenuItem { text: qsTr("Проверить движком игры"); enabled: !Engine.busy; onTriggered: Engine.engineCheck(ed.projectId, code.text) }
@@ -659,6 +699,10 @@ Item {
             badges: ed.badges
             lineTool: true
             onLineToolClicked: (line, anchor) => { ed.lineScenes = Engine.sceneNames(code.text); lineMenu.popup(anchor, anchor.width + 4, 0) }
+            onReplaced: (n) => {
+                previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+                Engine.toast(n ? qsTr("Заменено: ") + n + qsTr(" (Ctrl+Z вернёт всё сразу)") : qsTr("Нечего заменять"), n ? 0 : 1)
+            }
         }
 
         Rectangle {
