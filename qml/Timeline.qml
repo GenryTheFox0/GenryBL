@@ -16,6 +16,7 @@ Rectangle {
     signal gotoLine(int line)
     signal editLine(int line)
     signal moveLine(int from, int to)
+    signal addKeyframe(string tag)
     signal closeMe()
 
     readonly property var beats: tdata.beats || []
@@ -168,7 +169,7 @@ Rectangle {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: clipBox.modelData.movable ? (drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor) : Qt.PointingHandCursor
-                            drag.target: clipBox.modelData.movable && clipBox.modelData.to - clipBox.modelData.from === 1 ? dragProxy : null
+                            drag.target: clipBox.modelData.movable ? dragProxy : null
                             drag.axis: Drag.XAxis
                             drag.threshold: 8
                             property real startX: 0
@@ -190,11 +191,70 @@ Rectangle {
                             ToolTip.visible: containsMouse && !drag.active
                             ToolTip.delay: 500
                             ToolTip.text: qsTr("стр. ") + clipBox.modelData.line + ": " + clipBox.modelData.label +
-                                          (clipBox.modelData.movable && clipBox.modelData.to - clipBox.modelData.from === 1 ? qsTr("   ·   тащи — переставить строку") : "")
+                                          (clipBox.modelData.movable ? qsTr("   ·   тащи — переставить строку") : "")
                         }
                         Item { id: dragProxy }
+                        // the right edge: stretch / shorten the clip - the line that ends it moves
+                        readonly property bool stretchy: clipBox.modelData.to < tl.beats.length &&
+                                                         ["say", "flow", "moment"].indexOf(clipBox.modelData.kind) < 0
+                        property real stretchX: 0
+                        Rectangle {
+                            visible: clipBox.stretchy
+                            anchors.right: parent.right; anchors.rightMargin: -2 - clipBox.stretchX
+                            width: 8; height: parent.height; radius: 3
+                            color: edge.containsMouse || edge.drag.active ? Theme.gold : "#40ffffff"
+                            MouseArea {
+                                id: edge
+                                anchors.fill: parent; anchors.margins: -3
+                                hoverEnabled: true
+                                cursorShape: Qt.SizeHorCursor
+                                drag.target: edgeProxy
+                                drag.axis: Drag.XAxis
+                                drag.threshold: 4
+                                onPressed: edgeProxy.x = 0
+                                onPositionChanged: if (drag.active) clipBox.stretchX = edgeProxy.x
+                                onReleased: {
+                                    const to = clipBox.modelData.to
+                                    const end = Math.max(clipBox.modelData.from + 1, Math.round((to * tl.beatW + clipBox.stretchX) / tl.beatW))
+                                    clipBox.stretchX = 0
+                                    if (end === to) return
+                                    const ender = tl.beats[to]
+                                    const at = end > to ? end + 1 : end
+                                    tl.moveLine(ender, at >= tl.beats.length ? tl.beats[tl.beats.length - 1] + 1 : tl.beats[at])
+                                }
+                                ToolTip.visible: containsMouse && !drag.active
+                                ToolTip.delay: 400
+                                ToolTip.text: qsTr("Тащи край — растянуть или укоротить: сдвигается строка, которая это заканчивает")
+                            }
+                            Item { id: edgeProxy }
+                        }
                     }
                 }
+            }
+        }
+        // ◆ a keyframe on a character's track, at the playhead: it glides to a new place from here
+        Repeater {
+            model: tl.current >= 0 ? (tl.tdata.tracks || []) : []
+            Rectangle {
+                required property var modelData
+                required property int index
+                visible: modelData.id.indexOf("char:") === 0
+                x: tl.current * tl.beatW + tl.beatW / 2 + 6
+                y: 22 + index * tl.rowH + (tl.rowH - height) / 2
+                width: 22; height: 22; radius: 11
+                z: 11
+                color: kf.containsMouse ? Theme.gold : "#cc1e2b24"
+                border.color: Theme.gold
+                Text { anchors.centerIn: parent; text: "◆"; color: kf.containsMouse ? "#16240c" : Theme.gold; font.pixelSize: 12 }
+                MouseArea {
+                    id: kf
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: tl.addKeyframe(parent.modelData.id.substring(5))
+                }
+                ToolTip.visible: kf.containsMouse
+                ToolTip.text: qsTr("Ключевой кадр: отсюда персонаж плавно переедет на новое место — потом тащи его в превью")
             }
         }
         // the playhead

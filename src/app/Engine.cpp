@@ -1229,9 +1229,9 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
     int key;
     {
         QMutexLocker lock(&m_sceneMx);
-        key = ++m_sceneKey;
-        m_scenes.insert(key, st);
-        m_scenes.remove(key - 48);
+        key = ++m_cineKey;
+        m_cineScenes.insert(key, st);
+        m_cineScenes.remove(key - 48);
     }
     static const QRegularExpression tags(QStringLiteral("\\{[^}]*\\}"));
     QString text = st.text;
@@ -2889,7 +2889,11 @@ int Engine::tidyUnused(const QString& id, const QStringList& paths)
 QString Engine::lastCrash() const
 {
     const QString r = crash::newestReport(m_root + QStringLiteral("/work/crash"));
-    return !r.isEmpty() && QFileInfo(r).fileName() != m_settings.value(QStringLiteral("crashSeen")).toString() ? r : QString();
+    if (r.isEmpty() || QFileInfo(r).fileName() == m_settings.value(QStringLiteral("crashSeen")).toString()) return {};
+    QFile f(r);
+    if (!f.open(QIODevice::ReadOnly) || !QString::fromUtf8(f.readLine()).startsWith(QStringLiteral("GenryBL ") + version() + QLatin1Char(' ')))
+        return {};                                   // an old version fell: fixed long ago, nothing to tell
+    return r;
 }
 
 void Engine::crashSeen()
@@ -3030,7 +3034,7 @@ QImage Engine::providerImage(const QString& rawId, const QSize& req)
         SceneState st;
         {
             QMutexLocker lock(&m_sceneMx);
-            st = m_scenes.value(rest.toInt());
+            st = m_cineScenes.value(rest.toInt());
         }
         return fit(m_renderer.render(st, false));
     }

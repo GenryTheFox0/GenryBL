@@ -109,7 +109,9 @@ SceneTimeline sceneTimeline(const QString& storyText, int line, const CompileOpt
             while (!img.isEmpty() && (isPosition(img.last()) || isWalkPosition(img.last()) || pyIsNumber(img.last()))) img.removeLast();
             const QString image = img.join(QLatin1Char(' ')).section(QLatin1Char('|'), 0, 0).trimmed();
             const QString tag = image.section(QLatin1Char(' '), 0, 0);
-            if (!tag.isEmpty()) start(QStringLiteral("char:") + tag, charTitle(tag), beat, ln, image, QStringLiteral("char"));
+            // «… move»: the character glides there from where it stood - a keyframe of the scene
+            const bool key = w.contains(QStringLiteral("move"));
+            if (!tag.isEmpty()) start(QStringLiteral("char:") + tag, charTitle(tag), beat, ln, key ? QStringLiteral("◆ ") + image : image, QStringLiteral("char"));
         } else if (cmd == QLatin1String("hide") || cmd == QLatin1String("exitleft") || cmd == QLatin1String("exitright")) {
             const QString tag = w.value(0);
             if (!tag.isEmpty()) close(QStringLiteral("char:") + tag, beat + 1);

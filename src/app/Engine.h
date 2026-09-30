@@ -151,7 +151,7 @@ public:
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
     QString esRenpy() const { return m_es.esRoot().isEmpty() ? QString() : gb::build::esRenpyVersion(m_es.esRoot()); }
-    QString version() const { return QStringLiteral("V2.1.0"); }
+    QString version() const { return QStringLiteral("V2.1.1"); }
 
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;
@@ -485,6 +485,8 @@ private:
     mutable QSettings m_settings;
     QMutex m_sceneMx;
     QHash<int, gb::SceneState> m_scenes;
+    QHash<int, gb::SceneState> m_cineScenes;          // the cinema's frames: a live cinema re-walks on every edit
+    int m_cineKey = 0;
     int m_sceneKey = 0;
     qint64 m_gamePid = 0;
     QTimer m_watch;

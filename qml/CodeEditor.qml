@@ -98,6 +98,15 @@ Rectangle {
         }
     }
     function focusEditor() { area.forceActiveFocus() }
+    // a real one-pixel scroll and back in the next frame: Qt looks at what is in view again and draws it
+    function redrawText() {
+        if (redrawBack.running) return
+        flick.contentY += 1
+        redrawBack.start()
+    }
+    Timer { id: redrawBack; interval: 40; onTriggered: flick.contentY -= 1 }
+    Component.onCompleted: redrawLate.start()
+    Timer { id: redrawLate; interval: 600; onTriggered: ce.redrawText() }
     function lineY(n) {                    // the top of line n on the page (after the last line: the bottom)
         if (n - 1 >= starts.length) return area.contentHeight - area.bottomPadding
         return area.positionToRectangle(Math.min(area.length, starts[Math.max(0, n - 1)])).y
@@ -303,9 +312,14 @@ Rectangle {
     Flickable {
         id: flick
         anchors.fill: parent
+        // Qt draws a text only where it was in view: taller (the timeline closed, the window grew) - draw the rest now
+        onHeightChanged: Qt.callLater(ce.redrawText)
+        onWidthChanged: Qt.callLater(ce.redrawText)
         anchors.leftMargin: gutter.width
         contentWidth: width
-        contentHeight: area.implicitHeight
+        // the room under the last line lives here, not as the text's bottom padding: Qt leaves the bottom padding's
+        // worth of the view undrawn (the last ~200 px of text on screen stayed black until a scroll)
+        contentHeight: area.implicitHeight + 190
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
@@ -401,7 +415,7 @@ Rectangle {
             rightPadding: ce.lineTool ? 44 : 6
             leftPadding: 10
             topPadding: 10
-            bottomPadding: 200
+            bottomPadding: 10
             tabStopDistance: 32
             background: null
             placeholderText: qsTr("Пиши историю…")

@@ -953,6 +953,29 @@ Item {
             previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
         }
         onCloseMe: ed.showTimeline = false
+        // ◆ a keyframe: the character's last «показать» above, at the next place, with «move» (Ren'Py glides it there)
+        onAddKeyframe: (tag) => {
+            const n = code.currentLine
+            let src = ""
+            for (let i = n; i >= 1 && !src; --i) {
+                const t = code.lineText(i).trim()
+                const w = t.split(/\s+/)
+                if (/^(показать|show)$/i.test(w[0]) && w[1] === tag) src = t
+                else if (/^:/.test(t)) break
+            }
+            if (!src) { Engine.toast(qsTr("Сначала покажи персонажа в этой сцене — ключевой кадр двигает его с места"), 1); return }
+            const places = ["fleft", "left", "cleft", "center", "cright", "right", "fright"]
+            const effects = ["dissolve", "dissolve2", "dspr", "fade", "fade2", "fade3", "hpunch", "move", "moveinleft", "moveinright",
+                             "moveoutleft", "moveoutright", "none", "pixellate", "vpunch"]
+            let w = src.split(/\s+/).filter(x => effects.indexOf(x) < 0)
+            let at = "center"
+            for (const x of w) if (places.indexOf(x) >= 0) at = x
+            w = w.filter(x => places.indexOf(x) < 0)
+            const next = places.indexOf(at) >= 3 ? "left" : "right"
+            code.insertAfterLine(n, w.join(" ") + " " + next + " move")
+            previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+            Engine.toast(qsTr("Ключевой кадр: персонаж плавно переедет. Тащи его в превью — место поменяется на этой строке"), 0)
+        }
     }
 
     // ---------------------------------------------------------------- big preview (reading mode)

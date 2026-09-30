@@ -36,7 +36,10 @@ Item {
     Item {
         id: stage
         width: 1920; height: 1080
-        readonly property real s: Math.min(launcher.width / 1920, launcher.height / 1080)
+        // near 16:9 (a window minus the taskbar): cover, edge to edge; far from it: the whole stage fits
+        readonly property real fit: Math.min(launcher.width / 1920, launcher.height / 1080)
+        readonly property real cover: Math.max(launcher.width / 1920, launcher.height / 1080)
+        readonly property real s: cover / fit <= 1.08 ? cover : fit
         scale: s
         transformOrigin: Item.TopLeft
         x: (launcher.width - 1920 * s) / 2

@@ -11,6 +11,7 @@ import GenryBL
 // and a gust of wind now and then.
 Item {
     id: board
+    readonly property bool ready: imgA.status === Image.Ready
     width: 1920
     height: 1080
     property string variant: "day"          // the picture: morning | day | day2 | evening | night

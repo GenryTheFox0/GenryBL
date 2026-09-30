@@ -62,6 +62,9 @@ Item {
     // eased mouse (-1..1) + a slow idle float, so the board lives even when the mouse rests
     property real ex: 0
     property real ey: 0
+    // the fade in starts when the picture is there (not a white box first), or after 2.5 s whatever happens
+    property bool shown: board.ready || !menu.intro
+    Timer { interval: 2500; running: menu.intro && !menu.shown; onTriggered: menu.shown = true }
     Behavior on ex { SmoothedAnimation { velocity: 1.6 } }
     Behavior on ey { SmoothedAnimation { velocity: 1.6 } }
     onMxChanged: ex = mx
@@ -75,7 +78,8 @@ Item {
         width: 1920
         height: 1080
         transformOrigin: Item.Center
-        property real push: menu.intro ? 1.12 : 1.05
+        // the tilt after the mouse pulls the far edge in by ~8 %: the board is that much bigger, no black edge ever
+        property real push: menu.intro ? 1.18 : 1.11
         scale: push
         x: -menu.ex * 18 + Math.sin(menu.floatT) * 4
         y: -menu.ey * 11 + Math.cos(menu.floatT * 0.7) * 3
@@ -83,7 +87,7 @@ Item {
             Rotation { origin.x: 960; origin.y: 540; axis { x: 0; y: 1; z: 0 } angle: menu.ex * 3.2 + Math.sin(menu.floatT * 0.5) * 0.4 },
             Rotation { origin.x: 960; origin.y: 540; axis { x: 1; y: 0; z: 0 } angle: -menu.ey * 2.2 }
         ]
-        NumberAnimation on push { running: menu.intro; from: 1.12; to: 1.05; duration: 3200; easing.type: Easing.OutCubic }
+        NumberAnimation on push { running: menu.intro && menu.shown; from: 1.18; to: 1.11; duration: 3200; easing.type: Easing.OutCubic }
 
         LiveBoard {
             id: board
@@ -519,7 +523,7 @@ Item {
         anchors.fill: parent
         color: "black"
         opacity: menu.intro ? 1 : 0
-        NumberAnimation on opacity { running: menu.intro; from: 1; to: 0; duration: 1400; easing.type: Easing.InOutQuad }
+        NumberAnimation on opacity { running: menu.intro && menu.shown; from: 1; to: 0; duration: 1400; easing.type: Easing.InOutQuad }
         visible: opacity > 0.01
     }
 }
