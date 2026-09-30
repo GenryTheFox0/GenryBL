@@ -1712,6 +1712,39 @@ static void testCrash()
           "crash: errors.txt - the mod whose script the game could not read");
 }
 
+// [18] the list of deleted sprites that ships with GenryBL (a developer build writes its «Удалить» there): only the
+// workshop wardrobe's faces - never the game's own sprites (it once took every emotion but «smile» off Ольга Дмитриевна)
+static void testShippedHidden()
+{
+    out << "[18] shipped hidden list: never the game's own sprites\n";
+    QFile cf(QStringLiteral(GB_SOURCE_DIR "/data/es_catalog.json"));
+    check(cf.open(QIODevice::ReadOnly), "hidden: the catalog opens");
+    const QJsonObject sprites = QJsonDocument::fromJson(cf.readAll()).object().value(QStringLiteral("sprites")).toObject();
+    QSet<QString> game;                                           // "mt|angry pioneer"
+    for (auto it = sprites.begin(); it != sprites.end(); ++it) {
+        QStringList w = it.key().split(QLatin1Char(' '));
+        if (w.size() > 1 && (w.last() == QLatin1String("close") || w.last() == QLatin1String("far"))) w.removeLast();
+        game.insert(w.first() + QLatin1Char('|') + w.mid(1).join(QLatin1Char(' ')));
+    }
+    check(game.contains(QStringLiteral("mt|angry pioneer")), "hidden: the catalog knows «mt angry pioneer»");
+    QFile hf(QStringLiteral(GB_SOURCE_DIR "/data/wardrobe_hidden.txt"));
+    check(hf.open(QIODevice::ReadOnly | QIODevice::Text), "hidden: the shipped list opens");
+    QStringList bad;
+    for (const QString& raw : QString::fromUtf8(hf.readAll()).split(QLatin1Char('\n'))) {
+        const QString l = raw.trimmed();
+        const int bar = int(l.indexOf(QLatin1Char('|')));
+        if (bar > 0 && l.mid(bar + 1).startsWith(QLatin1String("look:")) && game.contains(l.left(bar + 1) + l.mid(bar + 6))) bad << l;
+    }
+    check(bad.isEmpty(), "hidden: no game sprite in the shipped list" + (bad.isEmpty() ? QString() : " - " + bad.mid(0, 5).join(QStringLiteral(", "))));
+    // the reading of the keys: a look, a face on every outfit, an outfit
+    const QSet<QString> keys{QStringLiteral("mt|look:angry pioneer"), QStringLiteral("us|face:laugh"), QStringLiteral("un|outfit:coat_bitd")};
+    check(Wardrobe::hiddenIn(keys, QStringLiteral("mt"), QStringLiteral("angry"), QStringLiteral("pioneer")) &&
+              !Wardrobe::hiddenIn(keys, QStringLiteral("mt"), QStringLiteral("angry"), QStringLiteral("dress")) &&
+              Wardrobe::hiddenIn(keys, QStringLiteral("us"), QStringLiteral("laugh"), QStringLiteral("sport")) &&
+              Wardrobe::hiddenIn(keys, QStringLiteral("un"), QStringLiteral("smile"), QStringLiteral("coat_bitd")),
+          "hidden: look / face / outfit keys read as the wardrobe reads them");
+}
+
 // [17] the Center: Discord over its pipe (a stand-in Discord here), the game's mods, the catalog's archive, «Играть»
 static bool waitFor(const std::function<bool()>& done, int ms = 5000)
 {
@@ -1859,6 +1892,7 @@ int main(int argc, char** argv)
     testBreakMod();
     testCrash();
     testHub();
+    testShippedHidden();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }
