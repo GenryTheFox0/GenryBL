@@ -194,17 +194,26 @@ init 999 python:
                     self.close()
                 return False
 
-        inbox = queue_mod.Queue()
-        started = int(time.time())
+        # one worker for the whole game: a language switch restarts Ren'Py (renpy.utter_restart) and runs this again
+        import sys, types
+        holder = sys.modules.get("_genry_presence")
+        if holder is None or holder.thread is None or not holder.thread.is_alive():
+            holder = types.ModuleType(str("_genry_presence"))   # str: Python 2 wants bytes here
+            holder.inbox = queue_mod.Queue()
+            holder.thread = None
+            holder.started = int(time.time())
+            sys.modules["_genry_presence"] = holder
+        inbox = holder.inbox
+        started = holder.started
 
         def worker():
             pipe = Pipe()
-            pending, last, nonce, retry = None, 0.0, 0, 0.0
+            pending, last, nonce, retry, current = None, 0.0, 0, 0.0, None
             while True:
                 try:
                     item = inbox.get(timeout=1.0)
                     while True:                        # only the newest status matters
-                        pending = item
+                        pending = current = item
                         item = inbox.get_nowait()
                 except queue_mod.Empty:
                     pass
@@ -214,6 +223,7 @@ init 999 python:
                             retry = max(retry, time.time() + 20)
                             continue
                         last = 0.0
+                        pending = current              # a new talk (Discord came back): the status again
                     elif pipe.waiting():
                         pipe.answer(1.0)               # a PING between our updates
                     if pending is not None and time.time() - last >= gap:
@@ -230,8 +240,10 @@ init 999 python:
                     pipe.close()
                     retry = time.time() + 20
 
-        thread = threading.Thread(target=worker, name="genry_presence")
-        thread.daemon = True
+        if holder.thread is None:
+            holder.thread = threading.Thread(target=worker, name="genry_presence")
+            holder.thread.daemon = True
+        thread = holder.thread
 
         # the game side: every few seconds, the status of the moment - to the worker only when it changed
         state = {"last": None, "at": 0.0}

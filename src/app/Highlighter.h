@@ -28,6 +28,7 @@ public:
     void setFindCase(bool on);
     // «Заменить все»: every match at once, as ONE step of Ctrl+Z; how many were replaced
     Q_INVOKABLE int replaceAll(const QString& find, const QString& with, bool caseSensitive);
+    Q_INVOKABLE void replaceRange(int from, int to, const QString& with);   // one match: one step of Ctrl+Z
 
 signals:
     void documentChanged();

@@ -78,8 +78,7 @@ Rectangle {
     function replaceOne() {
         if (matchIndex < 0) { findNext(); return }
         const at = area.selectionStart
-        area.remove(at, area.selectionEnd)
-        area.insert(at, replField.text)
+        hl.replaceRange(at, area.selectionEnd, replField.text)
         area.cursorPosition = at + replField.text.length
         findFrom(at + replField.text.length)
     }

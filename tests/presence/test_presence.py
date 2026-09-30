@@ -75,7 +75,9 @@ def main():
     flags = (__future__.absolute_import.compiler_flag | __future__.print_function.compiler_flag |
              __future__.unicode_literals.compiler_flag | __future__.with_statement.compiler_flag)
     exec(compile(code, RPY, 'exec', flags, True), env)
-    threading.Thread(target=serve).start()
+    t = threading.Thread(target=serve)
+    t.daemon = True
+    t.start()
     time.sleep(0.2)
     tick = env['_genry_presence_install']({'client_id': '1234567890', 'lang': 'en', 'pipe': PIPE, 'gap': 0.3, 'tick': 0.1})
 
@@ -121,4 +123,8 @@ def main():
     print('PRESENCE OK' if ok else 'PRESENCE FAILED', sys.version.split()[0])
     os._exit(0 if ok else 1)
 
-main()
+try:
+    main()
+except Exception as e:
+    print('PRESENCE FAILED', repr(e))
+    os._exit(1)

@@ -23,6 +23,7 @@ struct ChoiceSeen {
     QHash<int, QString> hint;          // ord -> the lock's «нужно …» as last seen
     QSet<int> shown, open;             // ords ever on screen / ever open
     QVector<int> route;                // the first way to it
+    quint32 seed = 0;
 };
 
 // a hit met again: counted, and the shortest way to it kept (the nicest to watch)
@@ -37,7 +38,10 @@ void note(QHash<QString, FuzzHit>& table, const FuzzHit& h)
         return;
     }
     ++it->count;
-    if (h.route.size() < it->route.size()) it->route = h.route;
+    if (h.route.size() < it->route.size()) {
+        it->route = h.route;
+        it->seed = h.seed;
+    }
 }
 
 QVector<FuzzHit> sorted(const QHash<QString, FuzzHit>& table, bool byCount)
@@ -92,6 +96,8 @@ FuzzReport breakMod(const QString& storyText, const EsAssets* es, int maxRuns, i
         if (run >= 24 && choices.isEmpty()) break;       // nothing to choose: every walk is the same one
         QVector<int> route;
         QHash<int, int> met;                     // choices met this walk: a hub met again is not a stubborn one's business
+        const quint32 seed = quint32(run + 1);
+        c.setSeed(seed);
         CinemaStop st = c.start(1);
         for (;;) {
             if (st.kind == CinemaStop::End) {
@@ -100,6 +106,7 @@ FuzzReport breakMod(const QString& storyText, const EsAssets* es, int maxRuns, i
                 h.scene = sceneOf(st.line);
                 h.detail = st.note;
                 h.route = route.mid(0, qMax(0, int(route.size()) - 1));   // the moment right before the end
+                h.seed = seed;
                 switch (st.endKind) {
                 case CinemaStop::Finale: h.kind = QStringLiteral("finale"); break;
                 case CinemaStop::SceneEnd: h.kind = QStringLiteral("sceneend"); break;
@@ -125,6 +132,7 @@ FuzzReport breakMod(const QString& storyText, const EsAssets* es, int maxRuns, i
                 h.line = st.line;
                 h.scene = sceneOf(st.line);
                 h.route = route;
+                h.seed = seed;
                 note(problems, h);
                 break;
             }
@@ -134,6 +142,7 @@ FuzzReport breakMod(const QString& storyText, const EsAssets* es, int maxRuns, i
                 if (cs.every.isEmpty()) {
                     cs.every = st.everyOption.isEmpty() ? st.options : st.everyOption;
                     cs.route = route;
+                    cs.seed = seed;
                 }
                 QVector<int> ok;                    // the options a player can press, by their place on screen
                 for (int i = 0; i < st.options.size(); ++i) {
@@ -155,6 +164,7 @@ FuzzReport breakMod(const QString& storyText, const EsAssets* es, int maxRuns, i
                         h.line = st.line;
                         h.scene = sceneOf(st.line);
                         h.route = route;
+                        h.seed = seed;
                         note(problems, h);
                         break;
                     }
@@ -213,6 +223,7 @@ FuzzReport breakMod(const QString& storyText, const EsAssets* es, int maxRuns, i
             h.detail = cs.every[ord];
             h.hint = cs.hint.value(ord);
             h.route = cs.route;
+            h.seed = cs.seed;
             r.locked << h;
         }
     }

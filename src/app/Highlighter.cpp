@@ -128,6 +128,16 @@ int StoryHighlighter::replaceAll(const QString& find, const QString& with, bool 
     return n;
 }
 
+void StoryHighlighter::replaceRange(int from, int to, const QString& with)
+{
+    QTextDocument* doc = m_doc ? m_doc->textDocument() : nullptr;
+    if (!doc) return;
+    QTextCursor c(doc);
+    c.setPosition(from);
+    c.setPosition(to, QTextCursor::KeepAnchor);
+    c.insertText(with);
+}
+
 void StoryHighlighter::setIssues(const QVariantList& issues)
 {
     if (issues == m_issues) return;

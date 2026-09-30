@@ -236,7 +236,7 @@ Item {
     BreakDialog {
         id: breakDialog
         onGotoLine: (line) => { breakDialog.close(); code.gotoLine(line) }
-        onWatch: (route) => { breakDialog.close(); cinemaView.beginRoute(code.text, route) }
+        onWatch: (route, seed) => { breakDialog.close(); cinemaView.beginRoute(code.text, route, seed) }
         onClosed: code.focusEditor()
     }
     SearchAllDialog {

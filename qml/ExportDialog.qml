@@ -23,6 +23,7 @@ Popup {
     property bool autoPublish: false             // from the launcher: export, then straight to the form
     property var tags: []
     readonly property bool isNew: !ws.item
+    readonly property bool updating: !!ws.item || /\d{6,}/.test(wsItem.text)
     // the Workshop's own tags (as Steam has them) and how they read here
     readonly property var tagGroups: [
         { title: qsTr("Персонажи"), tags: [["Alisa", qsTr("Алиса")], ["Lena", qsTr("Лена")], ["Slavya", qsTr("Славя")], ["Ulyana", qsTr("Ульяна")],
@@ -76,7 +77,7 @@ Popup {
     function publish() {
         Sfx.click()
         // new: public / friends / only me / by link; an update: the first choice leaves it as it is
-        const vis = ex.isNew ? wsVis.currentIndex : wsVis.currentIndex - 1
+        const vis = ex.updating ? wsVis.currentIndex - 1 : wsVis.currentIndex
         upStage = "start"
         upShare = 0
         upLegal = false
@@ -254,7 +255,7 @@ Popup {
                     Layout.fillWidth: true
                     spacing: 6
                     Text {
-                        text: ex.isNew ? qsTr("Новый мод в Мастерской") : qsTr("Обновить мод в Мастерской (предмет ") + ex.ws.item + ")"
+                        text: !ex.updating ? qsTr("Новый мод в Мастерской") : qsTr("Обновить мод в Мастерской (предмет ") + (ex.ws.item || (wsItem.text.match(/\d{6,}/) || [""])[0]) + ")"
                         color: Theme.gold; font.family: Theme.ui; font.pixelSize: 17; font.bold: true
                     }
                     TextField {
@@ -272,7 +273,7 @@ Popup {
                         DarkCombo {
                             id: wsVis
                             Layout.preferredWidth: 240
-                            model: (ex.isNew ? [] : [qsTr("Не менять")]).concat([qsTr("Все"), qsTr("Только друзья"), qsTr("Только я"), qsTr("По ссылке")])
+                            model: (ex.updating ? [qsTr("Не менять")] : []).concat([qsTr("Все"), qsTr("Только друзья"), qsTr("Только я"), qsTr("По ссылке")])
                         }
                     }
                 }

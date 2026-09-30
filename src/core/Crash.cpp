@@ -80,8 +80,13 @@ void pointAtStory(CrashReport& r, const QString& esRoot, const QString& modId, c
     const QStringList rpy = readText(QDir::cleanPath(QDir(esRoot).filePath(r.file))).split(QLatin1Char('\n'));
     QString label;
     static const QRegularExpression labelRe(QStringLiteral("^label\\s+([A-Za-z0-9_\\.]+)"));
-    for (int i = qMin(r.rpyLine, int(rpy.size())) - 1; i >= 0 && label.isEmpty(); --i)
-        if (const auto m = labelRe.match(rpy[i]); m.hasMatch()) label = m.captured(1);
+    // up to the block's head: a label - the story; a screen / init / define after the story - no story line of its own
+    for (int i = qMin(r.rpyLine, int(rpy.size())) - 1; i >= 0; --i) {
+        const QString& l = rpy[i];
+        if (l.trimmed().isEmpty() || l.trimmed().startsWith(QLatin1Char('#')) || l.at(0).isSpace()) continue;
+        if (const auto m = labelRe.match(l); m.hasMatch()) label = m.captured(1);
+        break;
+    }
     if (label.isEmpty()) return;                      // the mod's init / screens: no story line of its own
 
     const QStringList src = pySplitLines(stripBom(storyText));
@@ -158,7 +163,7 @@ CrashReport readCrash(const QString& esRoot, qint64 sinceMs, const QString& modI
             if (!m.hasMatch()) continue;
             const QString f = m.captured(1);
             // the deepest frame in a script (.rpy), not Ren'Py's own code
-            if (f.endsWith(QLatin1String(".rpy")) || at < 0) {
+            if ((f.endsWith(QLatin1String(".rpy")) && !f.startsWith(QLatin1String("renpy/"))) || at < 0) {
                 at = i;
                 r.file = f;
                 r.rpyLine = m.captured(2).toInt();

@@ -1169,9 +1169,29 @@ QString Engine::previewUrl(const QString& text, int line, const QString& extra, 
     return QStringLiteral("image://gb/scene/%1").arg(key);
 }
 
+QVariantMap Engine::cinemaRoute(const QString& text, const QVariantList& route, int seed)
+{
+    m_cinema.load(text, &m_es);
+    m_cinema.setSeed(quint32(seed));
+    m_cinema.setBlind(!route.isEmpty());
+    CinemaStop st = m_cinema.start(1);
+    int used = 0;
+    for (int i = 0; i < route.size(); ++i) {
+        if (st.kind == CinemaStop::End) break;
+        if (i == route.size() - 1) m_cinema.setBlind(false);     // the moment itself: its frame
+        st = m_cinema.next(route[i].toInt());
+        ++used;
+    }
+    m_cinema.setBlind(false);
+    QVariantMap m = cinemaMap(st);
+    m.insert(QStringLiteral("used"), used);
+    return m;
+}
+
 QVariantMap Engine::cinemaStart(const QString& text, int line)
 {
     m_cinema.load(text, &m_es);
+    m_cinema.setSeed(0);
     return cinemaMap(m_cinema.start(line));
 }
 
@@ -2640,7 +2660,7 @@ QVariantMap Engine::workshopInfo(const QString& id, const QString& storyText) co
 void Engine::publishWorkshop(const QString& id, const QString& storyText, const QString& itemGiven, const QString& title, const QString& desc,
                              int visibility, const QString& note, const QStringList& tags)
 {
-    if (m_upload) return;
+    if (m_upload) { emit workshopFinished(false, QString(), gbTr("Загрузка в Steam уже идёт"), false); return; }
     const QVariantMap info = workshopInfo(id, storyText);
     const QString modId = parseMeta(pySplitLines(stripBom(storyText)), nullptr, options()).modId;
     auto fail = [this](const QString& m) { emit workshopFinished(false, QString(), m, false); };
@@ -2684,6 +2704,12 @@ void Engine::publishWorkshop(const QString& id, const QString& storyText, const 
     const QString item = given.isEmpty() ? info.value(QStringLiteral("item")).toString() : given;
     if (!item.isEmpty()) args << QStringLiteral("--item") << item;
     args << QStringLiteral("--tags") << tags.join(QLatin1Char(','));
+    if (!given.isEmpty()) {                          // an item given by link is this project's from now on: no double next time
+        const QString pp = projectDir(id) + QStringLiteral("/project.json");
+        QJsonObject pj = QJsonDocument::fromJson(readFile(pp)).object();
+        pj.insert(QStringLiteral("workshopItem"), given);
+        writeFile(pp, QJsonDocument(pj).toJson(QJsonDocument::Indented));
+    }
     if (visibility >= 0) args << QStringLiteral("--visibility") << QString::number(visibility);
     auto* p = new QProcess(this);
     m_upload = p;
@@ -2739,6 +2765,14 @@ void Engine::publishWorkshop(const QString& id, const QString& storyText, const 
         else msg = gbTr("Steam не принял загрузку: ") + err;
         emit workshopFinished(false, it, msg, legal);
     });
+    connect(p, &QProcess::errorOccurred, this, [this, p, state](QProcess::ProcessError e) {
+        if (e != QProcess::FailedToStart) return;
+        p->deleteLater();
+        m_upload = nullptr;
+        emit uploadingChanged();
+        emit workshopFinished(false, (*state)[QStringLiteral("item")].toString(),
+                              gbTr("Не удалось запустить gb_workshop.exe — возможно, его блокирует антивирус"), false);
+    });
     emit workshopProgress(QStringLiteral("start"), 0);
     p->start();
 }
@@ -2760,7 +2794,8 @@ void Engine::breakMod(const QString& storyText)
                 for (int x : h.route) route << x;
                 out << QVariantMap{{QStringLiteral("kind"), h.kind}, {QStringLiteral("line"), h.line}, {QStringLiteral("scene"), h.scene},
                                    {QStringLiteral("detail"), h.detail}, {QStringLiteral("hint"), h.hint}, {QStringLiteral("count"), h.count},
-                                   {QStringLiteral("share"), r.runs ? (h.count * 100 + r.runs / 2) / r.runs : 0}, {QStringLiteral("route"), route}};
+                                   {QStringLiteral("share"), r.runs ? (h.count * 100 + r.runs / 2) / r.runs : 0}, {QStringLiteral("route"), route},
+                                   {QStringLiteral("seed"), int(h.seed)}};
             }
             return out;
         };

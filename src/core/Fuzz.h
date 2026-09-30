@@ -22,6 +22,7 @@ struct FuzzHit {
     QString hint;              // a lock: what it needs
     int count = 0;             // walks that hit it
     QVector<int> route;        // the clicks / picks from the mod's start to that moment (-1 = a click / the timer)
+    quint32 seed = 0;          // the walk's dice for «наугад» (Cinema::setSeed): the route replays only with it
 };
 
 struct FuzzReport {

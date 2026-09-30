@@ -289,6 +289,9 @@ public:
     // «живое кино»: the story as it is NOW, walked from `line` with the same clicks and picks as before an edit -
     // the frame the maker was looking at, with the change in it. + {used: how many of `inputs` still made sense}
     Q_INVOKABLE QVariantMap cinemaReplay(const QString& text, int line, const QVariantList& inputs);
+    // «Сломай мой мод» -> «▶ Как туда попасть»: a walk's route from the mod's start with its dice, walked in the dark
+    // (no frames: a long route stays quick) up to its last step, which is shown
+    Q_INVOKABLE QVariantMap cinemaRoute(const QString& text, const QVariantList& route, int seed);
 
     // ---- build / run ----
     Q_INVOKABLE void play(const QString& id, const QString& text, int line);

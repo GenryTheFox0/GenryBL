@@ -126,7 +126,15 @@ void Engine::startHub()
     m_discord = new DiscordPresence(this);
     connect(m_discord, &DiscordPresence::readyChanged, this, &Engine::discordChanged);
     connect(this, &Engine::gameRunningChanged, this, &Engine::updatePresence);
-    if (gamePresence()) writeGamePresenceConfig();      // the language may have changed since it was put in
+    if (gamePresence()) {                               // a newer GenryBL brings a newer status mod; the language may have changed
+        const QString dir = m_es.esRoot() + QStringLiteral("/game/mods/genry_presence");
+        if (readFile(dir + QStringLiteral("/genry_presence.rpy")) != readFile(m_root + QStringLiteral("/data/presence/genry_presence.rpy"))) {
+            QFile::remove(dir + QStringLiteral("/genry_presence.rpy"));
+            QFile::remove(dir + QStringLiteral("/genry_presence.rpyc"));
+            QFile::copy(m_root + QStringLiteral("/data/presence/genry_presence.rpy"), dir + QStringLiteral("/genry_presence.rpy"));
+        }
+        writeGamePresenceConfig();
+    }
     updatePresence();
 }
 
@@ -251,6 +259,8 @@ void Engine::playGameMod(const QString& label)
     if (!writePlayHook(m_es.esRoot(), label, &err)) { emit toast(gbTr("Не удалось подготовить запуск мода: ") + err, 2); return; }
     playGame();
     emit toast(gbTr("БЛ откроется сразу в этом моде, как из её меню «Моды»"), 0);
+    // the game was running already (it never passes its main menu again): the hook must not catch a later launch
+    QTimer::singleShot(180000, this, [this] { removePlayHook(m_es.esRoot()); });
 }
 
 // ---------------------------------------------------------------- the Steam Workshop over the web
@@ -361,7 +371,7 @@ QString Engine::workshopHelper() const { return QCoreApplication::applicationDir
 
 void Engine::steamSubscribe(const QString& id, bool on)
 {
-    if (m_subscribe) return;
+    if (m_subscribe) { emit steamSubscribed(id, on, false, gbTr("Steam ещё занят прошлой подпиской — секунду")); return; }
     const QString dll = steamDllOf(m_es.esRoot());
     if (dll.isEmpty() || !QFileInfo::exists(workshopHelper())) {
         emit steamSubscribed(id, on, false, gbTr("Нет Steam-библиотеки игры или gb_workshop.exe — открываю страницу в Steam"));
@@ -380,6 +390,12 @@ void Engine::steamSubscribe(const QString& id, bool on)
                              ok ? (on ? gbTr("Подписка оформлена — Steam скачает мод сам, он появится во вкладке «В игре»")
                                       : gbTr("Отписался — Steam уберёт мод из игры"))
                                 : gbTr("Steam не ответил: он запущен и ты в своём аккаунте?"));
+    });
+    connect(p, &QProcess::errorOccurred, this, [this, p, id, on](QProcess::ProcessError e) {
+        if (e != QProcess::FailedToStart) return;
+        p->deleteLater();
+        m_subscribe = nullptr;
+        emit steamSubscribed(id, on, false, gbTr("Не удалось запустить gb_workshop.exe — возможно, его блокирует антивирус"));
     });
     p->setWorkingDirectory(QDir::tempPath());
     p->start(workshopHelper(), {QStringLiteral("--dll"), QDir::toNativeSeparators(dll), on ? QStringLiteral("--subscribe") : QStringLiteral("--unsubscribe"), id});

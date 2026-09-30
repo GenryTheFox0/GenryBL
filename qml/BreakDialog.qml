@@ -13,7 +13,7 @@ Popup {
     property var report: null
     property bool waiting: false
     signal gotoLine(int line)
-    signal watch(var route)
+    signal watch(var route, int seed)
 
     parent: Overlay.overlay
     anchors.centerIn: parent
@@ -52,12 +52,12 @@ Popup {
             else if (h.kind === "loop") t = qsTr("История ходит по кругу без единой реплики (сцена ") + sceneName(h.scene) + qsTr(") — игра зависнет.")
             else if (h.kind === "stuck") t = qsTr("Игрок застревает на выборе: все варианты закрыты замками, а таймера нет.")
             else t = qsTr("Мод не кончился и за тысячи кликов — сцены гоняют игрока по кругу без выхода (сцена ") + sceneName(h.scene) + ")."
-            return { text: t, sub: qsTr("Так закончились ") + h.share + qsTr("% прохождений"), line: h.line, route: h.route, color: Theme.bad }
+            return { text: t, sub: qsTr("Так закончились ") + h.share + qsTr("% прохождений"), line: h.line, route: h.route, seed: h.seed, color: Theme.bad }
         })
         const locks = (r.locked || []).map(h => ({
             text: h.kind === "lock" ? qsTr("Вариант «") + h.detail + qsTr("» не открылся ни у одного игрока") + (h.hint ? " (" + h.hint + ")" : "") + qsTr(" — то, что под ним, не увидит никто.")
                                     : qsTr("Вариант «") + h.detail + qsTr("» ни разу не появился: его условие «если» не выполнилось ни у кого."),
-            sub: qsTr("Выбор в сцене ") + sceneName(h.scene), line: h.line, route: h.route, color: Theme.warn }))
+            sub: qsTr("Выбор в сцене ") + sceneName(h.scene), line: h.line, route: h.route, seed: h.seed, color: Theme.warn }))
         const unseen = (r.unseen || []).map(h => ({
             text: h.kind === "blocked" ? qsTr("Сцена «") + h.scene + qsTr("»: пути к ней есть, но ни одно прохождение туда не попало — не пускают условия или очки.")
                                        : qsTr("Сцена «") + h.scene + qsTr("»: к ней не ведёт ни один путь."),
@@ -67,7 +67,7 @@ Popup {
             sub: "", line: h.line, route: [], color: Theme.warn }))
         const ends = (r.endings || []).map(h => ({
             text: (h.kind === "sceneend" ? qsTr("«конецсцены» в сцене ") : qsTr("Концовка в сцене ")) + sceneName(h.scene),
-            sub: h.share + qsTr("% прохождений"), share: h.share, line: h.line, route: h.route, color: Theme.good }))
+            sub: h.share + qsTr("% прохождений"), share: h.share, line: h.line, route: h.route, seed: h.seed, color: Theme.good }))
         if (bad.length) out.push({ head: qsTr("Ломается"), color: Theme.bad }, ...bad)
         if (locks.length) out.push({ head: qsTr("Замки и условия, которые не открылись"), color: Theme.warn }, ...locks)
         if (unseen.length || never.length) out.push({ head: qsTr("Куда не попал никто"), color: Theme.warn }, ...unseen, ...never)
@@ -200,7 +200,7 @@ Popup {
                                 visible: !!row.modelData.route && row.modelData.route.length > 0
                                 dark: true
                                 text: qsTr("▶ Как туда попасть")
-                                onClicked: bd.watch(row.modelData.route)
+                                onClicked: bd.watch(row.modelData.route, row.modelData.seed || 0)
                                 ToolTip.visible: hovered
                                 ToolTip.text: qsTr("Кино проиграет именно этот путь — выборы, клики — и остановится на этом месте")
                             }

@@ -275,6 +275,7 @@ CinemaStop Cinema::start(int line)
     m_moment.clear();
     m_scene.clear();
     m_visited.clear();
+    m_rng.seed(m_seed);
     m_mapSeen.clear();
     m_mapTour = false;
     m_vars = m_defaults;                     // a new game: the mod's own starting values
@@ -662,7 +663,7 @@ CinemaStop Cinema::run()
             if (h.random) {                               // «наугад»: the game picks one itself
                 QVector<int> open;
                 for (int k = 0; k < m_opts.size(); ++k) if (!m_opts[k].locked) open << k;
-                enterOption(m_opts[open[int(QRandomGenerator::global()->bounded(int(open.size())))]]);
+                enterOption(m_opts[open[int(m_rng.bounded(int(open.size())))]]);
                 m_choiceLine = -1;
                 continue;
             }

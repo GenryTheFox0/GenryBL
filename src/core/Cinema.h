@@ -9,6 +9,7 @@
 #include "Scene.h"
 
 #include <QHash>
+#include <QRandomGenerator>
 #include <QSet>
 #include <QString>
 #include <QStringList>
@@ -49,6 +50,8 @@ public:
     int steps() const { return m_steps; }
     // «Сломай мой мод»: no frames (hundreds of walks in a second); the scenes this walk went into (label names)
     void setBlind(bool on) { m_blind = on; }
+    // «наугад» throws the Cinema's own dice, seeded at start(): the same seed + the same clicks = the same walk
+    void setSeed(quint32 seed) { m_seed = seed; }
     const QSet<QString>& visited() const { return m_visited; }
     QString labelOf(const QString& scene) const { return label(scene); }
 
@@ -81,6 +84,8 @@ private:
     QHash<QString, double> m_defaults;        // the mod's «переменная» / «шкала» values: every walk starts from them
     QSet<QString> m_visited;
     bool m_blind = false;
+    quint32 m_seed = 0;
+    QRandomGenerator m_rng;
     void enterScene(const QString& name) { m_scene = name; m_visited.insert(label(name)); }
     QSet<QString> m_items;
     QString m_music, m_ambience;

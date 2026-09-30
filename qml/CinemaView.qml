@@ -66,12 +66,11 @@ Popup {
         apply(Engine.cinemaStart(text, line))
     }
     // «Сломай мой мод» -> «▶ Как туда попасть»: the mod from its start along that route (the clicks and picks of a walk)
-    function beginRoute(text, route) {
+    function beginRoute(text, route, seed) {
         docked = false
         start(text, 1)
-        inputs = route.slice()
-        const s = Engine.cinemaReplay(text, 1, inputs)
-        if (s.used < inputs.length) inputs = inputs.slice(0, s.used)
+        const s = Engine.cinemaRoute(text, route, seed || 0)
+        inputs = route.slice(0, s.used)
         quiet = true
         apply(s)
         quiet = false

@@ -378,7 +378,7 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
             }
         // «фонарик»: a white veil twice the screen with a soft round hole in the middle (the game tints it to the dark);
         // at zoom 1 it still covers the whole screen with the light in a corner
-        if (rpy.contains(QLatin1String("genry_fx/flashlight.png"))) {
+        if (rpy.contains(QLatin1String("genry/fx/flashlight.png"))) {
             QImage mask(3840, 2160, QImage::Format_ARGB32);
             const double cx = 1920, cy = 1080, r0 = 150, r1 = 330;
             for (int y = 0; y < mask.height(); ++y) {
@@ -812,7 +812,7 @@ bool installModArchive(const QString& zipPath, const QString& modsDir, const QSt
     QSet<QString> tops;
     for (const QZipReader::FileInfo& f : all) {
         const QString p = QDir::fromNativeSeparators(f.filePath);
-        if (p.contains(QLatin1String("..")) || p.startsWith(QLatin1Char('/')) || p.contains(QLatin1Char(':')))
+        if (p.split(QLatin1Char('/')).contains(QStringLiteral("..")) || p.startsWith(QLatin1Char('/')) || p.contains(QLatin1Char(':')))
             return fail(QStringLiteral("the archive has a bad path: ") + p);
         if (!p.startsWith(strip)) continue;
         const QString rest = p.mid(strip.size());
@@ -831,18 +831,26 @@ bool installModArchive(const QString& zipPath, const QString& modsDir, const QSt
         QDir(target).removeRecursively();
     }
     const QString prefix = strip + mod + QLatin1Char('/');
+    // the mark goes in first: a install cut short stays the catalog's own, so the next try may replace it
+    QDir().mkpath(target);
+    QFile mark(target + QStringLiteral("/.genrybl_catalog"));
+    if (mark.open(QIODevice::WriteOnly)) mark.write("1\n");
+    mark.close();
     for (const QZipReader::FileInfo& f : all) {
         const QString p = QDir::fromNativeSeparators(f.filePath);
         if (!p.startsWith(prefix)) continue;
         const QString out = target + QLatin1Char('/') + p.mid(prefix.size());
         if (f.isDir) { QDir().mkpath(out); continue; }
         if (!f.isFile) continue;
+        const QByteArray data = zip.fileData(f.filePath);
         QDir().mkpath(QFileInfo(out).absolutePath());
         QFile o(out);
-        if (!o.open(QIODevice::WriteOnly) || o.write(zip.fileData(f.filePath)) < 0) return fail(QStringLiteral("cannot write ") + out);
+        if ((data.isEmpty() && f.size > 0) || !o.open(QIODevice::WriteOnly) || o.write(data) < 0) {
+            o.close();
+            QDir(target).removeRecursively();
+            return fail(QStringLiteral("the archive is damaged: ") + p);
+        }
     }
-    QFile mark(target + QStringLiteral("/.genrybl_catalog"));
-    if (mark.open(QIODevice::WriteOnly)) mark.write("1\n");
     if (folder) *folder = mod;
     return true;
 }
