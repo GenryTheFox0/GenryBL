@@ -21,6 +21,23 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 QT = os.environ.get('GENRYBL_QT', r'E:\Qt\6.8.3\msvc2022_64')
 BUILD = os.path.join(ROOT, 'build_release')
 DIST = os.path.join(ROOT, 'dist')
+
+def es_root():
+    # the game on this PC: GENRYBL_ES, else the one GenryBL itself uses (work/settings.ini)
+    r = os.environ.get('GENRYBL_ES', '')
+    if r:
+        return r
+    try:
+        for line in open(os.path.join(ROOT, 'work', 'settings.ini'), encoding='utf-8'):
+            if line.startswith('esRoot='):
+                return line.split('=', 1)[1].strip()
+    except OSError:
+        pass
+    return ''
+
+
+ES_ROOT = es_root()
+
 STAGE = os.path.join(DIST, 'stage', 'GenryBL')
 # --workshop: the installer that rides in the Steam Workshop item (tools/workshop): no copy of the 18+ patch inside -
 # in the Workshop the patch is its author's own item, GenryBL takes it from the subscription
@@ -111,7 +128,7 @@ def main():
     subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'bundle_patch.py')])
     print('== build the public edition')
     vs_shell(f'cmake -S "{ROOT}" -B "{BUILD}" -G Ninja -DCMAKE_BUILD_TYPE=Release -DGB_RELEASE=ON -DCMAKE_PREFIX_PATH="{QT}" >nul')
-    vs_shell(f'cmake --build "{BUILD}" --target GenryBL GenryBL_Setup gb_selftest gb_cli')
+    vs_shell(f'cmake --build "{BUILD}" --target GenryBL GenryBL_Setup gb_selftest gb_cli gb_workshop')
     env = dict(os.environ)
     env['PATH'] = os.path.join(QT, 'bin') + os.pathsep + env['PATH']
     r = subprocess.run([os.path.join(BUILD, 'gb_selftest.exe')], env=env, capture_output=True, text=True, encoding='utf-8', errors='replace')
@@ -119,6 +136,15 @@ def main():
     print('   selftest:', ' | '.join(last))
     if r.returncode != 0:
         sys.exit('selftest failed - no release')
+    # the Discord status inside the game (data/presence): under the game's own Python 2.7 and under Python 3 (renpy8)
+    es_python = os.path.join(ES_ROOT, 'lib', 'windows-x86_64', 'python.exe') if ES_ROOT else ''
+    for py in [p for p in (es_python, sys.executable) if p and os.path.isfile(p)]:
+        t = subprocess.run([py, '-u', os.path.join(ROOT, 'tests', 'presence', 'test_presence.py')], capture_output=True, text=True,
+                           encoding='utf-8', errors='replace', timeout=120)
+        ok = t.returncode == 0 and 'PRESENCE OK' in t.stdout
+        print('   presence:', (t.stdout.strip().splitlines() or ['?'])[-1])
+        if not ok:
+            sys.exit('the in-game Discord status failed under ' + py + ' - no release')
     # «замок»: every story GenryBL must build, installed as mods and checked by the game itself - each screen built,
     # each python name, the game's lint (gb_cli gate, ~4 min). A mod that would crash a player stops the release.
     if '--skip-gate' in sys.argv:
@@ -136,6 +162,7 @@ def main():
     app = os.path.join(STAGE, 'app')
     os.makedirs(app)
     shutil.copy2(os.path.join(BUILD, 'GenryBL.exe'), app)
+    shutil.copy2(os.path.join(BUILD, 'gb_workshop.exe'), app)                         # «⇪ Выложить в Steam», «Подписаться»
     # the symbols ride along: a crash report (work/crash) then names GenryBL's own functions and lines, not bare addresses
     if os.path.isfile(os.path.join(BUILD, 'GenryBL.pdb')):
         shutil.copy2(os.path.join(BUILD, 'GenryBL.pdb'), app)
@@ -172,6 +199,10 @@ def main():
     copy_tree(os.path.join(ROOT, 'data', 'i18n'), os.path.join(data, 'i18n'))           # 20 languages (ru = the source, no file)
     copy_tree(os.path.join(ROOT, 'data', 'flags'), os.path.join(data, 'flags'))         # the language chooser's flags
     copy_tree(os.path.join(ROOT, 'data', 'gate'), os.path.join(data, 'gate'))           # «замок»: the game checks a mod's screens and names
+    os.remove(os.path.join(data, 'gate', 'py3check.py'))                                # the release gate's own tool, not for people
+    copy_tree(os.path.join(ROOT, 'data', 'lab'), os.path.join(data, 'lab'))             # «Лаборатория механик»: the 27 pieces
+    os.makedirs(os.path.join(data, 'presence'), exist_ok=True)                          # the Discord status inside the game
+    shutil.copy2(os.path.join(ROOT, 'data', 'presence', 'genry_presence.rpy'), os.path.join(data, 'presence'))
     langs = [f for f in os.listdir(os.path.join(data, 'i18n')) if f.endswith('.json') and not f.startswith('_')]
     if len(langs) < 19:
         sys.exit(f'only {len(langs)} translations in data/i18n - no release')

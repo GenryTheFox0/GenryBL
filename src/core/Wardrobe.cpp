@@ -798,7 +798,7 @@ QString Wardrobe::definition(const QString& image, const QString& modId) const
         const WardrobeLayer& layer = l.layers[i];
         const QPoint at = l.kinds[i] == Face ? l.faceShift : QPoint();
         comp += QStringLiteral(", (%1,%2), \"%3\"").arg(at.x()).arg(at.y())
-                    .arg(layer.src.isEmpty() ? layer.path : QStringLiteral("mods/%1/images/genry_wardrobe/%2").arg(modId, modFile(layer)));
+                    .arg(layer.src.isEmpty() ? layer.path : QStringLiteral("mods/%1/genry/wardrobe/%2").arg(modId, modFile(layer)));
     }
     comp += QLatin1Char(')');
     // exactly how ES's sprites.rpy darkens its sprites in the evening and at night

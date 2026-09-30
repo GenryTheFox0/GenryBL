@@ -143,6 +143,12 @@ int syncTree(const QString& src, const QString& dst, QString* err, bool* ok, boo
             if (!want.contains(QDir(dst).relativeFilePath(f).toLower())) stale << f;
         }
         for (const QString& f : stale) QFile::remove(f);
+        // and the folders that emptied (images/genry_* of builds before GenryBL's files moved to genry/)
+        QStringList dirs;
+        QDirIterator d(dst, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+        while (d.hasNext()) dirs << d.next();
+        std::sort(dirs.begin(), dirs.end(), [](const QString& a, const QString& b) { return a.size() > b.size(); });
+        for (const QString& x : dirs) QDir().rmdir(x);
     }
     return copied;
 }
@@ -354,12 +360,16 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
                                sub == QLatin1String("images"));
         if (!ok) return rep;
     }
-    // the generated header always references the phone shell
-    if (!copyFile(env.dataDir + QStringLiteral("/mod_assets/genry_phone_body.png"), rep.modDir + QStringLiteral("/images/genry_phone_body.png"), &rep.error))
+    // GenryBL's own files (genry/) are written anew by every build: nothing stale stays from the last one
+    if (!opt.legacy) QDir(rep.modDir + QStringLiteral("/genry")).removeRecursively();
+    // the generated header always references the phone shell: V1 keeps it with GenryBL's own files (genry/), an old
+    // GenryModEngine project where it always was
+    if (!copyFile(env.dataDir + QStringLiteral("/mod_assets/genry_phone_body.png"),
+                  rep.modDir + (opt.legacy ? QStringLiteral("/images/genry_phone_body.png") : QStringLiteral("/genry/phone_body.png")), &rep.error))
         return rep;
     // V1 weather particles («погода снег»): soft flakes, drops, leaves… drawn by Weather.cpp
     if (!opt.legacy) {
-        const QString fx = rep.modDir + QStringLiteral("/images/genry_fx");
+        const QString fx = rep.modDir + QStringLiteral("/genry/fx");
         QDir().mkpath(fx);
         for (const QString& n : weatherParticleNames())
             if (!weatherParticle(n).save(fx + QLatin1Char('/') + n + QStringLiteral(".png"), "PNG")) {
@@ -386,12 +396,12 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
             }
         }
         // the camp map's chibi faces («карта … @sl»)
-        const QString chibiDir = rep.modDir + QStringLiteral("/images/genry_chibi");
+        const QString chibiDir = rep.modDir + QStringLiteral("/genry/chibi");
         QDir().mkpath(chibiDir);
         for (const QString& f : QDir(env.dataDir + QStringLiteral("/mod_assets/chibi")).entryList({QStringLiteral("*.png")}, QDir::Files))
             if (!copyFile(env.dataDir + QStringLiteral("/mod_assets/chibi/") + f, chibiDir + QLatin1Char('/') + f, &rep.error)) return rep;
         // Телефон 3.0: body, bubbles, icons… (PhoneAssets.cpp)
-        const QString phoneDir = rep.modDir + QStringLiteral("/images/genry_phone");
+        const QString phoneDir = rep.modDir + QStringLiteral("/genry/phone");
         QDir().mkpath(phoneDir);
         for (const QString& n : phoneAssetNames())
             if (!phoneAsset(n).save(phoneDir + QLatin1Char('/') + n + QStringLiteral(".png"), "PNG")) {
@@ -411,7 +421,7 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
                 if (!own.ready()) own.load(env.dataDir + QStringLiteral("/es_catalog.json"), env.esRoot, &err);
                 es = &own;
             }
-            const QString ovDir = rep.modDir + QStringLiteral("/images/genry_ov");
+            const QString ovDir = rep.modDir + QStringLiteral("/genry/overlays");
             QDir().mkpath(ovDir);
             for (const QString& image : ovImages) {
                 QString base;
@@ -428,7 +438,7 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
         }
         // the 18+ patch's pictures the mod shows (CG, the old cards): into the mod itself, so every player sees them
         // with or without the patch (from GenryBL's own copy or the subscribed one); Ульяна's frames stay out
-        static const QRegularExpression ptFile(QStringLiteral("\"mods/[A-Za-z0-9_]+/images/genry_patch/([^\"/]+)\""));
+        static const QRegularExpression ptFile(QStringLiteral("\"mods/[A-Za-z0-9_]+/genry/patch/([^\"/]+)\""));
         QSet<QString> patchFiles;
         for (auto m = ptFile.globalMatch(rpy); m.hasNext();) patchFiles.insert(m.next().captured(1));
         if (!patchFiles.isEmpty()) {
@@ -445,7 +455,7 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
                 if (!patchFiles.contains(name) || !esPatchInFolder(p)) continue;
                 const QByteArray data = es->vfs().read(p.path);
                 if (data.isEmpty()) continue;                  // not there at all: the mod shows its dark card
-                const QString file = rep.modDir + QStringLiteral("/images/genry_patch/") + name;
+                const QString file = rep.modDir + QStringLiteral("/genry/patch/") + name;
                 QDir().mkpath(QFileInfo(file).absolutePath());
                 QFile f(file);
                 if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate) || f.write(data) != data.size()) {
@@ -455,7 +465,7 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
             }
         }
         // «гардероб мастерской»: the workshop layers the definitions use, straight from the workshop files
-        static const QRegularExpression wrFile(QStringLiteral("\"mods/[A-Za-z0-9_]+/images/genry_wardrobe/([^\"]+)\""));
+        static const QRegularExpression wrFile(QStringLiteral("\"mods/[A-Za-z0-9_]+/genry/wardrobe/([^\"]+)\""));
         QSet<QString> rels;
         for (auto m = wrFile.globalMatch(rpy); m.hasNext();) rels.insert(m.next().captured(1));
         if (!rels.isEmpty()) {
@@ -467,7 +477,7 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
             say(log, QStringLiteral("Кладу слои гардероба мастерской (%1)…").arg(rels.size()));
             for (const QString& rel : rels) {
                 const QByteArray data = wr->readModFile(rel);
-                const QString file = rep.modDir + QStringLiteral("/images/genry_wardrobe/") + rel;
+                const QString file = rep.modDir + QStringLiteral("/genry/wardrobe/") + rel;
                 if (data.isEmpty()) {
                     rep.error = QStringLiteral("не прочитать слой мастерской ") + rel;
                     return rep;
@@ -991,7 +1001,7 @@ bool exportAndroid(const QString& modDir, const QString& modId, const QString& m
             const QString ext = QFileInfo(rel).suffix().toLower();
             if (ext == QLatin1String("rpy")) {
                 QString text = QString::fromUtf8(data);
-                usesWardrobe = usesWardrobe || text.contains(QLatin1String("genry_wardrobe/"));
+                usesWardrobe = usesWardrobe || text.contains(QLatin1String("genry/wardrobe/"));
                 usesMap = usesMap || text.contains(QLatin1String("genry_camp_map")) || text.contains(QLatin1String("genry_map_pic("));
                 usesVideo = usesVideo || text.contains(QLatin1String("renpy.movie_cutscene")) || text.contains(QLatin1String("Movie("));
                 for (auto it = renamed.begin(); it != renamed.end(); ++it)

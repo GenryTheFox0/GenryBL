@@ -5,9 +5,9 @@
 //   показать mi shy_smile towel close
 // The mod gets the sprite the way ES defines its own (sprites.rpy): a ConditionSwitch of
 // im.Composite((w,1080), …) with the sunset / night tint, and only the workshop layers it really uses
-// (images/genry_wardrobe/<workshop id>/<dist>/<tag>/<file>.png).
+// (genry/wardrobe/<workshop id>/<dist>/<tag>/<file>.png).
 // 18+ parts (nude, topless, panties, towel…) and the workshop's bodies are indexed for the adult heroines only:
-// Ульяна and everyone else always wear the Steam build's own body (images/genry_wardrobe/base/…, never the patch's).
+// Ульяна and everyone else always wear the Steam build's own body (genry/wardrobe/base/…, never the patch's).
 // A «clothes» picture that is really a whole second figure (its own head and face - Лена «boy», Мику
 // «camisole_far») is worn alone: no body under it, no emotion over it (показать un boy).
 #pragma once
@@ -90,7 +90,7 @@ public:
 
     // `image dv smile nude = ConditionSwitch(...)` for the mod (layers under mods/<modId>/…)
     QString definition(const QString& image, const QString& modId) const;
-    static QString modFile(const WardrobeLayer& l);        // "2519236508/normal/dv/dv_4_nude.png" (under images/genry_wardrobe/)
+    static QString modFile(const WardrobeLayer& l);        // "2519236508/normal/dv/dv_4_nude.png" (under genry/wardrobe/)
     QByteArray readModFile(const QString& rel) const;      // the picture a modFile() path stands for
 
     // «удалить навсегда»: the user's own list (Engine keeps it in work/wardrobe_hidden.txt), keys

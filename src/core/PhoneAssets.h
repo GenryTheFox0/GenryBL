@@ -1,5 +1,5 @@
 // GenryBL V1 - Телефон 3.0: every picture of the phone drawn by code (like Weather.cpp's
-// particles). The builder writes them into the mod (images/genry_phone/<name>.png) for the
+// particles). The builder writes them into the mod (genry/phone/<name>.png) for the
 // Ren'Py screens in V1Screens.inc; the editor preview draws with the very same images.
 #pragma once
 #include <QImage>

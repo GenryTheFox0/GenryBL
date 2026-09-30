@@ -1,5 +1,5 @@
 // GenryBL V1 - Телефон 3.0 (Ren'Py 7.4). Every picture is drawn by PhoneAssets.cpp and written by the
-// builder into mods/<mod>/images/genry_phone/; the compiler declares them as «image genry_ph <name>».
+// builder into mods/<mod>/genry/phone/; the compiler declares them as «image genry_ph <name>».
 // Message tuples stay the old five: (side, name, body, time, status); side = "me"/"them" + "_photo",
 // "_photo18", "_photo1" (once), "_voice"; or "call" for a centred system line.
 // Split into several literals: MSVC refuses a single string literal over ~16 KB.

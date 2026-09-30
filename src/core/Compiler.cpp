@@ -1295,7 +1295,7 @@ SL v1WeatherImages(const QString& all, const QString& modId, const Ctx& c)
         if (!tint.isEmpty()) parts << QStringLiteral("Solid(\"%1\")").arg(tint);
         for (const WeatherLayer& l : weatherLayers(key)) {
             QString d = QStringLiteral("Transform(%1, zoom=%2, alpha=%3%4)")
-                            .arg(pyQ(relModPath(modId, QStringLiteral("images/genry_fx/") + l.png + QStringLiteral(".png"))))
+                            .arg(pyQ(relModPath(modId, QStringLiteral("genry/fx/") + l.png + QStringLiteral(".png"))))
                             .arg(l.zoom).arg(l.alpha)
                             .arg(l.rotate != 0 ? QStringLiteral(", rotate=%1").arg(l.rotate) : QString());
             if (!l.anim.isEmpty()) d = QStringLiteral("At(%1, %2)").arg(d, c.sys(QStringLiteral("fx_") + l.anim));
@@ -2062,12 +2062,12 @@ static SL v1PhoneImages(const QString& modId)
 {
     SL r{QString()};
     for (const QString& n : phoneAssetNames())
-        r << QStringLiteral("image genry_ph %1 = %2").arg(n, pyQ(relModPath(modId, QStringLiteral("images/genry_phone/") + n + QStringLiteral(".png"))));
+        r << QStringLiteral("image genry_ph %1 = %2").arg(n, pyQ(relModPath(modId, QStringLiteral("genry/phone/") + n + QStringLiteral(".png"))));
     SL ava;
     for (const QString& id : esChibiIds()) {
         const QString f = esChibiFile(id);
         if (f.isEmpty() || id == QLatin1String("?")) continue;
-        r << QStringLiteral("image genry_chibi %1 = %2").arg(f, pyQ(relModPath(modId, QStringLiteral("images/genry_chibi/") + f + QStringLiteral(".png"))));
+        r << QStringLiteral("image genry_chibi %1 = %2").arg(f, pyQ(relModPath(modId, QStringLiteral("genry/chibi/") + f + QStringLiteral(".png"))));
         ava << QStringLiteral("%1: \"genry_chibi %2\"").arg(pyUQ(id), f);
     }
     for (auto it = speakers().begin(); it != speakers().end(); ++it) {       // «Алиса» -> dv -> her face
@@ -2636,7 +2636,7 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
             if (!z) continue;                                               // the check names the wrong place
             const QString file = esChibiFile(p.chibi);
             const QString chibi = file.isEmpty() ? QStringLiteral("None")
-                                                 : pyQ(relModPath(modId, QStringLiteral("images/genry_chibi/") + file + QStringLiteral(".png")));
+                                                 : pyQ(relModPath(modId, QStringLiteral("genry/chibi/") + file + QStringLiteral(".png")));
             items << QStringLiteral("(%1, %2, %3, %4, %5, %6, %7, %8, %9, %10)")
                          .arg(pyQ(z->id), pyQ(c.lab(p.target)), chibi, pyUQ(z->title))
                          .arg(z->x1).arg(z->y1).arg(z->x2).arg(z->y2).arg(z->cx).arg(z->cy);
@@ -2702,7 +2702,7 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
                 // V1: the Steam build has no map_icon_nXX.png - the mod brings its own faces
                 const QString file = esChibiFile(ch);
                 if (!opt.legacy && !file.isEmpty())
-                    r << QStringLiteral("    $ map.chibi[%1] = %2").arg(pyQ(ch), pyQ(relModPath(modId, QStringLiteral("images/genry_chibi/") + file + QStringLiteral(".png"))));
+                    r << QStringLiteral("    $ map.chibi[%1] = %2").arg(pyQ(ch), pyQ(relModPath(modId, QStringLiteral("genry/chibi/") + file + QStringLiteral(".png"))));
                 r << QStringLiteral("    $ set_chibi(%1, %2)").arg(pyQ(zone), pyQ(ch));
             }
         }
@@ -2927,12 +2927,12 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         return {QStringLiteral("    $ persistent.genry_streamer = ") + (off ? QStringLiteral("False") : QStringLiteral("True"))};
     }
     if (cmd == QLatin1String("flashlight") && !opt.legacy) {
-        // V2: 7ДЛ's flashlight - the mask is drawn by the builder (images/genry_fx/flashlight.png), tinted to the dark
+        // V2: 7ДЛ's flashlight - the mask is drawn by the builder (genry/fx/flashlight.png), tinted to the dark
         const FlashSpec f = parseFlashlight(rest);
         if (!f.ok) return compileLine(U("текст ") + stripped, modId, st, opt);        // «Фонарик погас.» - a sentence
         if (f.off) return {QStringLiteral("    hide screen genry_flashlight")};
         return {QStringLiteral("    show screen genry_flashlight(%1, %2, %3)")
-                    .arg(pyQ(relModPath(modId, QStringLiteral("images/genry_fx/flashlight.png"))), pyQ(f.color), pyRepr(f.zoom))};
+                    .arg(pyQ(relModPath(modId, QStringLiteral("genry/fx/flashlight.png"))), pyQ(f.color), pyRepr(f.zoom))};
     }
     if (cmd == QLatin1String("unlockachievement") && !opt.legacy) {
         // Достижения 2.0: the flag for good, the day it came, ES's own plate; «платина» comes by itself
@@ -3299,7 +3299,7 @@ static SL imageMenuScreen()
 }
 
 // V1: a mod that shows a CG of the 18+ patch would crash for every player without the
-// patch ("Couldn't find file images/cg/..."). The mod carries the pictures itself (images/genry_patch,
+// patch ("Couldn't find file images/cg/..."). The mod carries the pictures itself (genry/patch,
 // Builder copies them from GenryBL's own copy of the patch), a dark card only if even that is missing.
 static SL hentaiPatchFallback(const SL& rpy, const QString& modId)
 {
@@ -3320,7 +3320,7 @@ static SL hentaiPatchFallback(const SL& rpy, const QString& modId)
     for (const QString& n : used) {
         const QString path = esPatchImage(QStringLiteral("cg ") + n)->path;
         q << QStringLiteral("(%1, %2, %3)").arg(pyQ(n), pyQ(path),
-                                                 pyQ(QStringLiteral("mods/%1/images/genry_patch/%2").arg(modId, path.section(QLatin1Char('/'), -1))));
+                                                 pyQ(QStringLiteral("mods/%1/genry/patch/%2").arg(modId, path.section(QLatin1Char('/'), -1))));
     }
     return {QString(), QStringLiteral("init 990 python:"),
             QStringLiteral("    for _genry_cg, _genry_f, _genry_own in [%1]:").arg(q.join(QStringLiteral(", "))),
@@ -4213,6 +4213,9 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         // story and every other mod). It becomes the mod family's own screen, called by name.
         for (QString& l : out)
             if (l == QLatin1String("screen choice(items):")) { l = QStringLiteral("screen genry_choice(items):"); break; }
+        // V1: GenryBL's own files live in <mod>/genry/, the author's images/ stay the author's
+        for (QString& l : out)
+            if (l.contains(QLatin1String("/images/genry_phone_body.png\""))) { l.replace(QStringLiteral("/images/genry_phone_body.png"), QStringLiteral("/genry/phone_body.png")); break; }
     }
     for (const QString& v : varOrder) out << QStringLiteral("default %1 = %2").arg(c.var(v), varInit.value(v, QStringLiteral("0")));
     if (!varOrder.isEmpty()) out << QString();
@@ -4533,7 +4536,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             QString base;
             splitOverlays(image, &base, nullptr);
             decl << QStringLiteral("    image %1 = Fixed(%2, %3, fit_first=True)")
-                        .arg(image, pyQ(base), pyQ(relModPath(modId, QStringLiteral("images/genry_ov/") + overlayFile(image))));
+                        .arg(image, pyQ(base), pyQ(relModPath(modId, QStringLiteral("genry/overlays/") + overlayFile(image))));
         }
         for (int i = int(decl.size()) - 1; i >= 0; --i) out.insert(declareAt, decl[i]);
         declShift = int(decl.size());
@@ -4665,7 +4668,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             else spec.fxPick = pyQ(c.sys(fx.value(parts.fx, QStringLiteral("weather_dust_1"))));
         }
         for (const char* h : {"sl", "dv", "un", "us"})
-            spec.chibis << relModPath(modId, QStringLiteral("images/genry_chibi/") + esChibiFile(QLatin1String(h)) + QStringLiteral(".png"));
+            spec.chibis << relModPath(modId, QStringLiteral("genry/chibi/") + esChibiFile(QLatin1String(h)) + QStringLiteral(".png"));
         const bool esStyle = spec.style == QLatin1String("es");
         const bool sdlStyle = spec.style == QLatin1String("7dl");
         const QString corbelFont = QStringLiteral("font \"fonts/corbel.ttf\"");

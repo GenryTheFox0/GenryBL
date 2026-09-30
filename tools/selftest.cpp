@@ -251,9 +251,9 @@ static void testFixes()
     CompileOptions legacy;
     legacy.legacy = true;
     check(r5.contains(QStringLiteral("init 990 python:\n    for _genry_cg, _genry_f, _genry_own in [(\"d6_dv_hentai\", \"images/cg/d6_dv_hentai.jpg\", "
-                                     "\"mods/genry_h/images/genry_patch/d6_dv_hentai.jpg\"), (\"uvao_h\", \"images/cg/uvao_h.jpg\", "
-                                     "\"mods/genry_h/images/genry_patch/uvao_h.jpg\"), (\"card_12_uvao_old\", \"images/cards/12_uvao_old.png\", "
-                                     "\"mods/genry_h/images/genry_patch/12_uvao_old.png\")]:\n"
+                                     "\"mods/genry_h/genry/patch/d6_dv_hentai.jpg\"), (\"uvao_h\", \"images/cg/uvao_h.jpg\", "
+                                     "\"mods/genry_h/genry/patch/uvao_h.jpg\"), (\"card_12_uvao_old\", \"images/cards/12_uvao_old.png\", "
+                                     "\"mods/genry_h/genry/patch/12_uvao_old.png\")]:\n"
                                      "        if renpy.loadable(_genry_f):\n            if not renpy.has_image((\"cg\", _genry_cg), exact=True):")) &&
               !compileText(cgStory, legacy).contains(QStringLiteral("_genry_cg")),
           "18+ patch: every picture of it works in a mod (the uncensored CGs and the old cards declared by the mod), "
@@ -420,7 +420,7 @@ static void testRender()
         check(ov.size() == QSize(900, 1080) && cheek > 600 && outside == 0 &&
                   rpy.contains(QStringLiteral("show dv smile pioneer genry_ov_blush_sweat at left")) &&
                   rpy.contains(QStringLiteral("    image dv smile pioneer genry_ov_blush_sweat = Fixed(\"dv smile pioneer\", "
-                                              "\"mods/genry_ovt/images/genry_ov/dv_smile_pioneer__blush_sweat.png\", fit_first=True)")) &&
+                                              "\"mods/genry_ovt/genry/overlays/dv_smile_pioneer__blush_sweat.png\", fit_first=True)")) &&
                   !r.sprite(QStringLiteral("dv smile pioneer genry_ov_blush_sweat")).isNull(),
               QStringLiteral("overlays: blush+tears on the cheeks (%1 px), nothing above the head (%2), Fixed() in the mod").arg(cheek).arg(outside));
     }
@@ -464,7 +464,7 @@ static void testRender()
               "no subscriptions: GenryBL's own patch copy is mounted (its CGs, the heroines' bodies; Ульяна's stay Steam's) " + merr);
         CompileOptions po;
         const QString prpy = compileText(QString::fromUtf8("@mod_id genry_pt\n@mod_name p\n\n: start\nцг d6_dv_hentai\nконецигры\n"), po);
-        check(prpy.contains(QStringLiteral("\"mods/genry_pt/images/genry_patch/d6_dv_hentai.jpg\"")) &&
+        check(prpy.contains(QStringLiteral("\"mods/genry_pt/genry/patch/d6_dv_hentai.jpg\"")) &&
                   prpy.contains(QStringLiteral("elif renpy.loadable(_genry_own):")),
               "a mod showing a CG of the patch carries it itself (players need no patch)");
     }
@@ -763,7 +763,7 @@ static void testForms()
                                                      "погода дождь\nпогода стоп\nконецигры\n"), v1);
     check(wr.contains(QStringLiteral("    show genry_w__weather_snow_3 as genry_weather_snow with dissolve\n")) &&
               wr.contains(QStringLiteral("    show genry_w__weather_rain_2 as genry_weather_rain\n")) &&
-              wr.contains(QStringLiteral("image genry_w__weather_snow_3 = Fixed(Solid(\"#dfe8f41a\"), SnowBlossom(Transform(\"mods/genry_w/images/genry_fx/snow.png\"")) &&
+              wr.contains(QStringLiteral("image genry_w__weather_snow_3 = Fixed(Solid(\"#dfe8f41a\"), SnowBlossom(Transform(\"mods/genry_w/genry/fx/snow.png\"")) &&
               wr.contains(QStringLiteral("rotate=-9)")) && wr.contains(QStringLiteral("    hide genry_weather_snow\n")) && orphanIndent(wr).isEmpty(),
           "V1 weather: layered particles from the mod's genry_fx pictures, «сильно» = more of them, «стоп» hides by tag");
     const QString px = compileText(QString::fromUtf8("@mod_id genry_px\n@mod_name p\n\n: start\nфон ext_square_day\nпараллакс 0.5\nтабло Первый день\n"
@@ -795,13 +795,13 @@ static void testForms()
               ph3.contains(QStringLiteral("(\"them_photo1\", ")) && ph3.contains(QStringLiteral("    menu (screen=\"genry_phone_reply\"):\n")) &&
               ph3.contains(QString::fromUtf8("$ genry_ph3__feed[0][\"comments\"] = genry_ph3__feed[0].get(\"comments\", []) + [(u\"Алиса\", u\"Опять без меня?\")]")) &&
               ph3.contains(QStringLiteral("call screen genry_phone_home(genry_ph3__feed)")) &&
-              ph3.contains(QStringLiteral("image genry_ph body = \"mods/genry_ph3/images/genry_phone/body.png\"")) &&
+              ph3.contains(QStringLiteral("image genry_ph body = \"mods/genry_ph3/genry/phone/body.png\"")) &&
               ph3.contains(QString::fromUtf8("u\"алиса\": \"genry_chibi dv\"")) && ph3.contains(QStringLiteral("screen genry_phone_home(")) &&
               !ph3.contains(QStringLiteral("genry_ph_photos + [(u\"bg ext_beach_day\", u\"Забудь\")]")) && orphanIndent(ph3).isEmpty(),
           "V1 Телефон 3.0: push banner, one-time photo, replies inside the phone, feed comments, home screen, generated pictures + avatars");
     CompileState mst;
     const QString mp = compileLine(QString::fromUtf8("карта square: square @sl, beach: beach"), QStringLiteral("genry_m"), mst, v1).join(QLatin1Char('\n'));
-    check(mp.contains(QStringLiteral("(\"square\", \"genry_m__square\", \"mods/genry_m/images/genry_chibi/sl.png\", u\"")) &&
+    check(mp.contains(QStringLiteral("(\"square\", \"genry_m__square\", \"mods/genry_m/genry/chibi/sl.png\", u\"")) &&
               mp.contains(QStringLiteral("(\"beach\", \"genry_m__beach\", None, u\"")) &&
               mp.contains(QStringLiteral("    call screen genry_camp_map(_genry_map)\n    jump expression _return[1]")) &&
               !mp.contains(QStringLiteral("set_zone")),
@@ -811,8 +811,8 @@ static void testForms()
         CompileState tst;
         const QString tp = compileLine(QString::fromUtf8("карта обход площадь: a @Славя, Пляж: b @dv, готово: c"), QStringLiteral("genry_m"), tst, v1)
                                .join(QLatin1Char('\n'));
-        check(tp.contains(QStringLiteral("(\"square\", \"genry_m__a\", \"mods/genry_m/images/genry_chibi/sl.png\"")) &&
-                  tp.contains(QStringLiteral("(\"beach\", \"genry_m__b\", \"mods/genry_m/images/genry_chibi/dv.png\"")) &&
+        check(tp.contains(QStringLiteral("(\"square\", \"genry_m__a\", \"mods/genry_m/genry/chibi/sl.png\"")) &&
+                  tp.contains(QStringLiteral("(\"beach\", \"genry_m__b\", \"mods/genry_m/genry/chibi/dv.png\"")) &&
                   tp.contains(QStringLiteral("genry_m__map_seen.get(\"square,beach\", [])")) &&
                   tp.contains(QStringLiteral("    if not _genry_map:\n        jump genry_m__c")) &&
                   tp.contains(QStringLiteral("genry_m__map_seen.setdefault(\"square,beach\", []).append(_return[0])")),
@@ -959,13 +959,13 @@ static void testWardrobe()
     const QString story = QString::fromUtf8("@mod_id genry_wrt\n@mod_name w\n\n: start\nфон ext_beach_day\nпоказать dv smile casual left\n"
                                             "показать dv grin casual румянец right\nАлиса: Ну как?\nконецигры\n");
     const QString rpy = compileText(story, v1);
-    const QString casualBody = QStringLiteral("\"mods/genry_wrt/images/genry_wardrobe/2519236508/normal/dv/dv_4_body.png\"");
+    const QString casualBody = QStringLiteral("\"mods/genry_wrt/genry/wardrobe/2519236508/normal/dv/dv_4_body.png\"");
     check(rpy.contains(QStringLiteral("    image dv smile casual = ConditionSwitch(\"persistent.sprite_time=='sunset'\", im.MatrixColor(im.Composite((900,1080), "
                                       "(0,0), ") + casualBody) &&
               rpy.contains(QStringLiteral("show dv smile casual at left")) && rpy.contains(QStringLiteral("    image dv grin casual = ConditionSwitch(")) &&
               rpy.contains(QStringLiteral("image dv grin casual genry_ov_blush = Fixed(\"dv grin casual\"")) &&
               !wr.readModFile(QStringLiteral("2519236508/normal/dv/dv_4_casual.png")).isEmpty(),
-          "compiled like ES's own sprites (tint switch), layers under mods/<id>/images/genry_wardrobe, overlays ride on it");
+          "compiled like ES's own sprites (tint switch), layers under mods/<id>/genry/wardrobe, overlays ride on it");
     LintContext ctx;
     ctx.es = &es;
     ctx.opt = v1;
@@ -995,7 +995,7 @@ static void testWardrobe()
     QString scope;
     const QPoint zero;
     check(wr.resolve(QStringLiteral("dv smile casual"), &moved) && moved.faceShift == QPoint(7, -3) &&
-              wr.definition(QStringLiteral("dv smile casual"), QStringLiteral("m")).contains(QStringLiteral("(7,-3), \"mods/m/images/genry_wardrobe/2519236508/normal/dv/dv_4_smile.png\"")) &&
+              wr.definition(QStringLiteral("dv smile casual"), QStringLiteral("m")).contains(QStringLiteral("(7,-3), \"mods/m/genry/wardrobe/2519236508/normal/dv/dv_4_smile.png\"")) &&
               wr.faceShift(QStringLiteral("dv"), QStringLiteral("close"), QStringLiteral("smile"), QStringLiteral("casual"), &scope).isNull() &&
               wr.compose(QStringLiteral("dv smile casual")) != wr.compose(QStringLiteral("dv smile casual"), &zero),
           "a face moved by hand: the mod's Composite puts the face layer there, the preview too, only at that distance");
@@ -1340,7 +1340,7 @@ static void testAchievements2()
     check(mk.contains(QString::fromUtf8("    call screen genry_codelock(u\"1968\", u\"Год, когда открыли лагерь?\", 3)\n    if _return:\n        jump genry_t__safe\n    jump genry_t__lost")) &&
               mk.contains(QStringLiteral("screen genry_codelock(code, hint=u\"\", tries=0):")),
           "«кодовыйзамок»: ES's o_rly plate, the right / wrong code go to their scenes");
-    check(mk.contains(QStringLiteral("    show screen genry_flashlight(\"mods/genry_t/images/genry_fx/flashlight.png\", \"#050810\", 1.5)")) &&
+    check(mk.contains(QStringLiteral("    show screen genry_flashlight(\"mods/genry_t/genry/fx/flashlight.png\", \"#050810\", 1.5)")) &&
               mk.contains(QStringLiteral("    hide screen genry_flashlight")) && mk.contains(QString::fromUtf8("\"Фонарик погас.\"")),
           "«фонарик» on / off; «Фонарик погас.» stays a sentence");
     const SceneState dark = sceneAt(mech, 4, nullptr), lock = sceneAt(mech, 6, nullptr);

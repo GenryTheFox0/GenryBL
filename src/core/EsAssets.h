@@ -55,7 +55,7 @@ const QVector<QPair<QString, QString>>& esExtraMusic();
 QString esExtraMusicPath(const QString& word);
 QStringList esChibiIds();                                   // "sl", "dv", ... (ES store.map_chibi)
 // The Steam build ships no map_icon_nXX.png (a stock «set_chibi» shows a missing file), so V1
-// brings its own round faces: data/mod_assets/chibi/<file>.png -> <mod>/images/genry_chibi/
+// brings its own round faces: data/mod_assets/chibi/<file>.png -> <mod>/genry/chibi/
 QString esChibiFile(const QString& id);                     // "sl", "unknown" for "?", "" if not a chibi id
 QString esChibiId(const QString& word);                     // "sl" / "Славя" / "славя" -> "sl", "" if none
 

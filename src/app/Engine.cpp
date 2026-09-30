@@ -2802,9 +2802,9 @@ void Engine::modFiles(const QString& id, const QString& storyText)
                 continue;
             QString kind;
             if (rel.endsWith(QLatin1String(".rpy"))) kind = QStringLiteral("code");
-            else if (rel.startsWith(QLatin1String("images/genry_wardrobe/"))) kind = QStringLiteral("wardrobe");
-            else if (rel.startsWith(QLatin1String("images/genry_patch/"))) kind = QStringLiteral("patch");
-            else if (rel.startsWith(QLatin1String("images/genry_")) || rel == QLatin1String("images/genry_phone_body.png")) kind = QStringLiteral("genrybl");
+            else if (rel.startsWith(QLatin1String("genry/wardrobe/"))) kind = QStringLiteral("wardrobe");
+            else if (rel.startsWith(QLatin1String("genry/patch/"))) kind = QStringLiteral("patch");
+            else if (rel.startsWith(QLatin1String("genry/")) || rel == QLatin1String("images/genry_phone_body.png")) kind = QStringLiteral("genrybl");
             else if (rel.startsWith(QLatin1String("images/"))) kind = QStringLiteral("images");
             else if (rel.startsWith(QLatin1String("audio/"))) kind = QStringLiteral("audio");
             else if (rel.startsWith(QLatin1String("video/"))) kind = QStringLiteral("video");

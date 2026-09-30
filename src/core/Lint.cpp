@@ -170,7 +170,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         if (!es) return true;
         return es->sprites.contains(n) || es->images.contains(n) || low == QLatin1String("black") || low == QLatin1String("white");
     };
-    // CGs of the 18+ patch: the mod carries them itself (images/genry_patch), players need no patch
+    // CGs of the 18+ patch: the mod carries them itself (genry/patch), players need no patch
     bool patchNoted = false;
     auto patchCg = [&](int ln, const QString& full) {
         const EsPatchImage* p = esPatchImage(full);
@@ -179,7 +179,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             add(ln, LintIssue::Warning, U("«%1» — CG из 18+ патча, которого в GenryBL нет: в игре будет тёмная заглушка "
                                           "у всех, кто не подписан на патч").arg(full.mid(3)));
         else if (!patchNoted)
-            add(ln, LintIssue::Info, gbTr("CG из 18+ патча ляжет прямо в мод (images/genry_patch) — игроки увидят его и без патча"));
+            add(ln, LintIssue::Info, gbTr("CG из 18+ патча ляжет прямо в мод (genry/patch) — игроки увидят его и без патча"));
         patchNoted = true;
         return true;
     };
@@ -201,7 +201,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         WardrobeLook look;
         if (wr && !ctx.opt.legacy && wr->resolve(n, &look, &why)) {
             if (look.workshop && !wardrobeNoted)
-                add(ln, LintIssue::Info, U("Гардероб мастерской: слои возьмутся из Мастерской Steam и лягут в мод (images/genry_wardrobe) — "
+                add(ln, LintIssue::Info, U("Гардероб мастерской: слои возьмутся из Мастерской Steam и лягут в мод (genry/wardrobe) — "
                                            "игрокам ничего подписывать не надо"));
             wardrobeNoted = wardrobeNoted || look.workshop;
             return;
