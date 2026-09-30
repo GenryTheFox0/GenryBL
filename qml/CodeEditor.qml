@@ -285,7 +285,7 @@ Rectangle {
             Text { anchors.centerIn: parent; text: "+"; color: toolArea.containsMouse ? "#16240c" : Theme.accent; font.pixelSize: 18; font.bold: true }
             MouseArea { id: toolArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ce.lineToolClicked(ce.currentLine, lineToolBtn) }
             ToolTip.visible: toolArea.containsMouse
-            ToolTip.text: "Добавить сюда: реплику, очки, предмет, новый выбор…"
+            ToolTip.text: qsTr("Добавить сюда: реплику, очки, предмет, новый выбор…")
         }
 
         TextArea.flickable: TextArea {
@@ -304,7 +304,7 @@ Rectangle {
             bottomPadding: 200
             tabStopDistance: 32
             background: null
-            placeholderText: "Пиши историю…"
+            placeholderText: qsTr("Пиши историю…")
             placeholderTextColor: Theme.faint
             onTextChanged: {
                 ce.edited()

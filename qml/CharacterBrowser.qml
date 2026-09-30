@@ -118,7 +118,7 @@ Item {
         Flow {
             width: parent.width
             spacing: 5
-            PillButton { dark: cb.outfit !== ""; accent: cb.outfit === ""; text: "все"; onClicked: cb.outfit = "" }
+            PillButton { dark: cb.outfit !== ""; accent: cb.outfit === ""; text: qsTr("все"); onClicked: cb.outfit = "" }
             Repeater {
                 model: cb.outfits
                 PillButton {
@@ -134,22 +134,22 @@ Item {
                 dark: !cb.wardrobeOpen && !cb.wardrobeOutfit
                 accent: cb.wardrobeOpen || cb.wardrobeOutfit
                 enabled: Engine.wardrobeState === 2 && cb.wOutfits.length > 0
-                text: Engine.wardrobeState !== 2 ? "Гардероб мастерской грузится…"
-                    : cb.wOutfits.length ? "Гардероб мастерской · " + cb.wShown.length + (cb.wardrobeOpen ? " ▴" : " ▾") : "В мастерской нет одежды"
+                text: Engine.wardrobeState !== 2 ? qsTr("Гардероб мастерской грузится…")
+                    : cb.wOutfits.length ? qsTr("Гардероб мастерской · ") + cb.wShown.length + (cb.wardrobeOpen ? " ▴" : " ▾") : qsTr("В мастерской нет одежды")
                 onClicked: cb.wardrobeOpen = !cb.wardrobeOpen
             }
             PillButton {
                 visible: cb.hidden.length > 0
                 dark: true
-                text: "Удалённые · " + cb.hidden.length
+                text: qsTr("Удалённые · ") + cb.hidden.length
                 onClicked: restoreMenu.popup()
                 ToolTip.visible: hovered
-                ToolTip.text: "Что ты удалил у этого персонажа — клик по строке возвращает"
+                ToolTip.text: qsTr("Что ты удалил у этого персонажа — клик по строке возвращает")
             }
             PillButton {
                 visible: cb.wardrobeOpen && cb.wOutfits.some(o => o.adult)
                 dark: true
-                text: cb.showAdult ? "18+ показаны" : "18+ скрыты"
+                text: cb.showAdult ? qsTr("18+ показаны") : qsTr("18+ скрыты")
                 onClicked: {
                     cb.showAdult = !cb.showAdult
                     Engine.setSetting("wardrobeAdult", cb.showAdult)
@@ -179,8 +179,8 @@ Item {
                         text: (modelData.adult ? "18+ " : "") + modelData.id + (modelData.dists.indexOf("") < 0 ? " ◎" : "")
                         ToolTip.visible: hovered
                         ToolTip.delay: 400
-                        ToolTip.text: "из «" + modelData.title + "»" + (modelData.body ? " · своё тело" : "") +
-                                      (modelData.dists.indexOf("") < 0 ? " · только " + (modelData.dists[0] === "close" ? "близко" : "далеко") : "")
+                        ToolTip.text: qsTr("из «") + modelData.title + "»" + (modelData.body ? qsTr(" · своё тело") : "") +
+                                      (modelData.dists.indexOf("") < 0 ? qsTr(" · только ") + (modelData.dists[0] === "close" ? qsTr("близко") : qsTr("далеко")) : "")
                         onClicked: {
                             cb.outfit = modelData.id
                             if (modelData.dists.indexOf(cb.dist) < 0) cb.dist = modelData.dists[0]
@@ -193,14 +193,14 @@ Item {
         Row {
             spacing: 5
             Repeater {
-                model: [["", "обычно"], ["close", "близко"], ["far", "далеко"]]
+                model: [["", qsTr("обычно")], ["close", qsTr("близко")], ["far", qsTr("далеко")]]
                 PillButton { dark: cb.dist !== modelData[0]; accent: cb.dist === modelData[0]; text: modelData[1]; onClicked: cb.dist = modelData[0] }
             }
         }
         Row {
             spacing: 5
             Repeater {
-                model: [["fleft", "край ◂"], ["left", "слева"], ["center", "центр"], ["right", "справа"], ["fright", "▸ край"]]
+                model: [["fleft", qsTr("край ◂")], ["left", qsTr("слева")], ["center", qsTr("центр")], ["right", qsTr("справа")], ["fright", qsTr("▸ край")]]
                 PillButton { dark: cb.pos !== modelData[0]; accent: cb.pos === modelData[0]; text: modelData[1]; onClicked: cb.pos = modelData[0] }
             }
         }
@@ -208,15 +208,15 @@ Item {
             spacing: 6
             DarkCombo {
                 width: 150
-                model: ["dissolve", "без перехода", "fade", "dspr", "moveinleft", "moveinright", "hpunch"]
+                model: ["dissolve", qsTr("без перехода"), "fade", "dspr", "moveinleft", "moveinright", "hpunch"]
                 onActivated: (i) => cb.trans = i === 1 ? "" : model[i]
             }
-            PillButton { dark: true; text: "Реплика"; onClicked: cb.insert(cb.displayName + ": ") }
-            PillButton { dark: true; text: "Убрать"; onClicked: cb.insert("убрать " + cb.tag + " dissolve") }
-            PillButton { accent: true; text: "＋ Свой"; onClicked: pngDialog.open() }
+            PillButton { dark: true; text: qsTr("Реплика"); onClicked: cb.insert(cb.displayName + ": ") }
+            PillButton { dark: true; text: qsTr("Убрать"); onClicked: cb.insert("убрать " + cb.tag + " dissolve") }
+            PillButton { accent: true; text: qsTr("＋ Свой"); onClicked: pngDialog.open() }
         }
         Text {
-            text: cb.displayName + " · " + cb.shown.length + " спрайтов · наведи — увидишь на сцене"
+            text: cb.displayName + " · " + cb.shown.length + qsTr(" спрайтов · наведи — увидишь на сцене")
             color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
         }
     }
@@ -289,7 +289,7 @@ Item {
                         Text { anchors.centerIn: parent; text: "✎"; color: "white"; font.pixelSize: 13 }
                         MouseArea { id: fixArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: faceFix.openFor(cb.tag, modelData, cb.dist) }
                         ToolTip.visible: fixArea.containsMouse
-                        ToolTip.text: "Поправить лицо вручную"
+                        ToolTip.text: qsTr("Поправить лицо вручную")
                     }
                     Rectangle {
                         width: 24; height: 24; radius: 12
@@ -297,7 +297,7 @@ Item {
                         Text { anchors.centerIn: parent; text: "✕"; color: "white"; font.pixelSize: 12; font.bold: true }
                         MouseArea { id: delArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Engine.hideSprite(cb.tag, modelData) }
                         ToolTip.visible: delArea.containsMouse
-                        ToolTip.text: "Удалить этот спрайт навсегда (правый клик — ещё варианты)"
+                        ToolTip.text: qsTr("Удалить этот спрайт навсегда (правый клик — ещё варианты)")
                     }
                 }
             }
@@ -309,7 +309,7 @@ Item {
     Menu {
         id: outfitMenu
         property string outfit
-        MenuItem { text: "Удалить наряд «" + outfitMenu.outfit + "» целиком"; onTriggered: { Engine.hideOutfit(cb.tag, outfitMenu.outfit); if (cb.outfit === outfitMenu.outfit) cb.outfit = "" } }
+        MenuItem { text: qsTr("Удалить наряд «") + outfitMenu.outfit + qsTr("» целиком"); onTriggered: { Engine.hideOutfit(cb.tag, outfitMenu.outfit); if (cb.outfit === outfitMenu.outfit) cb.outfit = "" } }
     }
     Menu {
         id: tileMenu
@@ -317,13 +317,13 @@ Item {
         readonly property string emo: name.split(" ")[0]
         readonly property string outf: name.split(" ").slice(1).join(" ")
         MenuItem {
-            text: "✎ Поправить лицо…"
+            text: qsTr("✎ Поправить лицо…")
             enabled: Engine.wardrobeState === 2 && Engine.wardrobeKnows(cb.tag + " " + tileMenu.name + (cb.dist ? " " + cb.dist : ""))
             onTriggered: faceFix.openFor(cb.tag, tileMenu.name, cb.dist)
         }
-        MenuItem { text: "✕ Удалить спрайт «" + tileMenu.name + "»"; onTriggered: Engine.hideSprite(cb.tag, tileMenu.name) }
-        MenuItem { text: "Удалить эмоцию «" + tileMenu.emo + "» у всех нарядов"; onTriggered: Engine.hideEmotion(cb.tag, tileMenu.emo) }
-        MenuItem { text: "Удалить наряд «" + tileMenu.outf + "» целиком"; enabled: tileMenu.outf !== ""; onTriggered: { Engine.hideOutfit(cb.tag, tileMenu.outf); if (cb.outfit === tileMenu.outf) cb.outfit = "" } }
+        MenuItem { text: qsTr("✕ Удалить спрайт «") + tileMenu.name + "»"; onTriggered: Engine.hideSprite(cb.tag, tileMenu.name) }
+        MenuItem { text: qsTr("Удалить эмоцию «") + tileMenu.emo + qsTr("» у всех нарядов"); onTriggered: Engine.hideEmotion(cb.tag, tileMenu.emo) }
+        MenuItem { text: qsTr("Удалить наряд «") + tileMenu.outf + qsTr("» целиком"); enabled: tileMenu.outf !== ""; onTriggered: { Engine.hideOutfit(cb.tag, tileMenu.outf); if (cb.outfit === tileMenu.outf) cb.outfit = "" } }
     }
     Menu {
         id: restoreMenu
@@ -341,8 +341,8 @@ Item {
     FaceFixDialog { id: faceFix }
     FileDialog {
         id: pngDialog
-        title: "Свой спрайт (PNG с прозрачностью, лучше 900×1080)"
-        nameFilters: ["Картинки (*.png *.webp)"]
+        title: qsTr("Свой спрайт (PNG с прозрачностью, лучше 900×1080)")
+        nameFilters: [qsTr("Картинки (*.png *.webp)")]
         onAccepted: { nameField.text = ""; nameDialog.file = selectedFile; nameDialog.open() }
     }
     Dialog {
@@ -350,12 +350,12 @@ Item {
         property url file
         anchors.centerIn: Overlay.overlay
         modal: true
-        title: "Как зовут и какая эмоция?"
+        title: qsTr("Как зовут и какая эмоция?")
         standardButtons: Dialog.Ok | Dialog.Cancel
         Column {
             spacing: 8
-            Label { width: 380; wrapMode: Text.Wrap; text: "Например «вожатый smile» → команда «показать vozhatyy smile center».\nПервое слово — персонаж, дальше — эмоция/одежда." }
-            TextField { id: nameField; width: 380; placeholderText: "Имя эмоция"; selectByMouse: true; onAccepted: nameDialog.accept() }
+            Label { width: 380; wrapMode: Text.Wrap; text: qsTr("Например «вожатый smile» → команда «показать vozhatyy smile center».\nПервое слово — персонаж, дальше — эмоция/одежда.") }
+            TextField { id: nameField; width: 380; placeholderText: qsTr("Имя эмоция"); selectByMouse: true; onAccepted: nameDialog.accept() }
         }
         onAccepted: {
             const n = Engine.importImage(file, "sprite", nameField.text)

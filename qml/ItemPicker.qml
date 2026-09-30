@@ -49,7 +49,7 @@ Popup {
                 id: search
                 Layout.fillWidth: true
                 implicitHeight: 32
-                placeholderText: "Поиск…"
+                placeholderText: qsTr("Поиск…")
                 placeholderTextColor: Theme.faint
                 color: Theme.text
                 font.family: Theme.ui; font.pixelSize: 14
@@ -125,7 +125,7 @@ Popup {
             Text {
                 anchors.centerIn: parent
                 visible: pk.shown.length === 0
-                text: pk.items.length ? "Ничего не нашлось" : "Пока пусто"
+                text: pk.items.length ? qsTr("Ничего не нашлось") : qsTr("Пока пусто")
                 color: Theme.faint; font.family: Theme.ui; font.pixelSize: 16
             }
         }

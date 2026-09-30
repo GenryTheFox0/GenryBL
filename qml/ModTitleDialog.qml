@@ -70,10 +70,10 @@ Popup {
 
         RowLayout {
             Layout.fillWidth: true
-            InkText { text: "Название мода"; size: 28; color: Theme.gold }
+            InkText { text: qsTr("Название мода"); size: 28; color: Theme.gold }
             Text {
                 Layout.fillWidth: true
-                text: "так мод стоит в «Моды и пользовательские сценарии» самой игры"
+                text: qsTr("так мод стоит в «Моды и пользовательские сценарии» самой игры")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14
                 elide: Text.ElideRight
             }
@@ -89,7 +89,7 @@ Popup {
                 Layout.preferredWidth: 470
                 Layout.fillHeight: true
                 spacing: 10
-                Text { text: "Название"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                Text { text: qsTr("Название"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                 TextField {
                     id: nameField
                     Layout.fillWidth: true
@@ -103,12 +103,12 @@ Popup {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
-                    Text { text: "Автор"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                    Text { text: qsTr("Автор"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                     TextField {
                         id: authorField
                         Layout.fillWidth: true
                         implicitHeight: 34
-                        placeholderText: "пусто — в меню мода автора не будет"
+                        placeholderText: qsTr("пусто — в меню мода автора не будет")
                         placeholderTextColor: Theme.faint
                         color: Theme.text
                         font.family: Theme.ui; font.pixelSize: 15
@@ -116,17 +116,17 @@ Popup {
                         onTextEdited: mt.author = text
                         background: Rectangle { radius: 8; color: Theme.bg; border.color: authorField.activeFocus ? Theme.accent : Theme.line }
                     }
-                    PillButton { dark: true; text: "Убрать"; visible: mt.author !== ""; onClicked: { mt.author = ""; authorField.text = "" } }
+                    PillButton { dark: true; text: qsTr("Убрать"); visible: mt.author !== ""; onClicked: { mt.author = ""; authorField.text = "" } }
                 }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
-                    Text { text: "Герой"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                    Text { text: qsTr("Герой"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                     TextField {
                         id: heroField
                         Layout.fillWidth: true
                         implicitHeight: 34
-                        placeholderText: "Семён — или своё имя героя"
+                        placeholderText: qsTr("Семён — или своё имя героя")
                         placeholderTextColor: Theme.faint
                         color: Theme.text
                         font.family: Theme.ui; font.pixelSize: 15
@@ -134,16 +134,16 @@ Popup {
                         onTextEdited: mt.hero = text
                         background: Rectangle { radius: 8; color: Theme.bg; border.color: heroField.activeFocus ? Theme.accent : Theme.line }
                     }
-                    PillButton { text: "Он"; accent: !mt.heroShe; dark: mt.heroShe; onClicked: mt.heroShe = false }
-                    PillButton { text: "Она"; accent: mt.heroShe; dark: !mt.heroShe; onClicked: mt.heroShe = true }
+                    PillButton { text: qsTr("Он"); accent: !mt.heroShe; dark: mt.heroShe; onClicked: mt.heroShe = false }
+                    PillButton { text: qsTr("Она"); accent: mt.heroShe; dark: !mt.heroShe; onClicked: mt.heroShe = true }
                 }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 6
-                    Text { text: "Игрок вводит имя"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                    Text { text: qsTr("Игрок вводит имя"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                     Item { Layout.fillWidth: true }
                     Repeater {
-                        model: [["", "Нет"], ["menu", "В меню мода"], ["start", "В начале"]]
+                        model: [["", qsTr("Нет")], ["menu", qsTr("В меню мода")], ["start", qsTr("В начале")]]
                         PillButton {
                             required property var modelData
                             text: modelData[1]
@@ -156,17 +156,17 @@ Popup {
                 Text {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                    text: mt.heroAsk === "menu" ? "В меню мода сама появится кнопка «Имя: …» (нет меню — спросит в начале). В тексте имя — «[имя]»."
-                        : mt.heroAsk === "start" ? "Перед первой строкой игрок увидит табличку «Как тебя зовут?». В тексте имя — «[имя]»."
-                        : "Спросить можно и посреди истории: команда «Имя игрока». В тексте имя — «[имя]»."
+                    text: mt.heroAsk === "menu" ? qsTr("В меню мода сама появится кнопка «Имя: …» (нет меню — спросит в начале). В тексте имя — «[имя]».")
+                        : mt.heroAsk === "start" ? qsTr("Перед первой строкой игрок увидит табличку «Как тебя зовут?». В тексте имя — «[имя]».")
+                        : qsTr("Спросить можно и посреди истории: команда «Имя игрока». В тексте имя — «[имя]».")
                     // the forms are the same everywhere; one line of help under the choice
-                    + " Падежи: «[имя кого]», «[имя кому]», «[имя кем]», «[имя о ком]». Он/она: «[проснулся/проснулась]» — при вводе имени игрок сам выберет пол."
+                    + qsTr(" Падежи: «[имя кого]», «[имя кому]», «[имя кем]», «[имя о ком]». Он/она: «[проснулся/проснулась]» — при вводе имени игрок сам выберет пол.")
                     color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: "Шрифт"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13; Layout.fillWidth: true }
-                    PillButton { dark: true; text: "＋ Свой .ttf"; onClicked: fontDialog.open() }
+                    Text { text: qsTr("Шрифт"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13; Layout.fillWidth: true }
+                    PillButton { dark: true; text: qsTr("＋ Свой .ttf"); onClicked: fontDialog.open() }
                 }
                 ListView {
                     id: fontList
@@ -176,7 +176,7 @@ Popup {
                     spacing: 4
                     boundsBehavior: Flickable.StopAtBounds
                     ScrollBar.vertical: ScrollBar {}
-                    model: [{ ref: "", label: "как в игре (corbel)", family: mt.familyOf("es:fonts/corbel.ttf") }].concat(mt.fonts)
+                    model: [{ ref: "", label: qsTr("как в игре (corbel)"), family: mt.familyOf("es:fonts/corbel.ttf") }].concat(mt.fonts)
                     delegate: Rectangle {
                         required property var modelData
                         width: fontList.width - 10
@@ -187,7 +187,7 @@ Popup {
                         Text {
                             x: 12; anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - 170
-                            text: mt.name || "Мой мод"
+                            text: mt.name || qsTr("Мой мод")
                             font.family: modelData.family
                             font.pixelSize: 24
                             color: Theme.text
@@ -201,7 +201,7 @@ Popup {
                         MouseArea { id: area; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Sfx.click(); mt.fontRef = modelData.ref } }
                     }
                 }
-                Text { text: "Цвет"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                Text { text: qsTr("Цвет"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                 Flow {
                     Layout.fillWidth: true
                     spacing: 6
@@ -213,7 +213,7 @@ Popup {
                             color: modelData || "#4d2e19"
                             border.width: mt.colorHex === modelData ? 3 : 1
                             border.color: mt.colorHex === modelData ? Theme.accent : Theme.line
-                            Text { anchors.centerIn: parent; visible: !modelData; text: "БЛ"; color: "#f4ecd2"; font.pixelSize: 10; font.bold: true }
+                            Text { anchors.centerIn: parent; visible: !modelData; text: qsTr("БЛ"); color: "#f4ecd2"; font.pixelSize: 10; font.bold: true }
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { mt.colorHex = modelData; hexField.text = modelData } }
                         }
                     }
@@ -231,7 +231,7 @@ Popup {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
-                    Text { text: "Размер"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                    Text { text: qsTr("Размер"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                     Slider {
                         id: sizeSlider
                         Layout.fillWidth: true
@@ -240,8 +240,8 @@ Popup {
                         onMoved: mt.size = value
                     }
                     Text { text: mt.size; color: Theme.gold; font.family: Theme.mono; font.pixelSize: 16; Layout.preferredWidth: 28 }
-                    PillButton { text: "Ж"; accent: mt.bold; dark: !mt.bold; onClicked: mt.bold = !mt.bold }
-                    PillButton { text: "К"; accent: mt.italic; dark: !mt.italic; onClicked: mt.italic = !mt.italic }
+                    PillButton { text: qsTr("Ж"); accent: mt.bold; dark: !mt.bold; onClicked: mt.bold = !mt.bold }
+                    PillButton { text: qsTr("К"); accent: mt.italic; dark: !mt.italic; onClicked: mt.italic = !mt.italic }
                 }
             }
 
@@ -264,7 +264,7 @@ Popup {
                 Text {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                    text: "Свой шрифт кладётся в мод (fonts/…), шрифт игры не копируется. Автор пишется в меню мода («автор: …») и подставляется в следующие новые моды. Строки в сценарии: @mod_name, @author, @mod_title_font, @mod_title_color, @mod_title_size, @mod_title_style."
+                    text: qsTr("Свой шрифт кладётся в мод (fonts/…), шрифт игры не копируется. Автор пишется в меню мода («автор: …») и подставляется в следующие новые моды. Строки в сценарии: @mod_name, @author, @mod_title_font, @mod_title_color, @mod_title_size, @mod_title_style.")
                     color: Theme.faint; font.family: Theme.ui; font.pixelSize: 13
                 }
                 Item { Layout.fillHeight: true }
@@ -274,24 +274,24 @@ Popup {
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
-            PillButton { dark: true; text: "Как в игре"; onClicked: { mt.fontRef = ""; mt.colorHex = ""; hexField.text = ""; mt.size = 36; mt.bold = false; mt.italic = false } }
+            PillButton { dark: true; text: qsTr("Как в игре"); onClicked: { mt.fontRef = ""; mt.colorHex = ""; hexField.text = ""; mt.size = 36; mt.bold = false; mt.italic = false } }
             PillButton {
                 dark: true
-                text: "🎲 Наугад"
+                text: qsTr("🎲 Наугад")
                 // a ready look: the game's fonts with Cyrillic in colours that read on the list's paper
                 onClicked: {
                     const looks = Engine.titleLooks().filter(l => l.font !== mt.fontRef)
                     const l = looks[Math.floor(Math.random() * looks.length)]
                     mt.fontRef = l.font; mt.colorHex = l.color; hexField.text = l.color; mt.size = l.size
                     mt.bold = l.style.indexOf("b") >= 0; mt.italic = l.style.indexOf("i") >= 0
-                    Engine.toast("Стиль «" + l.name + "»", 0)
+                    Engine.toast(qsTr("Стиль «") + l.name + "»", 0)
                 }
             }
             Item { Layout.fillWidth: true }
-            PillButton { dark: true; text: "Отмена"; onClicked: mt.close() }
+            PillButton { dark: true; text: qsTr("Отмена"); onClicked: mt.close() }
             PillButton {
                 accent: true
-                text: "Сохранить"
+                text: qsTr("Сохранить")
                 onClicked: { mt.applied(Engine.applyModTitle(mt.storyText, mt.titleState())); mt.close() }
             }
         }
@@ -299,8 +299,8 @@ Popup {
 
     FileDialog {
         id: fontDialog
-        title: "Шрифт для названия (.ttf / .otf)"
-        nameFilters: ["Шрифты (*.ttf *.otf)"]
+        title: qsTr("Шрифт для названия (.ttf / .otf)")
+        nameFilters: [qsTr("Шрифты (*.ttf *.otf)")]
         onAccepted: {
             const ref = Engine.importFont(selectedFile)
             if (ref) { mt.fonts = Engine.modFonts(); mt.fontRef = ref }

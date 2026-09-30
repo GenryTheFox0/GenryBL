@@ -157,6 +157,13 @@ def main():
         shutil.copy2(os.path.join(ROOT, 'data', f), data)
     copy_tree(os.path.join(ROOT, 'data', 'mod_assets'), os.path.join(data, 'mod_assets'))
     copy_tree(os.path.join(ROOT, 'data', 'es_doc'), os.path.join(data, 'es_doc'))       # es-doc: Russian names + community sounds (GPL-3.0)
+    copy_tree(os.path.join(ROOT, 'data', 'menu'), os.path.join(data, 'menu'))           # the living menu: a picture + a wind mask per time of day
+    copy_tree(os.path.join(ROOT, 'data', 'i18n'), os.path.join(data, 'i18n'))           # 20 languages (ru = the source, no file)
+    copy_tree(os.path.join(ROOT, 'data', 'flags'), os.path.join(data, 'flags'))         # the language chooser's flags
+    langs = [f for f in os.listdir(os.path.join(data, 'i18n')) if f.endswith('.json') and not f.startswith('_')]
+    if len(langs) < 19:
+        sys.exit(f'only {len(langs)} translations in data/i18n - no release')
+    os.remove(os.path.join(data, 'i18n', '_source.json'))                              # the extractor's list, not for people
     if not WORKSHOP:
         copy_tree(os.path.join(ROOT, 'data', 'patch'), os.path.join(data, 'patch'))     # the 18+ patch inside (bundle_patch.py)
     copy_tree(os.path.join(ROOT, 'third_party', 'ffmpeg'), os.path.join(data, 'tools'))

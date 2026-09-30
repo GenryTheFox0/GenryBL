@@ -250,7 +250,7 @@ Popup {
                                 width: parent.width
                                 horizontalAlignment: Text.AlignHCenter
                                 elide: Text.ElideRight
-                                text: (index + 1) + ".  " + modelData + (parent.parent.ok ? "" : "   · сцены нет")
+                                text: (index + 1) + ".  " + modelData + (parent.parent.ok ? "" : qsTr("   · сцены нет"))
                                 color: optArea.containsMouse && !parent.parent.lock ? "#ffdd7d" : "#eef6ff"
                                 font.family: Engine.font()
                                 font.pixelSize: Math.max(9, 30 * cv.sc)
@@ -310,7 +310,7 @@ Popup {
                 Column {
                     anchors.centerIn: parent
                     spacing: 18
-                    InkText { anchors.horizontalCenter: parent.horizontalCenter; text: "Конец"; size: 64; color: Theme.gold }
+                    InkText { anchors.horizontalCenter: parent.horizontalCenter; text: qsTr("Конец"); size: 64; color: Theme.gold }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         width: Math.min(frame.width - 80, 900)
@@ -322,9 +322,9 @@ Popup {
                     Row {
                         anchors.horizontalCenter: parent.horizontalCenter
                         spacing: 10
-                        PillButton { accent: true; text: "↺ Сначала"; onClicked: cv.restart() }
-                        PillButton { dark: true; text: "К строке " + (cv.stop.line || 1); onClicked: { cv.gotoLine(cv.stop.line || 1); cv.close() } }
-                        PillButton { dark: true; text: "Закрыть"; onClicked: cv.close() }
+                        PillButton { accent: true; text: qsTr("↺ Сначала"); onClicked: cv.restart() }
+                        PillButton { dark: true; text: qsTr("К строке ") + (cv.stop.line || 1); onClicked: { cv.gotoLine(cv.stop.line || 1); cv.close() } }
+                        PillButton { dark: true; text: qsTr("Закрыть"); onClicked: cv.close() }
                     }
                 }
             }
@@ -340,10 +340,10 @@ Popup {
             anchors.verticalCenter: parent.verticalCenter
             x: 14
             spacing: 8
-            InkText { text: "Кино"; size: 22; color: Theme.gold; anchors.verticalCenter: parent.verticalCenter }
+            InkText { text: qsTr("Кино"); size: 22; color: Theme.gold; anchors.verticalCenter: parent.verticalCenter }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "строка " + (cv.stop.line || "—") + "  ·  клик / пробел — дальше  ·  A — авто  ·  Ctrl — промотать  ·  Esc — выход"
+                text: qsTr("строка ") + (cv.stop.line || "—") + qsTr("  ·  клик / пробел — дальше  ·  A — авто  ·  Ctrl — промотать  ·  Esc — выход")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
             }
         }
@@ -352,9 +352,9 @@ Popup {
             anchors.right: parent.right
             anchors.rightMargin: 12
             spacing: 6
-            PillButton { dark: !cv.auto; accent: cv.auto; text: cv.auto ? "Авто: вкл" : "Авто"; onClicked: { cv.auto = !cv.auto; if (cv.auto && !cv.typing) readTimer.restart(); keys.forceActiveFocus() } }
-            PillButton { dark: true; text: "↺ Сначала"; onClicked: cv.restart() }
-            PillButton { dark: true; text: "К строке в редакторе"; onClicked: { cv.gotoLine(cv.stop.line || 1); cv.close() } }
+            PillButton { dark: !cv.auto; accent: cv.auto; text: cv.auto ? qsTr("Авто: вкл") : qsTr("Авто"); onClicked: { cv.auto = !cv.auto; if (cv.auto && !cv.typing) readTimer.restart(); keys.forceActiveFocus() } }
+            PillButton { dark: true; text: qsTr("↺ Сначала"); onClicked: cv.restart() }
+            PillButton { dark: true; text: qsTr("К строке в редакторе"); onClicked: { cv.gotoLine(cv.stop.line || 1); cv.close() } }
             PillButton { dark: true; text: "✕"; onClicked: cv.close() }
         }
     }

@@ -54,7 +54,7 @@ Popup {
         const n = nameField.text.trim() || baseName(selected)
         const img = Engine.libraryImport(selected, kind, n)
         if (!img) return
-        Engine.toast("В мод: " + img, 0)
+        Engine.toast(qsTr("В мод: ") + img, 0)
         lastImported = img
     }
     property string lastImported: ""
@@ -83,11 +83,11 @@ Popup {
             Layout.preferredWidth: 300
             Layout.fillHeight: true
             spacing: 8
-            InkText { text: "Библиотека мастерской"; size: 26; color: Theme.gold }
+            InkText { text: qsTr("Библиотека мастерской"); size: 26; color: Theme.gold }
             Text {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                text: "Картинки всех модов из твоей мастерской БЛ: спрайты, фоны, CG. Бери в свой мод — автор запишется в CREDITS.txt."
+                text: qsTr("Картинки всех модов из твоей мастерской БЛ: спрайты, фоны, CG. Бери в свой мод — автор запишется в CREDITS.txt.")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
             }
             ListView {
@@ -109,7 +109,7 @@ Popup {
                         x: 10; anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 20
                         Text { width: parent.width; text: modelData.title; elide: Text.ElideRight; color: Theme.text; font.family: Theme.ui; font.pixelSize: 14; font.bold: true }
-                        Text { text: modelData.count + " картинок · " + modelData.id; color: Theme.faint; font.family: Theme.mono; font.pixelSize: 11 }
+                        Text { text: modelData.count + qsTr(" картинок · ") + modelData.id; color: Theme.faint; font.family: Theme.mono; font.pixelSize: 11 }
                     }
                     MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { search.text = ""; lb.openItem(modelData.id, modelData.title) } }
                 }
@@ -118,7 +118,7 @@ Popup {
                     visible: Engine.libraryState !== 2
                     spacing: 8
                     BusyIndicator { anchors.horizontalCenter: parent.horizontalCenter; running: visible }
-                    Text { width: 260; wrapMode: Text.Wrap; horizontalAlignment: Text.AlignHCenter; text: "Собираю картинки мастерской… (десятки тысяч файлов, это разово)"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                    Text { width: 260; wrapMode: Text.Wrap; horizontalAlignment: Text.AlignHCenter; text: qsTr("Собираю картинки мастерской… (десятки тысяч файлов, это разово)"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                 }
             }
         }
@@ -135,7 +135,7 @@ Popup {
                     id: search
                     Layout.fillWidth: true
                     implicitHeight: 34
-                    placeholderText: lb.itemId ? "Искать в «" + lb.itemTitle + "»…" : "Искать по всей мастерской: dv, naked, swim, beach…"
+                    placeholderText: lb.itemId ? qsTr("Искать в «") + lb.itemTitle + "»…" : qsTr("Искать по всей мастерской: dv, naked, swim, beach…")
                     placeholderTextColor: Theme.faint
                     color: Theme.text
                     font.family: Theme.ui; font.pixelSize: 14
@@ -146,8 +146,8 @@ Popup {
                 Repeater {
                     // label -> query («a|b» = any of them)
                     // the public build has no «18+» shortcut to the unofficial pictures (people look for what they want themselves)
-                    model: ([["18+", "naked|nude|hentai|undress|topless|underwear|lingerie|bra_|panties|body_n|голая|голые|нагая"]])
-                           .concat([["Купальники", "swim|bikini|купальн"], ["Фоны", "bg/|backgrounds/|фоны/"], ["CG", "cg/"], ["Крупно", "close/"]])
+                    model: ([["18+", qsTr("naked|nude|hentai|undress|topless|underwear|lingerie|bra_|panties|body_n|голая|голые|нагая")]])
+                           .concat([[qsTr("Купальники"), "swim|bikini|купальн"], [qsTr("Фоны"), "bg/|backgrounds/|фоны/"], ["CG", "cg/"], [qsTr("Крупно"), "close/"]])
                     PillButton {
                         required property var modelData
                         dark: search.text !== modelData[1]
@@ -156,7 +156,7 @@ Popup {
                         onClicked: { search.text = search.text === modelData[1] ? "" : modelData[1]; lb.refresh() }
                     }
                 }
-                PillButton { dark: true; text: "Все моды"; onClicked: { lb.itemId = ""; lb.itemTitle = ""; lb.folder = ""; lb.refresh() } }
+                PillButton { dark: true; text: qsTr("Все моды"); onClicked: { lb.itemId = ""; lb.itemTitle = ""; lb.folder = ""; lb.refresh() } }
                 PillButton { dark: true; text: "✕"; onClicked: lb.close() }
             }
             // breadcrumb
@@ -182,7 +182,7 @@ Popup {
             }
             Text {
                 visible: !!search.text.trim()
-                text: "Найдено: " + lb.listing.total + (lb.listing.total > lb.listing.files.length ? " (показаны первые " + lb.listing.files.length + ")" : "")
+                text: qsTr("Найдено: ") + lb.listing.total + (lb.listing.total > lb.listing.files.length ? qsTr(" (показаны первые ") + lb.listing.files.length + ")" : "")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
             }
             GridView {
@@ -223,7 +223,7 @@ Popup {
                             anchors.verticalCenterOffset: -10
                             spacing: 4
                             Text { anchors.horizontalCenter: parent.horizontalCenter; text: "▰"; color: Theme.gold; font.pixelSize: 38 }
-                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: (modelData.count || 0) + " шт."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: (modelData.count || 0) + qsTr(" шт."); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
                         }
                         Text {
                             anchors.bottom: parent.bottom; anchors.bottomMargin: 5
@@ -249,7 +249,7 @@ Popup {
                 Text {
                     anchors.centerIn: parent
                     visible: Engine.libraryState === 2 && grid.count === 0
-                    text: lb.itemId || search.text.trim() ? "Пусто" : "← Выбери мод слева или ищи по всей мастерской"
+                    text: lb.itemId || search.text.trim() ? qsTr("Пусто") : qsTr("← Выбери мод слева или ищи по всей мастерской")
                     color: Theme.faint; font.family: Theme.ui; font.pixelSize: 16
                 }
             }
@@ -274,7 +274,7 @@ Popup {
                     asynchronous: true
                     fillMode: Image.PreserveAspectFit
                 }
-                Text { anchors.centerIn: parent; visible: !lb.selected; text: "Кликни картинку"; color: Theme.faint; font.family: Theme.ui; font.pixelSize: 15 }
+                Text { anchors.centerIn: parent; visible: !lb.selected; text: qsTr("Кликни картинку"); color: Theme.faint; font.family: Theme.ui; font.pixelSize: 15 }
             }
             Text {
                 Layout.fillWidth: true
@@ -283,11 +283,11 @@ Popup {
                 text: lb.selected
                 color: Theme.faint; font.family: Theme.mono; font.pixelSize: 11
             }
-            Text { text: "Взять в мод как"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14; font.bold: true }
+            Text { text: qsTr("Взять в мод как"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14; font.bold: true }
             Row {
                 spacing: 6
                 Repeater {
-                    model: [["sprite", "Персонаж"], ["bg", "Фон"], ["cg", "CG"]]
+                    model: [["sprite", qsTr("Персонаж")], ["bg", qsTr("Фон")], ["cg", "CG"]]
                     PillButton { accent: lb.kind === modelData[0]; dark: !accent; text: modelData[1]; onClicked: lb.kind = modelData[0] }
                 }
             }
@@ -295,7 +295,7 @@ Popup {
                 id: nameField
                 Layout.fillWidth: true
                 implicitHeight: 34
-                placeholderText: lb.kind === "sprite" ? "имя и эмоция: «вика smile»" : "название"
+                placeholderText: lb.kind === "sprite" ? qsTr("имя и эмоция: «вика smile»") : qsTr("название")
                 placeholderTextColor: Theme.faint
                 color: Theme.text
                 font.family: Theme.ui; font.pixelSize: 14
@@ -305,15 +305,15 @@ Popup {
             Text {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                text: lb.kind === "sprite" ? "Первое слово — кто (новый персонаж или dv/sl…), дальше — эмоция/одежда. Потом: «показать вика smile»."
-                                           : "Потом: «" + (lb.kind === "bg" ? "фон" : "цг") + " <название>»."
+                text: lb.kind === "sprite" ? qsTr("Первое слово — кто (новый персонаж или dv/sl…), дальше — эмоция/одежда. Потом: «показать вика smile».")
+                                           : qsTr("Потом: «") + (lb.kind === "bg" ? "фон" : "цг") + qsTr(" <название>».")
                 color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12
             }
-            PillButton { accent: true; enabled: !!lb.selected; text: "＋ В мой мод"; onClicked: lb.take() }
+            PillButton { accent: true; enabled: !!lb.selected; text: qsTr("＋ В мой мод"); onClicked: lb.take() }
             PillButton {
                 dark: true
                 visible: !!lb.lastImported
-                text: "Вставить «" + (lb.lastImported.indexOf("bg ") === 0 ? "фон " + lb.lastImported.substring(3) : lb.lastImported.indexOf("cg ") === 0 ? "цг " + lb.lastImported.substring(3) : "показать " + lb.lastImported) + "»"
+                text: qsTr("Вставить «") + (lb.lastImported.indexOf("bg ") === 0 ? "фон " + lb.lastImported.substring(3) : lb.lastImported.indexOf("cg ") === 0 ? "цг " + lb.lastImported.substring(3) : "показать " + lb.lastImported) + "»"
                 onClicked: {
                     const n = lb.lastImported
                     lb.insertLine(n.indexOf("bg ") === 0 ? "фон " + n.substring(3) + " fade" : n.indexOf("cg ") === 0 ? "цг " + n.substring(3) + " dissolve" : "показать " + n + " center dissolve")

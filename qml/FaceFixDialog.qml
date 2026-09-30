@@ -72,7 +72,7 @@ Popup {
             spacing: 12
             RowLayout {
                 Layout.fillWidth: true
-                InkText { text: "Поправить лицо"; size: 26; color: Theme.gold }
+                InkText { text: qsTr("Поправить лицо"); size: 26; color: Theme.gold }
                 Text { text: "  " + ff.image; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 14 }
                 Item { Layout.fillWidth: true }
                 PillButton { dark: true; text: "✕"; onClicked: ff.close() }
@@ -115,7 +115,7 @@ Popup {
                     }
                     Text {
                         anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; anchors.bottomMargin: 10
-                        text: "тяни мышью · стрелки 1 px · Shift+стрелки 5 px"
+                        text: qsTr("тяни мышью · стрелки 1 px · Shift+стрелки 5 px")
                         color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
                     }
                     MouseArea {
@@ -149,13 +149,13 @@ Popup {
                     PillButton { dark: true; text: "↓"; implicitWidth: 34; onClicked: ff.nudge(0, 1) }
                     PillButton { dark: true; text: "→"; implicitWidth: 34; onClicked: ff.nudge(1, 0) }
                 }
-                Text { text: "сдвиг  " + ff.dx + ", " + ff.dy; color: Theme.text; font.family: Theme.mono; font.pixelSize: 16 }
+                Text { text: qsTr("сдвиг  ") + ff.dx + ", " + ff.dy; color: Theme.text; font.family: Theme.mono; font.pixelSize: 16 }
                 PillButton { dark: true; text: "0, 0"; onClicked: { ff.dx = 0; ff.dy = 0 } }
                 Item { width: 18 }
                 ColumnLayout {
                     spacing: 2
                     Repeater {
-                        model: [["look", "только этот спрайт"], ["outfit", "все эмоции наряда «" + ff.outfit + "»"], ["face", "эмоция «" + ff.emotion + "» во всех нарядах"]]
+                        model: [["look", qsTr("только этот спрайт")], ["outfit", qsTr("все эмоции наряда «") + ff.outfit + "»"], ["face", qsTr("эмоция «") + ff.emotion + qsTr("» во всех нарядах")]]
                         RadioButton {
                             required property var modelData
                             visible: modelData[0] !== "outfit" || ff.outfit !== ""
@@ -169,13 +169,13 @@ Popup {
                 Item { Layout.fillWidth: true }
                 PillButton {
                     dark: true
-                    text: "Удалить спрайт"
+                    text: qsTr("Удалить спрайт")
                     onClicked: { Engine.hideSprite(ff.tag, ff.name); ff.close() }
                 }
                 PillButton {
                     id: save
                     accent: true
-                    text: "Сохранить  ⏎"
+                    text: qsTr("Сохранить  ⏎")
                     onClicked: { Engine.setFaceShift(ff.tag, ff.name, ff.dist, ff.scope, ff.dx, ff.dy); ff.close() }
                 }
             }

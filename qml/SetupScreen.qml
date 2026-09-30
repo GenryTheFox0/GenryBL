@@ -46,10 +46,10 @@ Item {
             width: parent.width - 80
             spacing: 16
             Text { text: "GenryBL"; color: Theme.gold; font.family: Theme.riffic; font.pixelSize: 64; font.bold: true }
-            Text { text: "конструктор модов «Бесконечного лета»"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 20; Layout.topMargin: -12 }
+            Text { text: qsTr("конструктор модов «Бесконечного лета»"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 20; Layout.topMargin: -12 }
             Text {
                 Layout.topMargin: 10
-                text: "Где у тебя стоит «Бесконечное лето»?"
+                text: qsTr("Где у тебя стоит «Бесконечное лето»?")
                 color: Theme.text; font.family: Theme.ui; font.pixelSize: 28; font.bold: true
             }
             Text {
@@ -57,9 +57,9 @@ Item {
                 wrapMode: Text.Wrap
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 17
                 text: setup.found
-                      ? "Нашёл игру через Steam. Если это она — жми «Да, это она»."
-                      : "Через Steam не нашёл. Покажи папку игры: Steam → Библиотека → Бесконечное лето → ⚙ → Управление → " +
-                        "Просмотреть локальные файлы — вот эту папку (там лежит Everlasting Summer.exe)."
+                      ? qsTr("Нашёл игру через Steam. Если это она — жми «Да, это она».")
+                      : qsTr("Через Steam не нашёл. Покажи папку игры: Steam → Библиотека → Бесконечное лето → ⚙ → Управление → ") +
+                        qsTr("Просмотреть локальные файлы — вот эту папку (там лежит Everlasting Summer.exe).")
             }
             Rectangle {
                 visible: setup.found !== ""
@@ -77,11 +77,11 @@ Item {
             }
             RowLayout {
                 spacing: 12
-                PillButton { visible: setup.found !== ""; accent: true; text: "Да, это она"; implicitHeight: 44; onClicked: setup.use(setup.found) }
-                PillButton { accent: setup.found === ""; dark: setup.found !== ""; text: "Выбрать папку…"; implicitHeight: 44; onClicked: folderDialog.open() }
+                PillButton { visible: setup.found !== ""; accent: true; text: qsTr("Да, это она"); implicitHeight: 44; onClicked: setup.use(setup.found) }
+                PillButton { accent: setup.found === ""; dark: setup.found !== ""; text: qsTr("Выбрать папку…"); implicitHeight: 44; onClicked: folderDialog.open() }
                 Item { Layout.fillWidth: true }
                 Text {
-                    text: "<a href='steam://install/331470'>Нет игры? Она бесплатная в Steam</a>"
+                    text: qsTr("<a href='steam://install/331470'>Нет игры? Она бесплатная в Steam</a>")
                     textFormat: Text.RichText
                     color: Theme.dim; linkColor: Theme.gold
                     font.family: Theme.ui; font.pixelSize: 16
@@ -93,7 +93,7 @@ Item {
     }
     FolderDialog {
         id: folderDialog
-        title: "Папка «Бесконечного лета» (там Everlasting Summer.exe)"
+        title: qsTr("Папка «Бесконечного лета» (там Everlasting Summer.exe)")
         onAccepted: setup.use(String(selectedFolder))
     }
 }

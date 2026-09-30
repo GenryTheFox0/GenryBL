@@ -47,7 +47,7 @@ Rectangle {
                 onDoubleClicked: pp.enlarge()
                 ToolTip.visible: containsMouse && pp.extra === ""
                 ToolTip.delay: 900
-                ToolTip.text: "Двойной клик — на весь экран"
+                ToolTip.text: qsTr("Двойной клик — на весь экран")
                 hoverEnabled: true
             }
             Rectangle {
@@ -60,7 +60,7 @@ Rectangle {
                 Text {
                     id: tagText
                     anchors.centerIn: parent
-                    text: "примерка: " + pp.extra.split("\n")[0]
+                    text: qsTr("примерка: ") + pp.extra.split("\n")[0]
                     color: "white"; font.family: Theme.ui; font.pixelSize: 13; font.bold: true
                 }
             }
@@ -73,7 +73,7 @@ Rectangle {
             PillButton { dark: true; text: "‹"; onClicked: pp.step(-1) }
             PillButton {
                 accent: true
-                text: pp.playing ? "Пауза" : "Смотреть"
+                text: pp.playing ? qsTr("Пауза") : qsTr("Смотреть")
                 implicitWidth: 92
                 onClicked: pp.playing = !pp.playing
             }

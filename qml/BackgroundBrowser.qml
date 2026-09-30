@@ -25,7 +25,7 @@ Item {
         spacing: 8
         Row {
             spacing: 6
-            PillButton { text: "Фоны"; accent: !bb.cg && !bb.adult; dark: !accent; onClicked: { bb.cg = false; bb.adult = false } }
+            PillButton { text: qsTr("Фоны"); accent: !bb.cg && !bb.adult; dark: !accent; onClicked: { bb.cg = false; bb.adult = false } }
             PillButton { text: "CG"; accent: bb.cg && !bb.adult; dark: !accent; onClicked: { bb.cg = true; bb.adult = false } }
             AbstractButton {
                 implicitWidth: 52; implicitHeight: 30
@@ -33,14 +33,14 @@ Item {
                 background: Rectangle { radius: 15; color: bb.adult ? "#e74c3c" : "#8e2a20"; border.color: "#5a130c" }
                 contentItem: Text { text: "18+"; color: "white"; font.family: Theme.ui; font.pixelSize: 15; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 ToolTip.visible: hovered
-                ToolTip.text: "Официальный вырезанный 18+ контент БЛ (хентай-патч Мастерской)"
+                ToolTip.text: qsTr("Официальный вырезанный 18+ контент БЛ (хентай-патч Мастерской)")
             }
             DarkCombo {
                 width: 130
-                model: ["fade", "dissolve", "без перехода", "fade2", "fade3", "dspr", "pixellate"]
+                model: ["fade", "dissolve", qsTr("без перехода"), "fade2", "fade3", "dspr", "pixellate"]
                 onActivated: (i) => bb.trans = i === 2 ? "" : model[i]
             }
-            PillButton { accent: true; text: "＋ Свой"; onClicked: imgDialog.open() }
+            PillButton { accent: true; text: qsTr("＋ Свой"); onClicked: imgDialog.open() }
         }
         // the «18+» folder: what it is, whether the player has it
         Rectangle {
@@ -58,29 +58,29 @@ Item {
                 Text {
                     width: parent.width
                     wrapMode: Text.Wrap
-                    text: "18+ · официальный контент БЛ, вырезанный из Steam — патч «Deleted hentai scenes» (автор — Лена, Мастерская Steam, id 1118110148): его CG, старые карточки дней и старые тела героинь."
+                    text: qsTr("18+ · официальный контент БЛ, вырезанный из Steam — патч «Deleted hentai scenes» (автор — Лена, Мастерская Steam, id 1118110148): его CG, старые карточки дней и старые тела героинь.")
                     color: Theme.text; font.family: Theme.ui; font.pixelSize: 13
                 }
                 Text {
                     width: parent.width
                     wrapMode: Text.Wrap
-                    text: !Engine.patchInstalled ? "⚠ Патча нет ни в GenryBL, ни в подписках — превью пустые."
-                        : Engine.patchBundled ? "✓ Патч встроен в GenryBL — подписываться не надо. Картинки, что ты покажешь, лягут прямо в мод: игроки увидят их и без патча."
-                                              : "✓ Патч у тебя подписан. Картинки, что ты покажешь, лягут прямо в мод: игроки увидят их и без патча."
+                    text: !Engine.patchInstalled ? qsTr("⚠ Патча нет ни в GenryBL, ни в подписках — превью пустые.")
+                        : Engine.patchBundled ? qsTr("✓ Патч встроен в GenryBL — подписываться не надо. Картинки, что ты покажешь, лягут прямо в мод: игроки увидят их и без патча.")
+                                              : qsTr("✓ Патч у тебя подписан. Картинки, что ты покажешь, лягут прямо в мод: игроки увидят их и без патча.")
                     color: Engine.patchInstalled ? Theme.good : Theme.warn; font.family: Theme.ui; font.pixelSize: 13
                 }
                 Row {
                     spacing: 6
-                    PillButton { dark: true; text: bb.blur ? "Размытие: вкл" : "Размытие: выкл"; onClicked: { bb.blur = !bb.blur; Engine.setSetting("blur18", bb.blur) } }
-                    PillButton { dark: true; text: "Патч в Мастерской"; onClicked: Qt.openUrlExternally("https://steamcommunity.com/sharedfiles/filedetails/?id=1118110148") }
-                    PillButton { dark: true; text: "Автор патча"; onClicked: Qt.openUrlExternally("https://steamcommunity.com/id/Lena_sova") }
+                    PillButton { dark: true; text: bb.blur ? qsTr("Размытие: вкл") : qsTr("Размытие: выкл"); onClicked: { bb.blur = !bb.blur; Engine.setSetting("blur18", bb.blur) } }
+                    PillButton { dark: true; text: qsTr("Патч в Мастерской"); onClicked: Qt.openUrlExternally("https://steamcommunity.com/sharedfiles/filedetails/?id=1118110148") }
+                    PillButton { dark: true; text: qsTr("Автор патча"); onClicked: Qt.openUrlExternally("https://steamcommunity.com/id/Lena_sova") }
                 }
             }
         }
         TextField {
             id: search
             width: parent.width
-            placeholderText: "Поиск: square, beach, night, dv…"
+            placeholderText: qsTr("Поиск: square, beach, night, dv…")
             placeholderTextColor: Theme.faint
             color: Theme.text
             font.family: Theme.ui; font.pixelSize: 14
@@ -145,7 +145,7 @@ Item {
                 Text {
                     anchors.bottom: parent.bottom; anchors.bottomMargin: 5
                     x: 8; width: parent.width - 16
-                    text: bb.adult && !modelData.have ? modelData.id + " · нужен патч" : (modelData.title || modelData.id) + (modelData.custom ? " ★" : "")
+                    text: bb.adult && !modelData.have ? modelData.id + qsTr(" · нужен патч") : (modelData.title || modelData.id) + (modelData.custom ? " ★" : "")
                     color: area.containsMouse ? Theme.text : Theme.dim
                     font.family: modelData.title ? Theme.ui : Theme.mono; font.pixelSize: 12
                     elide: Text.ElideRight
@@ -166,8 +166,8 @@ Item {
 
     FileDialog {
         id: imgDialog
-        title: "Свой фон / CG (лучше 1920×1080)"
-        nameFilters: ["Картинки (*.png *.jpg *.jpeg *.webp)"]
+        title: qsTr("Свой фон / CG (лучше 1920×1080)")
+        nameFilters: [qsTr("Картинки (*.png *.jpg *.jpeg *.webp)")]
         onAccepted: {
             const f = decodeURIComponent(String(selectedFile)).split("/").pop().replace(/\.[^.]+$/, "")
             const n = Engine.importImage(selectedFile, bb.cg ? "cg" : "bg", f)

@@ -3197,7 +3197,9 @@ QString menuButtonKind(const QString& word)
         {"главы", {"главы", "дни", "эпизоды", "части", "сцены", "chapters", "days", "episodes"}},
         {"настройки", {"настройки", "опции", "параметры", "settings", "options", "preferences"}},
         {"загрузить", {"загрузить", "продолжить", "сохранения", "загрузка", "load", "continue"}},
-        {"выход", {"выход", "выйти", "выселиться", "уйти", "покинуть", "закрыть", "назад в игру", "exit", "quit", "leave"}},
+        {"выход", {"выход", "выйти", "выселиться", "выселение", "выселить", "выписаться", "выписка", "уйти", "уехать", "уехать домой",
+                   "домой", "покинуть", "покинуть лагерь", "сбежать", "до свидания", "пока", "закрыть", "назад в игру", "в меню бл",
+                   "exit", "quit", "leave"}},
         {"имя", {"имя", "мое имя", "твое имя", "имя героя", "имя игрока", "представиться", "как тебя зовут", "кто ты", "name"}},
     };
     // «Имя: [имя]» -> «имя»: the caption may show the name itself
@@ -4353,10 +4355,11 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             const QString t = spec.bg.isEmpty() ? QString() : bgTimeOf(spec.bg);
             spec.bgTime = t == QLatin1String("sunset") || t == QLatin1String("night") || t == QLatin1String("prologue") ? t : QStringLiteral("day");
         }
-        spec.fxDust = c.sys(QStringLiteral("weather_dust_1"));
-        spec.fxSpark = c.sys(QStringLiteral("weather_spark_1"));
-        spec.fxLeaf = c.sys(QStringLiteral("weather_leaf_1"));
-        spec.fxRain = c.sys(QStringLiteral("weather_rain_2"));
+        // quoted: in a screen «add name» is a Python variable, «add "name"» is the image (NameError in 2.0)
+        spec.fxDust = pyQ(c.sys(QStringLiteral("weather_dust_1")));
+        spec.fxSpark = pyQ(c.sys(QStringLiteral("weather_spark_1")));
+        spec.fxLeaf = pyQ(c.sys(QStringLiteral("weather_leaf_1")));
+        spec.fxRain = pyQ(c.sys(QStringLiteral("weather_rain_2")));
         spec.layout = parts.layout;
         spec.look = parts.look;
         spec.accent = parts.accent;
@@ -4367,7 +4370,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
                                                     {QStringLiteral("snow"), QStringLiteral("weather_snow_1")}, {QStringLiteral("heart"), QStringLiteral("weather_heart_1")}};
             if (parts.fx.isEmpty() || parts.fx == QLatin1String("hour")) spec.fxPick = QStringLiteral("hour");
             else if (parts.fx == QLatin1String("none")) spec.fxPick.clear();
-            else spec.fxPick = c.sys(fx.value(parts.fx, QStringLiteral("weather_dust_1")));
+            else spec.fxPick = pyQ(c.sys(fx.value(parts.fx, QStringLiteral("weather_dust_1"))));
         }
         for (const char* h : {"sl", "dv", "un", "us"})
             spec.chibis << relModPath(modId, QStringLiteral("images/genry_chibi/") + esChibiFile(QLatin1String(h)) + QStringLiteral(".png"));

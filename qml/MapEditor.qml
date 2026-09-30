@@ -58,7 +58,7 @@ Popup {
         zones = zones.map(z => z.zone === id ? Object.assign({}, z, { [k]: v }) : z)
     }
     function commit() {
-        if (!zones.length) { Engine.toast("Открой хотя бы одно место на карте", 1); return }
+        if (!zones.length) { Engine.toast(qsTr("Открой хотя бы одно место на карте"), 1); return }
         accepted(built, editing)
         close()
     }
@@ -148,7 +148,7 @@ Popup {
                             Text {
                                 id: tl
                                 anchors.centerIn: parent
-                                text: modelData.title + (parent.parent.isOpen ? " → " + parent.parent.ent.scene : "  (закрыто)")
+                                text: modelData.title + (parent.parent.isOpen ? " → " + parent.parent.ent.scene : qsTr("  (закрыто)"))
                                 color: Theme.text; font.family: Theme.ui; font.pixelSize: 13; font.bold: true
                             }
                         }
@@ -177,19 +177,19 @@ Popup {
             RowLayout {
                 spacing: 10
                 Rectangle { width: 12; height: 12; radius: 6; color: Theme.categoryColor("Сцены") }
-                InkText { text: "Карта лагеря"; size: 30; color: Theme.gold }
-                Text { visible: me.editing; text: "строка " + me.storyLine; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 13 }
+                InkText { text: qsTr("Карта лагеря"); size: 30; color: Theme.gold }
+                Text { visible: me.editing; text: qsTr("строка ") + me.storyLine; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 13 }
             }
             Text {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                text: "Клик по месту — открыть его. Клик по открытому — выбрать, ещё клик — закрыть. Игрок сам выберет, куда идти."
+                text: qsTr("Клик по месту — открыть его. Клик по открытому — выбрать, ещё клик — закрыть. Игрок сам выберет, куда идти.")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14
             }
             RowLayout {
                 spacing: 6
-                PillButton { dark: true; text: "Открыть все"; onClicked: me.zones = me.allZones.map(z => (me.entry(z.id) || { zone: z.id, scene: z.id, chibi: "" })) }
-                PillButton { dark: true; text: "Закрыть все"; onClicked: { me.zones = []; me.selId = "" } }
+                PillButton { dark: true; text: qsTr("Открыть все"); onClicked: me.zones = me.allZones.map(z => (me.entry(z.id) || { zone: z.id, scene: z.id, chibi: "" })) }
+                PillButton { dark: true; text: qsTr("Закрыть все"); onClicked: { me.zones = []; me.selId = "" } }
             }
             Flickable {
                 id: fl
@@ -236,7 +236,7 @@ Popup {
                                         Layout.fillWidth: true
                                         implicitHeight: 30
                                         text: modelData.scene
-                                        placeholderText: "сцена"
+                                        placeholderText: qsTr("сцена")
                                         placeholderTextColor: Theme.faint
                                         color: Theme.text
                                         font.family: Theme.ui; font.pixelSize: 14
@@ -248,12 +248,12 @@ Popup {
                                         dark: true
                                         text: "▾"
                                         enabled: me.scenes.length > 0
-                                        onClicked: picker.show("Сцена для «" + me.titleOf(modelData.zone) + "»", me.scenes.map(s => ({ value: s, label: s })),
+                                        onClicked: picker.show(qsTr("Сцена для «") + me.titleOf(modelData.zone) + "»", me.scenes.map(s => ({ value: s, label: s })),
                                                                (v) => me.setField(modelData.zone, "scene", v))
                                     }
                                     Text {
                                         visible: modelData.scene !== "" && me.scenes.indexOf(modelData.scene) < 0
-                                        text: "новая"; color: Theme.warn; font.family: Theme.ui; font.pixelSize: 12
+                                        text: qsTr("новая"); color: Theme.warn; font.family: Theme.ui; font.pixelSize: 12
                                     }
                                 }
                                 Flow {
@@ -301,7 +301,7 @@ Popup {
                     }
                     Text {
                         visible: me.zones.length === 0
-                        text: "Все места закрыты — кликни по карте."
+                        text: qsTr("Все места закрыты — кликни по карте.")
                         color: Theme.faint; font.family: Theme.ui; font.pixelSize: 15
                     }
                 }
@@ -325,8 +325,8 @@ Popup {
             RowLayout {
                 Layout.fillWidth: true
                 Item { Layout.fillWidth: true }
-                PillButton { dark: true; text: "Отмена"; onClicked: me.close() }
-                PillButton { accent: true; text: me.editing ? "✓ Применить" : "＋ Вставить"; onClicked: me.commit() }
+                PillButton { dark: true; text: qsTr("Отмена"); onClicked: me.close() }
+                PillButton { accent: true; text: me.editing ? qsTr("✓ Применить") : qsTr("＋ Вставить"); onClicked: me.commit() }
             }
         }
     }

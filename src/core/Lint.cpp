@@ -1,4 +1,5 @@
 #include "Lint.h"
+#include "Tr.h"
 #include "EsAssets.h"
 #include "Overlays.h"
 #include "Py.h"
@@ -129,7 +130,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             add(ln, LintIssue::Warning, U("«%1» — CG из 18+ патча, которого в GenryBL нет: в игре будет тёмная заглушка "
                                           "у всех, кто не подписан на патч").arg(full.mid(3)));
         else if (!patchNoted)
-            add(ln, LintIssue::Info, U("CG из 18+ патча ляжет прямо в мод (images/genry_patch) — игроки увидят его и без патча"));
+            add(ln, LintIssue::Info, gbTr("CG из 18+ патча ляжет прямо в мод (images/genry_patch) — игроки увидят его и без патча"));
         patchNoted = true;
         return true;
     };
@@ -141,7 +142,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         if (!ctx.opt.legacy) splitOverlays(withOverlays(n), &n, nullptr);     // «румянец пот» ride on the sprite
         if (patchCg(ln, n) || imageKnown(n)) return;
         if (es->missingImages.contains(n)) {
-            add(ln, LintIssue::Warning, U("«%1» объявлена в БЛ, но файла в игре нет — у игрока будет ошибка").arg(n));
+            add(ln, LintIssue::Warning, gbTr("«%1» объявлена в БЛ, но файла в игре нет — у игрока будет ошибка").arg(n));
             return;
         }
         const QString tag = n.section(QLatin1Char(' '), 0, 0);
@@ -169,11 +170,11 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                 dist = rest.section(QLatin1Char(' '), -1);
                 rest = rest.section(QLatin1Char(' '), 0, -2);
             }
-            add(ln, LintIssue::Warning, U("У %1 нет «%2» — похожие: %3").arg(es->characterName(tag).isEmpty() ? tag : es->characterName(tag), rest,
+            add(ln, LintIssue::Warning, gbTr("У %1 нет «%2» — похожие: %3").arg(es->characterName(tag).isEmpty() ? tag : es->characterName(tag), rest,
                                                                        closest(rest, es->spriteNames(tag))));
             return;
         }
-        add(ln, LintIssue::Warning, U("Нет картинки «%1» — это не персонаж БЛ и не свой PNG проекта").arg(n));
+        add(ln, LintIssue::Warning, gbTr("Нет картинки «%1» — это не персонаж БЛ и не свой PNG проекта").arg(n));
     };
 
     for (int i = 0; i < lines.size(); ++i) {
@@ -199,7 +200,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                         {U("частицы"), U("пыль, листья, светлячки, дождь, снег, сердца, по часам, нет")},
                         {U("появление"), U("выезд, проявление, снизу, печать")}, {U("вход"), U("выезд, проявление, снизу, печать")}};
                     const bool got = !mp.layout.isEmpty() || !mp.look.isEmpty() || !mp.accent.isEmpty() || !mp.fx.isEmpty() || !mp.enter.isEmpty();
-                    if (!got) add(ln, LintIssue::Warning, U("«%1 %2» не знаю — можно: %3").arg(first, rest, known.value(lw)));
+                    if (!got) add(ln, LintIssue::Warning, gbTr("«%1 %2» не знаю — можно: %3").arg(first, rest, known.value(lw)));
                     continue;
                 }
             }
@@ -221,7 +222,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                     const QString t = pyStrip(rest.section(QStringLiteral("->"), 1));
                     if (!special.contains(menuButtonKind(t))) targets.push_back({ln, t});
                 } else if (rest.isEmpty()) {
-                    add(ln, LintIssue::Warning, U("Кнопка без текста: «кнопка Начать -> start» или «кнопка Галерея»"));
+                    add(ln, LintIssue::Warning, gbTr("Кнопка без текста: «кнопка Начать -> start» или «кнопка Галерея»"));
                 } else if (!special.contains(menuButtonKind(rest)) && ++menuStarts > 1) {
                     // a second button with no target and no known word: it starts the mod too - most likely not meant
                     add(ln, LintIssue::Info, U("Кнопка «%1» тоже начинает мод с начала. Другое нужно — «кнопка %1 -> главы» "
@@ -233,11 +234,11 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         if (cmd == QLatin1String("modmenu")) { menuOpen = ln; menuStarts = 0; continue; }
         if (cmd == QLatin1String("meter")) {
             const QString v = pyStrip(rest.section(QLatin1Char('|'), 0, 0));
-            if (v.isEmpty()) add(ln, LintIssue::Error, U("Шкала: «шкала симпатия_алисы | Алиса | #ff7a00 | 0 | 10»"));
+            if (v.isEmpty()) add(ln, LintIssue::Error, gbTr("Шкала: «шкала симпатия_алисы | Алиса | #ff7a00 | 0 | 10»"));
             continue;
         }
         if (cmd == QLatin1String("meters") && meterVars.isEmpty())
-            add(ln, LintIssue::Warning, U("Нет ни одной «шкала …» — экран шкал будет пустым"));
+            add(ln, LintIssue::Warning, gbTr("Нет ни одной «шкала …» — экран шкал будет пустым"));
         if (cmd == QLatin1String("bestmeter")) {
             for (const QString& part : rest.split(QLatin1Char('|'))) {
                 if (!part.contains(QLatin1String("->"))) continue;
@@ -245,7 +246,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                 targets.push_back({ln, pyStrip(part.section(QStringLiteral("->"), 1))});
                 const QString l = left.toLower();
                 if (l != U("иначе") && l != QLatin1String("else") && l != U("ничья") && !meterVars.contains(slugOf(left, QStringLiteral("value"), ctx.opt)))
-                    add(ln, LintIssue::Warning, U("«%1» — не шкала: объяви её «шкала %1 | Имя | #цвет | 0 | 10»").arg(left));
+                    add(ln, LintIssue::Warning, gbTr("«%1» — не шкала: объяви её «шкала %1 | Имя | #цвет | 0 | 10»").arg(left));
             }
             continue;
         }
@@ -254,13 +255,13 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         if (!ctx.opt.legacy && !choiceItems.isEmpty()) {
             if (cmd == QLatin1String("endchoice")) {
                 if (choiceItems.last() == 0)
-                    add(ln, LintIssue::Warning, U("В «выбор» нет ни одного варианта «- Текст» — меню не покажется"));
+                    add(ln, LintIssue::Warning, gbTr("В «выбор» нет ни одного варианта «- Текст» — меню не покажется"));
                 choiceItems.removeLast();
                 choiceTimed.removeLast();
                 continue;
             }
             if (s.startsWith(QLatin1Char(':')) || cmd == QLatin1String("label")) {
-                add(ln, LintIssue::Info, U("«выбор» без «конецвыбора» — закрою его сам перед этой сценой"));
+                add(ln, LintIssue::Info, gbTr("«выбор» без «конецвыбора» — закрою его сам перед этой сценой"));
                 choiceItems.clear();
                 choiceTimed.clear();
             } else if (isChoiceItemLine(s)) {
@@ -289,7 +290,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                         const QString cond = pyStrip(tail.section(QLatin1Char('|'), 0, 0));
                         const QString c0 = firstWord(cond).toLower();
                         if (cond.isEmpty())
-                            at(int(b.capturedStart()), int(b.capturedLength()), LintIssue::Error, U("Чего нужно? [нужно Славя 3]"));
+                            at(int(b.capturedStart()), int(b.capturedLength()), LintIssue::Error, gbTr("Чего нужно? [нужно Славя 3]"));
                         else if (c0 != U("предмет") && !opRe.match(cond).hasMatch() && !numTail.match(cond).hasMatch() &&
                                  !cond.contains(U(" и ")) && !cond.contains(U(" или ")) && cond.contains(QLatin1Char(' '))) {
                             const QString last = cond.section(QLatin1Char(' '), -1);
@@ -311,29 +312,29 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                             }
                     }
                 }
-                if (it.caption.isEmpty()) add(ln, LintIssue::Warning, U("Пустой текст варианта"));
+                if (it.caption.isEmpty()) add(ln, LintIssue::Warning, gbTr("Пустой текст варианта"));
                 if (!it.target.isEmpty()) targets.push_back({ln, it.target});
-                else if (s.contains(QLatin1String("->"))) add(ln, LintIssue::Warning, U("После «->» нужна сцена — или убери стрелку, и история пойдёт дальше"));
+                else if (s.contains(QLatin1String("->"))) add(ln, LintIssue::Warning, gbTr("После «->» нужна сцена — или убери стрелку, и история пойдёт дальше"));
                 if (!it.image.isEmpty()) {
                     QString kind;
                     const QString img = choiceImage(it.image, &kind, ctx.customImages);
                     if (kind == QLatin1String("sprite")) checkSprite(ln, img);
                     else if (!patchCg(ln, img) && !imageKnown(img)) {
                         const bool cg = img.startsWith(QLatin1String("cg "));
-                        add(ln, LintIssue::Warning, U("Нет картинки «%1» для варианта — похожие: %2")
+                        add(ln, LintIssue::Warning, gbTr("Нет картинки «%1» для варианта — похожие: %2")
                                                          .arg(it.image, closest(img.mid(3), cg ? (es ? es->cgs() : QStringList()) : (es ? es->backgrounds() : QStringList()))));
                     }
                 }
                 // a lock on points nothing ever gives never opens; a condition on them never shows the option
                 for (const QString& v : badNeed ? QStringList() : choiceConditionVars(it.need))
                     if (!setVars.contains(slugOf(v, QStringLiteral("value"), ctx.opt)))
-                        add(ln, LintIssue::Warning, U("«%1» нигде не прибавляется — этот вариант всегда будет закрыт. Дай очки: «[+1 %1]» у другого варианта или «прибавить %1 1»").arg(v));
+                        add(ln, LintIssue::Warning, gbTr("«%1» нигде не прибавляется — этот вариант всегда будет закрыт. Дай очки: «[+1 %1]» у другого варианта или «прибавить %1 1»").arg(v));
                 for (const QString& v : choiceConditionVars(it.cond))
                     if (!setVars.contains(slugOf(v, QStringLiteral("value"), ctx.opt)))
-                        add(ln, LintIssue::Warning, U("«%1» нигде не задаётся — этот вариант никогда не появится").arg(v));
+                        add(ln, LintIssue::Warning, gbTr("«%1» нигде не задаётся — этот вариант никогда не появится").arg(v));
                 continue;
             } else if (s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0))) {
-                if (!choiceTimed.last()) add(ln, LintIssue::Warning, U("«время вышло» работает только в «выбор на время N»"));
+                if (!choiceTimed.last()) add(ln, LintIssue::Warning, gbTr("«время вышло» работает только в «выбор на время N»"));
                 targets.push_back({ln, pyStrip(s.section(QStringLiteral("->"), 1))});
                 continue;
             }
@@ -348,30 +349,30 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
                     t = pyStrip(t.section(QLatin1Char('|'), 0, 0));
                     QString kind;
                     const QString img = choiceImage(raw, &kind, ctx.customImages);
-                    if (raw.isEmpty()) add(ln, LintIssue::Warning, U("После «|» нужна картинка: sl smile pioneer, bg ext_beach_day или cg …"));
+                    if (raw.isEmpty()) add(ln, LintIssue::Warning, gbTr("После «|» нужна картинка: sl smile pioneer, bg ext_beach_day или cg …"));
                     else if (kind == QLatin1String("sprite")) checkSprite(ln, img);
                     else if (!patchCg(ln, img) && !imageKnown(img)) {
                         const bool cg = img.startsWith(QLatin1String("cg "));
-                        add(ln, LintIssue::Warning, U("Нет картинки «%1» для варианта — похожие: %2")
+                        add(ln, LintIssue::Warning, gbTr("Нет картинки «%1» для варианта — похожие: %2")
                                                          .arg(raw, closest(img.mid(3), cg ? (es ? es->cgs() : QStringList()) : (es ? es->backgrounds() : QStringList()))));
                     }
                 }
-                if (pyStrip(s.mid(1).section(QStringLiteral("->"), 0, 0)).isEmpty()) add(ln, LintIssue::Warning, U("Пустой текст варианта"));
+                if (pyStrip(s.mid(1).section(QStringLiteral("->"), 0, 0)).isEmpty()) add(ln, LintIssue::Warning, gbTr("Пустой текст варианта"));
                 targets.push_back({ln, t});
                 continue;
             }
             if (!ctx.opt.legacy && s.contains(QLatin1String("->")) && isTimeoutWord(s.section(QStringLiteral("->"), 0, 0))) {
-                if (!timedChoice) add(ln, LintIssue::Warning, U("«время вышло» работает только в «выбор на время N»"));
+                if (!timedChoice) add(ln, LintIssue::Warning, gbTr("«время вышло» работает только в «выбор на время N»"));
                 targets.push_back({ln, pyStrip(s.section(QStringLiteral("->"), 1))});
                 continue;
             }
-            add(ln, LintIssue::Error, U("Внутри «выбор» только строки «- Текст -> сцена» — иначе сборка упадёт"));
+            add(ln, LintIssue::Error, gbTr("Внутри «выбор» только строки «- Текст -> сцена» — иначе сборка упадёт"));
             continue;
         }
         if (s.startsWith(QLatin1Char(':')) || cmd == QLatin1String("label")) {
             QString l = sl(s.startsWith(QLatin1Char(':')) ? pyStrip(s.mid(1)) : rest);
             if (l == QLatin1String("start")) l = meta.modId;
-            if (labels.value(l, -1) > 0) add(ln, LintIssue::Error, U("Сцена «%1» уже есть на строке %2 — Ren'Py не запустится").arg(l).arg(labels[l]));
+            if (labels.value(l, -1) > 0) add(ln, LintIssue::Error, gbTr("Сцена «%1» уже есть на строке %2 — Ren'Py не запустится").arg(l).arg(labels[l]));
             labels.insert(l, ln);
             continue;
         }
@@ -380,12 +381,12 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             const QString id = speakerId(who, declared, ctx.opt);
             if (id.startsWith(QLatin1String("genry_sp_")) && !newSpeakers.contains(id)) {
                 newSpeakers.insert(id);
-                add(ln, LintIssue::Info, U("Новый говорящий «%1» — объявлю его сам (или «персонаж id Имя #цвет»)").arg(who));
+                add(ln, LintIssue::Info, gbTr("Новый говорящий «%1» — объявлю его сам (или «персонаж id Имя #цвет»)").arg(who));
             }
             continue;
         }
         if (!isCommandName(cmd)) {
-            add(ln, LintIssue::Warning, U("«%1» — не команда: в мод уйдёт комментарием").arg(first));
+            add(ln, LintIssue::Warning, gbTr("«%1» — не команда: в мод уйдёт комментарием").arg(first));
             continue;
         }
         auto popEffect = [&] { if (!w.isEmpty() && isEffect(w.last())) w.removeLast(); };
@@ -394,30 +395,30 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             const QString rawLine = rawLines.value(srcOf.value(i));
             static const QRegularExpression digits(QStringLiteral("^\\d+$"));
             if (k.code.isEmpty()) {
-                add(ln, LintIssue::Error, U("Какой код? «кодовыйзамок 1968 | Подсказка | верно -> сцена | неверно -> сцена»"));
+                add(ln, LintIssue::Error, gbTr("Какой код? «кодовыйзамок 1968 | Подсказка | верно -> сцена | неверно -> сцена»"));
             } else if (!digits.match(k.code).hasMatch()) {
                 LintIssue x{ln, LintIssue::Error, U("На замке только цифры — «%1» так не набрать").arg(k.code), QString(), int(rawLine.indexOf(k.code)), int(k.code.size())};
                 out.push_back(x);
             } else if (k.code.size() > 10) {
-                add(ln, LintIssue::Warning, U("Код из %1 цифр — игрок замучается; обычно 3–6").arg(k.code.size()));
+                add(ln, LintIssue::Warning, gbTr("Код из %1 цифр — игрок замучается; обычно 3–6").arg(k.code.size()));
             }
             if (!k.okTarget.isEmpty()) targets.push_back({ln, k.okTarget});
             if (!k.badTarget.isEmpty()) targets.push_back({ln, k.badTarget});
             if (k.okTarget.isEmpty() && k.badTarget.isEmpty())
-                add(ln, LintIssue::Info, U("Замок без «верно -> сцена»: после него история просто идёт дальше, что бы игрок ни набрал"));
+                add(ln, LintIssue::Info, gbTr("Замок без «верно -> сцена»: после него история просто идёт дальше, что бы игрок ни набрал"));
             continue;
         }
         if (cmd == QLatin1String("unlockachievement") && !ctx.opt.legacy) {
             const AchSpec a = parseAchievement(rest);
             const QString rawLine = rawLines.value(srcOf.value(i));
-            if (a.key.isEmpty()) add(ln, LintIssue::Error, U("Какое достижение? «ачивка ключ | Название»"));
+            if (a.key.isEmpty()) add(ln, LintIssue::Error, gbTr("Какое достижение? «ачивка ключ | Название»"));
             for (const QString& n : a.needs)
                 if (!achKeys.contains(n.toLower())) {
                     LintIssue x{ln, LintIssue::Warning, U("Достижения «%1» нигде нет — в «нужно=» пиши ключ другой «ачивки»").arg(n), QString(),
                                 int(rawLine.indexOf(n)), int(n.size())};
                     out.push_back(x);
                 }
-            if (a.plat && achPlain == 0) add(ln, LintIssue::Warning, U("«платина» приходит, когда собраны остальные — а других достижений нет"));
+            if (a.plat && achPlain == 0) add(ln, LintIssue::Warning, gbTr("«платина» приходит, когда собраны остальные — а других достижений нет"));
             continue;
         }
         if (cmd == QLatin1String("choice") && !ctx.opt.legacy) {
@@ -430,14 +431,14 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             timedChoice = !ctx.opt.legacy && choiceStyleOf(rest) == QLatin1String("timed");
             continue;
         }
-        if (cmd == QLatin1String("endchoice")) { add(ln, LintIssue::Info, U("«конецвыбора» без «выбор»")); continue; }
+        if (cmd == QLatin1String("endchoice")) { add(ln, LintIssue::Info, gbTr("«конецвыбора» без «выбор»")); continue; }
         if (cmd == QLatin1String("jump") || cmd == QLatin1String("callscene")) {
-            if (rest.isEmpty()) add(ln, LintIssue::Error, U("Куда? переход <сцена>"));
+            if (rest.isEmpty()) add(ln, LintIssue::Error, gbTr("Куда? переход <сцена>"));
             else targets.push_back({ln, rest});
             continue;
         }
         if (cmd == QLatin1String("ifjump") || cmd == QLatin1String("ifpersistent") || cmd == QLatin1String("ifitem")) {
-            if (!rest.contains(QLatin1String("->"))) add(ln, LintIssue::Error, U("Формат: условие -> сцена"));
+            if (!rest.contains(QLatin1String("->"))) add(ln, LintIssue::Error, gbTr("Формат: условие -> сцена"));
             else targets.push_back({ln, pyStrip(rest.section(QStringLiteral("->"), 1))});
             continue;
         }
@@ -449,22 +450,22 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         }
         if (cmd == QLatin1String("map") && !ctx.opt.legacy) {
             const MapSpec m = parseMapSpec(rest);
-            if (m.places.isEmpty()) add(ln, LintIssue::Error, U("На карте нет мест: карта площадь: сцена @sl, пляж: сцена2"));
+            if (m.places.isEmpty()) add(ln, LintIssue::Error, gbTr("На карте нет мест: карта площадь: сцена @sl, пляж: сцена2"));
             for (const MapEntry& p : m.places) {
                 if (!p.target.isEmpty()) targets.push_back({ln, p.target});
-                else add(ln, LintIssue::Error, U("Место «%1» никуда не ведёт: «%1: сцена»").arg(p.raw));
+                else add(ln, LintIssue::Error, gbTr("Место «%1» никуда не ведёт: «%1: сцена»").arg(p.raw));
                 if (p.zone.isEmpty()) {
                     QStringList known;
                     for (const EsMapZone& z : esMapZones()) known << z.title.toLower();
-                    add(ln, LintIssue::Error, U("На карте игры нет места «%1» — есть: %2").arg(p.raw, known.join(QStringLiteral(", "))));
+                    add(ln, LintIssue::Error, gbTr("На карте игры нет места «%1» — есть: %2").arg(p.raw, known.join(QStringLiteral(", "))));
                 }
             }
             if (!m.done.isEmpty()) targets.push_back({ln, m.done});
-            else if (m.tour) add(ln, LintIssue::Info, U("Обход без «готово: сцена» — когда все места пройдены, карта начнётся заново"));
+            else if (m.tour) add(ln, LintIssue::Info, gbTr("Обход без «готово: сцена» — когда все места пройдены, карта начнётся заново"));
             for (const QString& e : rest.split(QLatin1Char(','))) {
                 if (!e.contains(QLatin1Char('@'))) continue;
                 const QString who = pyStrip(e.section(QLatin1Char('@'), 1)).section(QLatin1Char(' '), 0, 0);
-                if (esChibiId(who).isEmpty()) add(ln, LintIssue::Warning, U("Нет мордочки «%1» для карты — пиши sl, dv, un, mi, us, mt… или имя: @Славя").arg(who));
+                if (esChibiId(who).isEmpty()) add(ln, LintIssue::Warning, gbTr("Нет мордочки «%1» для карты — пиши sl, dv, un, mi, us, mt… или имя: @Славя").arg(who));
             }
             continue;
         }
@@ -480,7 +481,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             popEffect();
             if (w.size() >= 2 && w.at(w.size() - 2) == QLatin1String("at")) { w.removeLast(); w.removeLast(); }
             else if (!w.isEmpty() && isPosition(w.last())) w.removeLast();
-            if (w.isEmpty()) add(ln, LintIssue::Error, U("Кого показать? показать dv smile pioneer center"));
+            if (w.isEmpty()) add(ln, LintIssue::Error, gbTr("Кого показать? показать dv smile pioneer center"));
             else checkSprite(ln, w.join(QLatin1Char(' ')));
             continue;
         }
@@ -493,16 +494,16 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         if (cmd == QLatin1String("bg") || cmd == QLatin1String("showbg") || cmd == QLatin1String("cg")) {
             popEffect();
             const QString name = w.join(QLatin1Char(' '));
-            if (name.isEmpty()) { add(ln, LintIssue::Error, U("Какой фон?")); continue; }
+            if (name.isEmpty()) { add(ln, LintIssue::Error, gbTr("Какой фон?")); continue; }
             const QString low = name.toLower();
             if (low == QLatin1String("black") || low == QLatin1String("white")) continue;
             const QString full = (cmd == QLatin1String("cg") ? QStringLiteral("cg ") : QStringLiteral("bg ")) + name;
             if (patchCg(ln, full)) {
             } else if (!imageKnown(full) && es && es->missingImages.contains(full)) {
-                add(ln, LintIssue::Warning, U("«%1» объявлена в БЛ, но файла в игре нет — у игрока будет ошибка").arg(name));
+                add(ln, LintIssue::Warning, gbTr("«%1» объявлена в БЛ, но файла в игре нет — у игрока будет ошибка").arg(name));
             } else if (!imageKnown(full)) {
                 QStringList opts = cmd == QLatin1String("cg") ? (es ? es->cgs() : QStringList()) : (es ? es->backgrounds() : QStringList());
-                add(ln, LintIssue::Warning, U("Нет %1 «%2» — похожие: %3").arg(cmd == QLatin1String("cg") ? U("CG") : U("фона"), name, closest(name, opts)));
+                add(ln, LintIssue::Warning, gbTr("Нет %1 «%2» — похожие: %3").arg(cmd == QLatin1String("cg") ? U("CG") : gbTr("фона"), name, closest(name, opts)));
             }
             continue;
         }
@@ -519,46 +520,46 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             key.replace(QLatin1Char('_'), QLatin1Char(' ')).replace(QLatin1Char('-'), QLatin1Char(' '));
             const bool alias = key.startsWith(QLatin1String("lightness"));
             if (!name.isEmpty() && es->missingAudio.contains(name))
-                add(ln, LintIssue::Warning, U("Трек «%1» объявлен в БЛ, но файла в Steam-версии нет — музыка не заиграет").arg(name));
+                add(ln, LintIssue::Warning, gbTr("Трек «%1» объявлен в БЛ, но файла в Steam-версии нет — музыка не заиграет").arg(name));
             else if (!name.isEmpty() && !es->music.contains(name) && !alias)
-                add(ln, LintIssue::Warning, U("Нет трека «%1» в БЛ — похожие: %2").arg(name, closest(name, es->music.keys())));
+                add(ln, LintIssue::Warning, gbTr("Нет трека «%1» в БЛ — похожие: %2").arg(name, closest(name, es->music.keys())));
             continue;
         }
         if ((cmd == QLatin1String("sound") || cmd == QLatin1String("voice")) && es) {
             if (rest.isEmpty() || rest.startsWith(QLatin1Char('"')) || rest.startsWith(QLatin1Char('\'')) || rest.startsWith(QLatin1String("u\""))) continue;
             if (es->missingAudio.contains(rest))
-                add(ln, LintIssue::Warning, U("Звук «%1» объявлен в БЛ, но файла в Steam-версии нет").arg(rest));
+                add(ln, LintIssue::Warning, gbTr("Звук «%1» объявлен в БЛ, но файла в Steam-версии нет").arg(rest));
             else if (!es->sounds.contains(rest) && !es->ambience.contains(rest))
-                add(ln, LintIssue::Warning, U("Нет звука «%1» в БЛ — похожие: %2").arg(rest, closest(rest, es->sounds.keys())));
+                add(ln, LintIssue::Warning, gbTr("Нет звука «%1» в БЛ — похожие: %2").arg(rest, closest(rest, es->sounds.keys())));
             continue;
         }
         if (cmd == QLatin1String("ambience") && es && !w.isEmpty()) {
             const QString v = w[0];
             if (!v.contains(QLatin1Char('/')) && !v.contains(QLatin1Char('.')) && !es->ambience.contains(v))
-                add(ln, LintIssue::Warning, U("Нет атмосферы «%1» — похожие: %2").arg(v, closest(v, es->ambience.keys())));
+                add(ln, LintIssue::Warning, gbTr("Нет атмосферы «%1» — похожие: %2").arg(v, closest(v, es->ambience.keys())));
             continue;
         }
         if (cmd == QLatin1String("musicfile") || cmd == QLatin1String("soundfile") || cmd == QLatin1String("voicefile")) {
             const QString p = w.value(0);
             if (!p.isEmpty() && !p.startsWith(QLatin1String("mods/")) && !ctx.customAudio.contains(p))
-                add(ln, LintIssue::Warning, U("Файла «%1» нет в проекте — добавь его во вкладке «Звук»").arg(p));
+                add(ln, LintIssue::Warning, gbTr("Файла «%1» нет в проекте — добавь его во вкладке «Звук»").arg(p));
             continue;
         }
         if (cmd == QLatin1String("phonestart")) { phoneOpen = ln; continue; }
-        if (cmd == QLatin1String("sms") && !phoneOpen) { add(ln, LintIssue::Warning, U("«смс» без «телефонначать» — сообщение не будет видно")); continue; }
+        if (cmd == QLatin1String("sms") && !phoneOpen) { add(ln, LintIssue::Warning, gbTr("«смс» без «телефонначать» — сообщение не будет видно")); continue; }
         if (cmd == QLatin1String("phoneend")) { phoneOpen = 0; continue; }
         if ((cmd == QLatin1String("weather") && !w.isEmpty() && weatherKey(w[0]).isEmpty() &&
              !QStringList{U("стоп"), U("нет"), U("выключить"), U("убрать"), QStringLiteral("off"), QStringLiteral("none"), QStringLiteral("clear"), U("чисто")}.contains(w[0].toLower()) &&
              !isEffect(w[0])))
-            add(ln, LintIssue::Warning, U("Погода «%1» неизвестна: снег, дождь, листья, сердца, искры, пыль, стоп").arg(w[0]));
+            add(ln, LintIssue::Warning, gbTr("Погода «%1» неизвестна: снег, дождь, листья, сердца, искры, пыль, стоп").arg(w[0]));
         if (cmd == QLatin1String("colorfilter") && !w.isEmpty() && filterKey(w[0]).isEmpty() && !isEffect(w[0]) &&
             !QStringList{U("нет"), U("стоп"), U("выкл"), U("выключить"), QStringLiteral("off"), QStringLiteral("none"), U("убрать"), U("чисто")}.contains(w[0].toLower()))
-            add(ln, LintIssue::Warning, U("Фильтр «%1» неизвестен: сепия, чб, ночь, тепло, холод, сон, выцвет, хоррор, нет").arg(w[0]));
+            add(ln, LintIssue::Warning, gbTr("Фильтр «%1» неизвестен: сепия, чб, ночь, тепло, холод, сон, выцвет, хоррор, нет").arg(w[0]));
     }
-    if (choiceOpen) add(choiceOpen, LintIssue::Warning, U("Выбор не закрыт «конецвыбора» — закрою сам в конце"));
+    if (choiceOpen) add(choiceOpen, LintIssue::Warning, gbTr("Выбор не закрыт «конецвыбора» — закрою сам в конце"));
     if (!choiceItems.isEmpty()) {
-        add(srcOf.isEmpty() ? 1 : srcOf.last() + 1, LintIssue::Info, U("«выбор» без «конецвыбора» — закрою сам в конце"));
-        if (choiceItems.last() == 0) add(srcOf.isEmpty() ? 1 : srcOf.last() + 1, LintIssue::Warning, U("В «выбор» нет ни одного варианта «- Текст» — меню не покажется"));
+        add(srcOf.isEmpty() ? 1 : srcOf.last() + 1, LintIssue::Info, gbTr("«выбор» без «конецвыбора» — закрою сам в конце"));
+        if (choiceItems.last() == 0) add(srcOf.isEmpty() ? 1 : srcOf.last() + 1, LintIssue::Warning, gbTr("В «выбор» нет ни одного варианта «- Текст» — меню не покажется"));
     }
     // a scene runs to its end and the mod ends there (V1 closes every scene): the next scene in the text is not
     // «the next one» - it needs a «переход». Said at the scene's last line, with the fix.
@@ -630,7 +631,7 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
         QString l = sl(t.name);
         if (l == QLatin1String("start")) l = meta.modId;
         if (!labels.contains(l))
-            add(t.line, LintIssue::Warning, U("Нет сцены «%1» — будет пустая сцена с мгновенным выходом").arg(t.name));
+            add(t.line, LintIssue::Warning, gbTr("Нет сцены «%1» — будет пустая сцена с мгновенным выходом").arg(t.name));
     }
     std::sort(out.begin(), out.end(), [](const LintIssue& a, const LintIssue& b) { return a.line < b.line; });
     return out;

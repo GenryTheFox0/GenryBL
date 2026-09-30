@@ -5,6 +5,11 @@ steam_api64.dll (Steamworks ISteamUGC) - no password, no SteamCMD.
 
     python tools/workshop_upload.py --folder X --preview X/preview.jpg --title "…" --desc-file d.txt
                                     [--item ID] [--visibility public|friends|private|unlisted] [--note "…"]
+                                    [--gallery img.jpg]... [--skip-content]
+
+--gallery      an extra picture for the item's gallery (repeatable; each under 1 MB). ADDS to the gallery.
+--skip-content update the texts/pictures only, keep the uploaded files as they are
+--gallery-update N=img.jpg  replace the gallery picture number N (0 = the first added) instead of adding
 
 Without --item a new item is created; its id is printed and written next to the folder (workshop_item_id.txt).
 """
@@ -44,6 +49,9 @@ def main():
     ap.add_argument('--visibility', default='public', choices=list(VISIBILITY))
     ap.add_argument('--note', default='Первая версия мода')
     ap.add_argument('--dll', default=ES_LIB)
+    ap.add_argument('--gallery', action='append', default=[])
+    ap.add_argument('--skip-content', action='store_true')
+    ap.add_argument('--gallery-update', action='append', default=[])
     a = ap.parse_args()
     folder = os.path.abspath(a.folder)
     preview = os.path.abspath(a.preview)
@@ -52,6 +60,14 @@ def main():
         sys.exit('description is longer than Steam takes (8000 bytes)')
     if os.path.getsize(preview) > 1024 * 1024:
         sys.exit('the preview must be under 1 MB')
+    gallery = [os.path.abspath(g) for g in a.gallery]
+    updates = []
+    for u in a.gallery_update:
+        n, _, f = u.partition('=')
+        updates.append((int(n), os.path.abspath(f)))
+    for g in gallery + [f for _, f in updates]:
+        if os.path.getsize(g) > 1024 * 1024:
+            sys.exit(f'gallery picture over 1 MB: {g}')
 
     # Steamworks reads the app id from steam_appid.txt in the working directory
     work = tempfile.mkdtemp(prefix='genrybl_ws_')
@@ -73,6 +89,10 @@ def main():
         fn.restype = ctypes.c_bool
     api.SteamAPI_ISteamUGC_SetItemVisibility.argtypes = [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_int]
     api.SteamAPI_ISteamUGC_SetItemVisibility.restype = ctypes.c_bool
+    api.SteamAPI_ISteamUGC_AddItemPreviewFile.argtypes = [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_char_p, ctypes.c_int]
+    api.SteamAPI_ISteamUGC_AddItemPreviewFile.restype = ctypes.c_bool
+    api.SteamAPI_ISteamUGC_UpdateItemPreviewFile.argtypes = [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_uint32, ctypes.c_char_p]
+    api.SteamAPI_ISteamUGC_UpdateItemPreviewFile.restype = ctypes.c_bool
     api.SteamAPI_ISteamUGC_SubmitItemUpdate.argtypes = [ctypes.c_void_p, ctypes.c_uint64, ctypes.c_char_p]
     api.SteamAPI_ISteamUGC_SubmitItemUpdate.restype = ctypes.c_uint64
     api.SteamAPI_ISteamUGC_GetItemUpdateProgress.argtypes = [ctypes.c_void_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64),
@@ -120,9 +140,14 @@ def main():
     h = api.SteamAPI_ISteamUGC_StartItemUpdate(ugc, APP_ID, item)
     checks = [api.SteamAPI_ISteamUGC_SetItemTitle(ugc, h, a.title.encode('utf-8')),
               api.SteamAPI_ISteamUGC_SetItemDescription(ugc, h, desc.encode('utf-8')),
-              api.SteamAPI_ISteamUGC_SetItemContent(ugc, h, folder.encode('utf-8')),
               api.SteamAPI_ISteamUGC_SetItemPreview(ugc, h, preview.encode('utf-8')),
               api.SteamAPI_ISteamUGC_SetItemVisibility(ugc, h, VISIBILITY[a.visibility])]
+    if not a.skip_content:
+        checks.append(api.SteamAPI_ISteamUGC_SetItemContent(ugc, h, folder.encode('utf-8')))
+    for g in gallery:   # k_EItemPreviewType_Image = 0
+        checks.append(api.SteamAPI_ISteamUGC_AddItemPreviewFile(ugc, h, g.encode('utf-8'), 0))
+    for n, f in updates:
+        checks.append(api.SteamAPI_ISteamUGC_UpdateItemPreviewFile(ugc, h, n, f.encode('utf-8')))
     if not all(checks):
         sys.exit(f'Steam refused a field of the item: {checks}')
 

@@ -147,16 +147,16 @@ Popup {
                 Layout.fillWidth: true
                 spacing: 10
                 Rectangle { width: 12; height: 12; radius: 6; color: cf.accentColor }
-                InkText { text: cf.form.title || ""; size: 30; color: Theme.gold }
+                InkText { text: qsTr(cf.form.title || ""); size: 30; color: Theme.gold }
                 PillButton {
                     visible: !!cf.form.dice
                     dark: true
-                    text: "🎲 Удиви меня"
+                    text: qsTr("🎲 Удиви меня")
                     onClicked: { cf.values = Engine.diceForm(cf.formId, cf.values); cf.rebuild() }
                 }
                 Text {
                     visible: cf.editing
-                    text: "строка " + cf.storyLine
+                    text: qsTr("строка ") + cf.storyLine
                     color: Theme.dim
                     font.family: Theme.mono; font.pixelSize: 13
                 }
@@ -165,7 +165,7 @@ Popup {
             Text {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
-                text: cf.form.help || ""
+                text: qsTr(cf.form.help || "")
                 color: Theme.dim
                 font.family: Theme.ui; font.pixelSize: 14
             }
@@ -191,7 +191,7 @@ Popup {
                         }
                         contentItem: Text {
                             id: vt
-                            text: modelData[1]
+                            text: qsTr(modelData[1])
                             color: parent.on ? "#10150f" : Theme.text
                             font.family: Theme.ui; font.pixelSize: 15; font.bold: true
                             horizontalAlignment: Text.AlignHCenter
@@ -224,7 +224,7 @@ Popup {
                     }
                     Text {
                         visible: cf.shownFields.length === 0
-                        text: "Настраивать нечего — жми «Вставить»."
+                        text: qsTr("Настраивать нечего — жми «Вставить».")
                         color: Theme.faint
                         font.family: Theme.ui; font.pixelSize: 15
                     }
@@ -283,13 +283,13 @@ Popup {
                 Layout.fillWidth: true
                 spacing: 10
                 Text {
-                    text: "Ctrl+Enter — " + (cf.editing ? "применить" : "вставить") + "   ·   Esc — отмена"
+                    text: "Ctrl+Enter — " + (cf.editing ? qsTr("применить") : qsTr("вставить")) + qsTr("   ·   Esc — отмена")
                     color: Theme.faint
                     font.family: Theme.ui; font.pixelSize: 13
                 }
                 Item { Layout.fillWidth: true }
-                PillButton { dark: true; text: "Отмена"; onClicked: cf.close() }
-                PillButton { accent: true; text: cf.editing ? "✓ Применить" : "＋ Вставить в сценарий"; onClicked: cf.commit() }
+                PillButton { dark: true; text: qsTr("Отмена"); onClicked: cf.close() }
+                PillButton { accent: true; text: cf.editing ? qsTr("✓ Применить") : qsTr("＋ Вставить в сценарий"); onClicked: cf.commit() }
             }
         }
     }
@@ -332,7 +332,7 @@ Popup {
             }
             RowLayout {
                 Layout.fillWidth: true
-                Text { text: le.fd.label; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14; font.bold: true }
+                Text { text: qsTr(le.fd.label); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14; font.bold: true }
                 Text { text: le.items.length ? "· " + le.items.length : ""; color: Theme.faint; font.family: Theme.ui; font.pixelSize: 13 }
                 Item { Layout.fillWidth: true }
             }
@@ -378,7 +378,7 @@ Popup {
             PillButton {
                 dark: true
                 visible: !le.fd.max || le.items.length < le.fd.max
-                text: "＋ " + (le.fd.add || "Ещё")
+                text: "＋ " + (le.fd.add ? qsTr(le.fd.add) : qsTr("Ещё"))
                 onClicked: le.add()
             }
         }

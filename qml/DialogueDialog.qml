@@ -17,7 +17,7 @@ Popup {
     property string previewSrc: ""
     signal insertBlock(string block)
 
-    readonly property string narrator: "Текст"
+    readonly property string narrator: qsTr("Текст")
     readonly property var audioExt: ["ogg", "mp3", "wav", "flac", "m4a", "opus", "aac", "wma"]
 
     parent: Overlay.overlay
@@ -65,7 +65,7 @@ Popup {
         for (const c of Engine.cast) if (c.id === tag) return c
         return null
     }
-    readonly property var places: [["left", "слева"], ["cleft", "левее центра"], ["center", "в центре"], ["cright", "правее центра"], ["right", "справа"]]
+    readonly property var places: [["left", qsTr("слева")], ["cleft", qsTr("левее центра")], ["center", qsTr("в центре")], ["cright", qsTr("правее центра")], ["right", qsTr("справа")]]
     function placeName(p) {
         for (const x of places) if (x[0] === p) return x[1]
         return p
@@ -132,7 +132,7 @@ Popup {
             const ext = s.substring(s.lastIndexOf(".") + 1).toLowerCase()
             if (audioExt.indexOf(ext) >= 0) audio.push(s)
         }
-        if (!audio.length) { Engine.toast("Это не аудио: ogg, mp3, wav, flac, m4a, opus", 1); return }
+        if (!audio.length) { Engine.toast(qsTr("Это не аудио: ogg, mp3, wav, flac, m4a, opus"), 1); return }
         const rels = Engine.importAudioFiles(audio)
         if (rels.length) assignVoices(rels)
     }
@@ -143,9 +143,9 @@ Popup {
     }
     function commit() {
         const bad = missingText()
-        if (bad.length) { Engine.toast("У строк " + bad.join(", ") + " есть озвучка, но нет текста", 2); return }
+        if (bad.length) { Engine.toast(qsTr("У строк ") + bad.join(", ") + qsTr(" есть озвучка, но нет текста"), 2); return }
         const lines = block()
-        if (!lines.length) { Engine.toast("Нет ни одной реплики", 1); return }
+        if (!lines.length) { Engine.toast(qsTr("Нет ни одной реплики"), 1); return }
         insertBlock(lines.join("\n"))
         close()
     }
@@ -174,10 +174,10 @@ Popup {
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
-            InkText { text: "Диалог + озвучка"; size: 28; color: Theme.gold }
+            InkText { text: qsTr("Диалог + озвучка"); size: 28; color: Theme.gold }
             Text {
                 Layout.fillWidth: true
-                text: "Enter — следующая реплика  ·  аудио можно перетащить прямо сюда: файлы лягут по строкам по порядку"
+                text: qsTr("Enter — следующая реплика  ·  аудио можно перетащить прямо сюда: файлы лягут по строкам по порядку")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14
                 elide: Text.ElideRight
             }
@@ -244,7 +244,7 @@ Popup {
                                 Layout.maximumWidth: 200
                                 implicitHeight: 34
                                 text: row.who
-                                placeholderText: "имя…"
+                                placeholderText: qsTr("имя…")
                                 placeholderTextColor: Theme.faint
                                 color: dd.colorOf(row.who)
                                 font.family: Theme.ui; font.pixelSize: 15; font.bold: true
@@ -304,7 +304,7 @@ Popup {
                                             height: visible ? 30 : 0
                                             leftPadding: 8
                                             verticalAlignment: Text.AlignVCenter
-                                            text: "Enter — новый герой «" + whoField.filter.trim() + "»"
+                                            text: qsTr("Enter — новый герой «") + whoField.filter.trim() + "»"
                                             color: Theme.gold; font.family: Theme.ui; font.pixelSize: 13
                                         }
                                         delegate: Rectangle {
@@ -358,13 +358,13 @@ Popup {
                                         anchors.verticalCenter: parent.verticalCenter
                                         width: 96
                                         elide: Text.ElideRight
-                                        text: row.look ? row.look.split(" ")[0] + (row.pos ? " · " + dd.placeName(row.pos) : "") : "＋ спрайт"
+                                        text: row.look ? row.look.split(" ")[0] + (row.pos ? " · " + dd.placeName(row.pos) : "") : qsTr("＋ спрайт")
                                         color: row.look ? Theme.text : Theme.dim
                                         font.family: Theme.ui; font.pixelSize: 13
                                     }
                                 }
                                 ToolTip.visible: hovered
-                                ToolTip.text: "Кого показать с этой репликой: лицо, одежда, место. Не менялось — второй раз не вставлю"
+                                ToolTip.text: qsTr("Кого показать с этой репликой: лицо, одежда, место. Не менялось — второй раз не вставлю")
                             }
                             // voice: takes what is left of the row, so the ✖ never falls off the edge
                             Rectangle {
@@ -391,7 +391,7 @@ Popup {
                                     Text {
                                         Layout.fillWidth: true
                                         leftPadding: row.voice ? 0 : 8
-                                        text: row.voice ? "♪ " + row.voice.substring(6) : "без озвучки"
+                                        text: row.voice ? "♪ " + row.voice.substring(6) : qsTr("без озвучки")
                                         color: row.voice ? Theme.text : Theme.faint
                                         font.family: Theme.mono; font.pixelSize: 12
                                         elide: Text.ElideMiddle
@@ -402,7 +402,7 @@ Popup {
                                         background: Rectangle { radius: 14; color: parent.hovered ? Theme.panel3 : "transparent" }
                                         contentItem: Text { text: row.voice ? "✕" : "＋"; color: Theme.dim; font.pixelSize: 14; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                         ToolTip.visible: hovered
-                                        ToolTip.text: row.voice ? "Убрать озвучку" : "Выбрать файл озвучки"
+                                        ToolTip.text: row.voice ? qsTr("Убрать озвучку") : qsTr("Выбрать файл озвучки")
                                     }
                                 }
                             }
@@ -414,7 +414,7 @@ Popup {
                                 background: Rectangle { radius: 15; color: parent.hovered ? "#44ff6b6b" : "transparent" }
                                 contentItem: Text { text: "✖"; color: Theme.dim; font.pixelSize: 13; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 ToolTip.visible: hovered
-                                ToolTip.text: "Удалить строку"
+                                ToolTip.text: qsTr("Удалить строку")
                             }
                         }
                             TextField {
@@ -423,7 +423,7 @@ Popup {
                                 Layout.leftMargin: 30
                                 implicitHeight: 36
                                 text: row.text
-                                placeholderText: row.who === dd.narrator ? "Текст рассказчика…" : "Что говорит " + row.who + "…"
+                                placeholderText: row.who === dd.narrator ? qsTr("Текст рассказчика…") : qsTr("Что говорит ") + row.who + "…"
                                 placeholderTextColor: Theme.faint
                                 color: Theme.text
                                 font.family: Theme.ui; font.pixelSize: 15
@@ -447,11 +447,11 @@ Popup {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
-                    PillButton { dark: true; text: "＋ Реплика"; onClicked: dd.addRow(true) }
-                    PillButton { dark: true; text: "♪ Озвучка пачкой…"; enabled: !Engine.busy; onClicked: bulkDialog.open() }
+                    PillButton { dark: true; text: qsTr("＋ Реплика"); onClicked: dd.addRow(true) }
+                    PillButton { dark: true; text: qsTr("♪ Озвучка пачкой…"); enabled: !Engine.busy; onClicked: bulkDialog.open() }
                     Text {
                         Layout.fillWidth: true
-                        text: Engine.busy ? Engine.busyText : "файлы лягут начиная со строки " + (dd.current + 1)
+                        text: Engine.busy ? Engine.busyText : qsTr("файлы лягут начиная со строки ") + (dd.current + 1)
                         color: Engine.busy ? Theme.warn : Theme.faint
                         font.family: Theme.ui; font.pixelSize: 13
                         elide: Text.ElideRight
@@ -472,7 +472,7 @@ Popup {
                     clip: true
                     SmoothImage { anchors.fill: parent; source: dd.previewSrc; fade: 120 }
                 }
-                Text { text: "Строка " + (dd.current + 1) + " — так её увидит игрок"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                Text { text: qsTr("Строка ") + (dd.current + 1) + qsTr(" — так её увидит игрок"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -501,10 +501,10 @@ Popup {
             Layout.fillWidth: true
             spacing: 10
             Item { Layout.fillWidth: true }
-            PillButton { dark: true; text: "Отмена"; onClicked: dd.close() }
+            PillButton { dark: true; text: qsTr("Отмена"); onClicked: dd.close() }
             PillButton {
                 accent: true
-                text: { dd.previewSrc; return "Вставить в сцену  (" + dd.block().length + ")" }
+                text: { dd.previewSrc; return qsTr("Вставить в сцену  (") + dd.block().length + ")" }
                 enabled: !Engine.busy
                 onClicked: dd.commit()
             }
@@ -521,7 +521,7 @@ Popup {
         border.width: 3
         Text {
             anchors.centerIn: parent
-            text: "Отпусти — озвучка ляжет со строки " + (dd.current + 1) + " по порядку"
+            text: qsTr("Отпусти — озвучка ляжет со строки ") + (dd.current + 1) + qsTr(" по порядку")
             color: Theme.accent; font.family: Theme.ui; font.pixelSize: 24; font.bold: true
         }
     }
@@ -565,13 +565,13 @@ Popup {
             spacing: 10
             RowLayout {
                 Layout.fillWidth: true
-                InkText { text: "Спрайт реплики " + (lookPop.rowIndex + 1); size: 24; color: Theme.gold }
+                InkText { text: qsTr("Спрайт реплики ") + (lookPop.rowIndex + 1); size: 24; color: Theme.gold }
                 Item { Layout.fillWidth: true }
                 PillButton {
-                    dark: true; text: "Без спрайта"
+                    dark: true; text: qsTr("Без спрайта")
                     onClicked: { rows.setProperty(lookPop.rowIndex, "look", ""); dd.refresh(); lookPop.close() }
                 }
-                PillButton { accent: true; text: "Готово"; onClicked: lookPop.close() }
+                PillButton { accent: true; text: qsTr("Готово"); onClicked: lookPop.close() }
             }
             // who
             Flickable {
@@ -615,7 +615,7 @@ Popup {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
-                Text { text: "Одежда:"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14 }
+                Text { text: qsTr("Одежда:"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14 }
                 Flow {
                     Layout.fillWidth: true
                     spacing: 6
@@ -634,7 +634,7 @@ Popup {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
-                Text { text: "Где стоит:"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14 }
+                Text { text: qsTr("Где стоит:"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14 }
                 Repeater {
                     model: dd.places
                     PillButton {
@@ -685,15 +685,15 @@ Popup {
 
     FileDialog {
         id: oneDialog
-        title: "Озвучка строки"
-        nameFilters: ["Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus *.aac *.wma)"]
+        title: qsTr("Озвучка строки")
+        nameFilters: [qsTr("Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus *.aac *.wma)")]
         onAccepted: dd.importUrls([selectedFile])
     }
     FileDialog {
         id: bulkDialog
-        title: "Озвучка пачкой — по порядку строк"
+        title: qsTr("Озвучка пачкой — по порядку строк")
         fileMode: FileDialog.OpenFiles
-        nameFilters: ["Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus *.aac *.wma)"]
+        nameFilters: [qsTr("Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus *.aac *.wma)")]
         onAccepted: {
             const files = selectedFiles.slice().sort((a, b) => a.toString().localeCompare(b.toString(), undefined, { numeric: true }))
             dd.importUrls(files)

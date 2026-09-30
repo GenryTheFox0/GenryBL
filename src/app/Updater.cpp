@@ -4,6 +4,7 @@
 // It waits until this program has closed, copies the new files (projects/ and work/ are never touched) and starts
 // the new GenryBL. The developer build (built from the sources) never updates itself.
 #include "Engine.h"
+#include "Tr.h"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -103,7 +104,7 @@ void Engine::checkUpdates(bool manual)
     const QString st = m_update.value(QStringLiteral("state")).toString();
     if (st == QLatin1String("checking") || st == QLatin1String("downloading") || st == QLatin1String("starting")) return;
     if (!isRelease()) {
-        if (manual) setUpdate(QStringLiteral("dev"), U("Это сборка разработчика — она собирается из исходников, обновлять её нечем"));
+        if (manual) setUpdate(QStringLiteral("dev"), gbTr("Это сборка разработчика — она собирается из исходников, обновлять её нечем"));
         return;
     }
     static bool autoDone = false;                     // the quiet check on the menu: once a session
@@ -119,7 +120,7 @@ void Engine::checkUpdates(bool manual)
     m_update.remove(QStringLiteral("source"));
     QString steamVer;
     const QString steamExe = workshopSetup(esRoot(), &steamVer);
-    setUpdate(QStringLiteral("checking"), U("Проверяю обновления…"));
+    setUpdate(QStringLiteral("checking"), gbTr("Проверяю обновления…"));
     if (!m_net) m_net = new QNetworkAccessManager(this);
     // GENRYBL_UPDATE_API: another «releases/latest» (the updater's own test serves one locally)
     const QString api = qEnvironmentVariableIsEmpty("GENRYBL_UPDATE_API") ? QString::fromLatin1(kLatest) : qEnvironmentVariable("GENRYBL_UPDATE_API");
@@ -133,20 +134,20 @@ void Engine::checkUpdates(bool manual)
             m_updLocal = steamExe;
             m_update.insert(QStringLiteral("version"), pretty(steamVer));
             m_update.insert(QStringLiteral("source"), QStringLiteral("steam"));
-            setUpdate(QStringLiteral("available"), U("Вышла %1 — Steam уже скачал её из Мастерской").arg(pretty(steamVer)));
+            setUpdate(QStringLiteral("available"), gbTr("Вышла %1 — Steam уже скачал её из Мастерской").arg(pretty(steamVer)));
         } else if (ghNew) {
             m_updUrl = url;
             m_updSums = sums;
             m_updSize = size;
             m_update.insert(QStringLiteral("version"), pretty(ghVer));
             m_update.insert(QStringLiteral("source"), QStringLiteral("github"));
-            setUpdate(QStringLiteral("available"), size > 0 ? U("Вышла %1 на GitHub, %2 МБ").arg(pretty(ghVer)).arg(qMax<qint64>(1, size / (1024 * 1024)))
-                                                            : U("Вышла %1 на GitHub").arg(pretty(ghVer)));
+            setUpdate(QStringLiteral("available"), size > 0 ? gbTr("Вышла %1 на GitHub, %2 МБ").arg(pretty(ghVer)).arg(qMax<qint64>(1, size / (1024 * 1024)))
+                                                            : gbTr("Вышла %1 на GitHub").arg(pretty(ghVer)));
         } else if (!netError.isEmpty()) {
-            if (manual) setUpdate(QStringLiteral("error"), U("Не достучался до GitHub (%1). Проверь интернет и нажми «Проверить» ещё раз").arg(netError));
+            if (manual) setUpdate(QStringLiteral("error"), gbTr("Не достучался до GitHub (%1). Проверь интернет и нажми «Проверить» ещё раз").arg(netError));
             else setUpdate(QString(), QString());
         } else {
-            setUpdate(manual ? QStringLiteral("latest") : QString(), manual ? U("У тебя последняя версия — %1").arg(mine()) : QString());
+            setUpdate(manual ? QStringLiteral("latest") : QString(), manual ? gbTr("У тебя последняя версия — %1").arg(mine()) : QString());
         }
         if (now && m_update.value(QStringLiteral("state")).toString() == QLatin1String("available")) startUpdate();
     };
@@ -214,7 +215,7 @@ void Engine::startUpdate()
     if (!m_updLocal.isEmpty()) {
         // a copy: Steam may refresh the Workshop folder while the installer runs
         if (!QFile::copy(m_updLocal, setup)) {
-            setUpdate(QStringLiteral("error"), U("Не смог взять установщик из папки Мастерской"));
+            setUpdate(QStringLiteral("error"), gbTr("Не смог взять установщик из папки Мастерской"));
             return;
         }
         runUpdater(setup);
@@ -229,7 +230,7 @@ void Engine::startUpdate()
     m_dlUrl = m_updUrl;
     m_dlTries = 0;
     QFile::remove(setup);
-    setUpdate(QStringLiteral("downloading"), U("Качаю %1…").arg(ver), 0);
+    setUpdate(QStringLiteral("downloading"), gbTr("Качаю %1…").arg(ver), 0);
     downloadChunk();
 }
 
@@ -239,7 +240,7 @@ void Engine::downloadChunk()
     auto* file = new QFile(m_dlPath, this);
     if (!file->open(QIODevice::Append)) {
         file->deleteLater();
-        setUpdate(QStringLiteral("error"), U("Не могу записать во временную папку: %1").arg(QDir::toNativeSeparators(QFileInfo(m_dlPath).absolutePath())));
+        setUpdate(QStringLiteral("error"), gbTr("Не могу записать во временную папку: %1").arg(QDir::toNativeSeparators(QFileInfo(m_dlPath).absolutePath())));
         return;
     }
     const qint64 have = file->size();
@@ -273,8 +274,8 @@ void Engine::downloadChunk()
         watch->start();
         const qint64 got = file->size();
         setUpdate(QStringLiteral("downloading"),
-                  U("Качаю %1: %2 из %3 МБ").arg(ver).arg(got / (1024 * 1024)).arg(qMax<qint64>(1, m_updSize / (1024 * 1024))) +
-                      (m_dlTries ? U(" (докачиваю после обрыва)") : QString()),
+                  gbTr("Качаю %1: %2 из %3 МБ").arg(ver).arg(got / (1024 * 1024)).arg(qMax<qint64>(1, m_updSize / (1024 * 1024))) +
+                      (m_dlTries ? gbTr(" (докачиваю после обрыва)") : QString()),
                   m_updSize > 0 ? double(got) / double(m_updSize) : 0);
     };
     connect(r, &QNetworkReply::readyRead, this, write);
@@ -291,12 +292,12 @@ void Engine::downloadChunk()
         if (m_updSize > 0 && got > m_updSize) QFile::remove(m_dlPath);     // something went wrong in the middle: anew
         if (code == 403 || code == 404 || code == 410) m_dlUrl = m_updUrl;  // the signed CDN address lives an hour: ask GitHub again
         if (++m_dlTries <= 6) {
-            setUpdate(QStringLiteral("downloading"), U("Связь оборвалась (%1) — докачиваю, попытка %2 из 6…").arg(r->errorString()).arg(m_dlTries),
+            setUpdate(QStringLiteral("downloading"), gbTr("Связь оборвалась (%1) — докачиваю, попытка %2 из 6…").arg(r->errorString()).arg(m_dlTries),
                       m_updSize > 0 ? double(qMin(got, m_updSize)) / double(m_updSize) : 0);
             QTimer::singleShot(2500, this, [this] { downloadChunk(); });
             return;
         }
-        setUpdate(QStringLiteral("error"), U("Скачать не вышло: %1. Проверь интернет и нажми ещё раз").arg(r->errorString()));
+        setUpdate(QStringLiteral("error"), gbTr("Скачать не вышло: %1. Проверь интернет и нажми ещё раз").arg(r->errorString()));
     });
 }
 
@@ -319,7 +320,7 @@ void Engine::downloadDone()
         const QString hex = QString::fromLatin1(h.result().toHex());
         if (s->error() == QNetworkReply::NoError && sums.contains(QLatin1String("GenryBL_Setup.exe")) && !sums.contains(hex, Qt::CaseInsensitive)) {
             QFile::remove(setup);
-            setUpdate(QStringLiteral("error"), U("Файл не сошёлся с контрольной суммой релиза — нажми ещё раз, скачаю заново"));
+            setUpdate(QStringLiteral("error"), gbTr("Файл не сошёлся с контрольной суммой релиза — нажми ещё раз, скачаю заново"));
             return;
         }
         runUpdater(setup);
@@ -328,11 +329,11 @@ void Engine::downloadDone()
 
 void Engine::runUpdater(const QString& setup)
 {
-    setUpdate(QStringLiteral("starting"), U("Ставлю %1 — GenryBL закроется и откроется уже новым").arg(m_update.value(QStringLiteral("version")).toString()), 1);
+    setUpdate(QStringLiteral("starting"), gbTr("Ставлю %1 — GenryBL закроется и откроется уже новым").arg(m_update.value(QStringLiteral("version")).toString()), 1);
     const QStringList args{QStringLiteral("--silent-to"), QDir::toNativeSeparators(m_root), QStringLiteral("--no-shortcuts"),
                            QStringLiteral("--update"), QStringLiteral("--relaunch")};
     if (!QProcess::startDetached(setup, args, QFileInfo(setup).absolutePath())) {
-        setUpdate(QStringLiteral("error"), U("Не смог запустить установщик %1").arg(QDir::toNativeSeparators(setup)));
+        setUpdate(QStringLiteral("error"), gbTr("Не смог запустить установщик %1").arg(QDir::toNativeSeparators(setup)));
         return;
     }
     QTimer::singleShot(1500, qApp, &QCoreApplication::quit);

@@ -43,20 +43,20 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: 8
         Text {
-            text: fe.field.label || ""
+            text: qsTr(fe.field.label || "")
             color: Theme.dim
             font.family: Theme.ui; font.pixelSize: fe.compact ? 13 : 14; font.bold: true
         }
         Text {
             visible: fe.optional && !fe.compact
-            text: "необязательно"
+            text: qsTr("необязательно")
             color: Theme.faint
             font.family: Theme.ui; font.pixelSize: 12
         }
         Item { Layout.fillWidth: true }
         Text {
             visible: fe.optional && fe.str !== ""
-            text: "✕ очистить"
+            text: qsTr("✕ очистить")
             color: Theme.faint
             font.family: Theme.ui; font.pixelSize: 12
             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: fe.set("") }
@@ -79,7 +79,7 @@ ColumnLayout {
             case "video": return videoEd
             case "tag": return tagEd
             case "menubutton": return menuBtnEd
-            case "scene": case "speaker": case "var": case "meter": case "item": return namedEd
+            case "scene": case "speaker": case "var": case "meter": case "item": case "menuaction": return namedEd
             }
             return textEd
         }
@@ -89,7 +89,7 @@ ColumnLayout {
         visible: !!fe.field.hint && !fe.compact
         Layout.fillWidth: true
         wrapMode: Text.Wrap
-        text: fe.field.hint || ""
+        text: qsTr(fe.field.hint || "")
         color: Theme.faint
         font.family: Theme.ui; font.pixelSize: 12
     }
@@ -207,7 +207,7 @@ ColumnLayout {
             PillButton {
                 accent: !!fe.value
                 dark: !fe.value
-                text: (fe.value ? "✓ " : "○ ") + (fe.field.label || "")
+                text: (fe.value ? "✓ " : "○ ") + qsTr(fe.field.label || "")
                 onClicked: fe.set(!fe.value)
             }
         }
@@ -222,7 +222,7 @@ ColumnLayout {
                     required property var modelData
                     accent: fe.str === String(modelData[0]) || (fe.str === "" && fe.def === String(modelData[0]))
                     dark: !accent
-                    text: modelData[1]
+                    text: qsTr(modelData[1])
                     onClicked: fe.set(String(modelData[0]))
                 }
             }
@@ -232,7 +232,7 @@ ColumnLayout {
         id: comboEd
         DarkCombo {
             implicitHeight: 34
-            model: fe.opts.map(o => o[1])
+            model: fe.opts.map(o => qsTr(o[1]))
             currentIndex: Math.max(0, fe.opts.findIndex(o => String(o[0]) === (fe.str || fe.def)))
             onActivated: (i) => fe.set(String(fe.opts[i][0]))
         }
@@ -267,19 +267,19 @@ ColumnLayout {
                     Layout.fillWidth: true
                     font.family: Theme.mono; font.pixelSize: 14
                     text: fe.str
-                    placeholderText: fe.def || "не выбрано"
+                    placeholderText: fe.def || qsTr("не выбрано")
                     onTextEdited: fe.set(text)
                 }
-                PillButton { dark: true; text: fe.type === "sprite" ? "Выбрать героя и эмоцию…" : "Выбрать картинку…"; onClicked: pick() }
+                PillButton { dark: true; text: fe.type === "sprite" ? qsTr("Выбрать героя и эмоцию…") : qsTr("Выбрать картинку…"); onClicked: pick() }
             }
             function pick() {
                 const tab = fe.type === "sprite" ? 0 : fe.type === "bg" ? 1 : fe.type === "cg" ? 2 : (fe.str.indexOf("cg ") === 0 ? 2 : fe.str.indexOf("bg ") === 0 ? 1 : 0)
                 fe.host.pickImage(tab, fe.type === "sprite" ? fe.str.split(" ")[0] : "", (img) => {
                     if (fe.type === "bg" || fe.type === "cg") {
-                        if (img.indexOf(fe.type + " ") !== 0) { Engine.toast(fe.type === "bg" ? "Здесь нужен фон" : "Здесь нужен CG", 1); return }
+                        if (img.indexOf(fe.type + " ") !== 0) { Engine.toast(fe.type === "bg" ? qsTr("Здесь нужен фон") : qsTr("Здесь нужен CG"), 1); return }
                         fe.set(img.substring(3))
                     } else if (fe.type === "sprite" && (img.indexOf("bg ") === 0 || img.indexOf("cg ") === 0)) {
-                        Engine.toast("Здесь нужен герой", 1)
+                        Engine.toast(qsTr("Здесь нужен герой"), 1)
                     } else fe.set(img)
                 })
             }
@@ -313,20 +313,24 @@ ColumnLayout {
                 Layout.fillWidth: true
                 font.family: Theme.mono; font.pixelSize: 14
                 text: fe.str
-                placeholderText: fe.def || "не выбрано"
+                placeholderText: fe.def || qsTr("не выбрано")
                 onTextEdited: fe.set(text)
             }
             PillButton {
                 dark: true
-                text: fe.type === "audiofile" ? "Файлы мода…" : "Список…"
-                onClicked: fe.host.pickFrom(fe.field.label, parent.list, (v) => fe.set(v))
+                text: fe.type === "audiofile" ? qsTr("Файлы мода…") : qsTr("Список…")
+                onClicked: fe.host.pickFrom(qsTr(fe.field.label), parent.list, (v) => fe.set(v))
             }
             PillButton {
                 visible: fe.type === "audiofile" || fe.type === "ambience"
                 dark: true
-                text: "＋ Файл"
-                onClicked: fe.host.pickFile("Звук, музыка или атмосфера (ogg/mp3/wav/flac… — переделаю в ogg)", ["Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus)"], (url) => {
-                    const p = Engine.importAudio(url)
+                text: qsTr("＋ Файл")
+                onClicked: fe.host.pickFile(qsTr("Звук, музыка или атмосфера (ogg/mp3/wav/flac… — переделаю в ogg)"), [qsTr("Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus)")], (url) => {
+                    // the file goes into its own tab of «Звук»: a song stays music, a voice line stays a voice line
+                    const form = fe.host ? fe.host.formId : ""
+                    const kind = fe.type === "ambience" ? "ambience" : form === "sound" ? "sfx"
+                               : form === "say" || form === "phone" ? "voice" : "music"
+                    const p = Engine.importAudio(url, kind)
                     if (p) fe.set(p)
                 })
             }
@@ -354,18 +358,18 @@ ColumnLayout {
                 Layout.fillWidth: true
                 font.family: Theme.mono; font.pixelSize: 14
                 text: fe.str
-                placeholderText: fe.def || "нет"
+                placeholderText: fe.def || qsTr("нет")
                 onTextEdited: fe.set(text)
             }
             PillButton {
                 dark: true
-                text: "Из мода…"
-                onClicked: fe.host.pickFrom(fe.field.label, Engine.projectFiles("images").map(f => ({ value: f.path, label: f.title, thumb: f.url })), (v) => fe.set(v))
+                text: qsTr("Из мода…")
+                onClicked: fe.host.pickFrom(qsTr(fe.field.label), Engine.projectFiles("images").map(f => ({ value: f.path, label: f.title, thumb: f.url })), (v) => fe.set(v))
             }
             PillButton {
                 dark: true
-                text: "＋ Картинка"
-                onClicked: fe.host.pickFile("Картинка (png/jpg/webp)", ["Картинки (*.png *.jpg *.jpeg *.webp)"], (url) => {
+                text: qsTr("＋ Картинка")
+                onClicked: fe.host.pickFile(qsTr("Картинка (png/jpg/webp)"), [qsTr("Картинки (*.png *.jpg *.jpeg *.webp)")], (url) => {
                     const p = Engine.importFile(url, "images")
                     if (p) fe.set(p)
                 })
@@ -376,7 +380,7 @@ ColumnLayout {
         id: videoEd
         RowLayout {
             spacing: 6
-            readonly property var list: Engine.videos().map(v => ({ value: v.path, label: v.title, sub: v.es ? "из игры" : "свой, " + v.path }))
+            readonly property var list: Engine.videos().map(v => ({ value: v.path, label: v.title, sub: v.es ? qsTr("из игры") : qsTr("свой, ") + v.path }))
             Field {
                 Layout.fillWidth: true
                 font.family: Theme.mono; font.pixelSize: 14
@@ -384,11 +388,11 @@ ColumnLayout {
                 placeholderText: fe.def
                 onTextEdited: fe.set(text)
             }
-            PillButton { dark: true; text: "Список…"; onClicked: fe.host.pickFrom("Видео", parent.list, (v) => fe.set(v)) }
+            PillButton { dark: true; text: qsTr("Список…"); onClicked: fe.host.pickFrom(qsTr("Видео"), parent.list, (v) => fe.set(v)) }
             PillButton {
                 dark: true
-                text: "＋ Свой ролик"
-                onClicked: fe.host.pickFile("Видео (webm/ogv/mp4/mkv…)", ["Видео (*.webm *.ogv *.mp4 *.mkv *.mov *.avi)"], (url) => {
+                text: qsTr("＋ Свой ролик")
+                onClicked: fe.host.pickFile(qsTr("Видео (webm/ogv/mp4/mkv…)"), [qsTr("Видео (*.webm *.ogv *.mp4 *.mkv *.mov *.avi)")], (url) => {
                     const p = Engine.importVideo(url)
                     if (p) fe.set(p)
                 })
@@ -445,6 +449,14 @@ ColumnLayout {
             readonly property var list: {
                 const n = fe.host ? fe.host.names : {}
                 if (fe.type === "scene") return (n.scenes || []).map(s => ({ value: s, label: s }))
+                // a menu button: what it does, whatever its caption says («Выселение» -> выход)
+                if (fe.type === "menuaction")
+                    return [{ value: "start", label: qsTr("Начать игру") }, { value: "загрузить", label: qsTr("Продолжить (загрузка)") },
+                            { value: "главы", label: qsTr("Главы") }, { value: "галерея", label: qsTr("Галерея") },
+                            { value: "достижения", label: qsTr("Достижения") }, { value: "отношения", label: qsTr("Отношения") },
+                            { value: "настройки", label: qsTr("Настройки") }, { value: "имя", label: qsTr("Имя игрока") },
+                            { value: "выход", label: qsTr("Выход") }]
+                           .concat((n.scenes || []).map(s => ({ value: s, label: "→ " + s })))
                 if (fe.type === "speaker") return Engine.storySpeakers(fe.host ? fe.host.storyText : "").map(s => ({ value: s.name, label: s.name, color: s.color }))
                 const l = fe.type === "meter" ? n.meters : fe.type === "item" ? n.items : n.vars
                 return (l || []).map(s => ({ value: s, label: s }))
@@ -452,18 +464,18 @@ ColumnLayout {
             Field {
                 Layout.fillWidth: true
                 text: fe.str
-                placeholderText: fe.def || "не задано"
+                placeholderText: fe.def || qsTr("не задано")
                 onTextEdited: fe.set(text)
             }
             PillButton {
                 dark: true
                 text: "▾"
                 enabled: parent.list.length > 0
-                onClicked: fe.host.pickFrom(fe.field.label, parent.list, (v) => fe.set(v))
+                onClicked: fe.host.pickFrom(qsTr(fe.field.label), parent.list, (v) => fe.set(v))
             }
             Text {
-                visible: fe.type === "scene" && fe.str !== "" && parent.list.findIndex(i => i.value === fe.str) < 0
-                text: "новая"
+                visible: (fe.type === "scene" || fe.type === "menuaction") && fe.str !== "" && parent.list.findIndex(i => i.value === fe.str) < 0
+                text: qsTr("новая")
                 color: Theme.warn
                 font.family: Theme.ui; font.pixelSize: 12
             }

@@ -21,17 +21,17 @@ Item {
         x: 10; y: 10
         spacing: 6
         Repeater {
-            model: ["Музыка", "Звуки", "Атмосфера", "Сообщество"]
+            model: [qsTr("Музыка"), qsTr("Звуки"), qsTr("Атмосфера"), qsTr("Сообщество")]
             PillButton { text: modelData; accent: ab.tab === index; dark: ab.tab !== index; onClicked: ab.tab = index }
         }
-        PillButton { dark: true; text: "＋ Свой"; visible: ab.tab < 3; onClicked: audioDialog.open() }
+        PillButton { dark: true; text: qsTr("＋ Свой"); visible: ab.tab < 3; onClicked: audioDialog.open() }
         PillButton { dark: true; text: "■"; visible: Music.previewing !== ""; onClicked: Music.stopPreview() }
     }
     TextField {
         id: search
         anchors.top: head.bottom; anchors.topMargin: 8
         x: 10; width: parent.width - 20
-        placeholderText: "Поиск…"
+        placeholderText: qsTr("Поиск…")
         placeholderTextColor: Theme.faint
         color: Theme.text
         font.family: Theme.ui; font.pixelSize: 14
@@ -90,7 +90,7 @@ Item {
                 anchors.right: parent.right; anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
                 dark: true
-                text: modelData.community ? "В мой мод" : "Вставить"
+                text: modelData.community ? qsTr("В мой мод") : qsTr("Вставить")
                 onClicked: ab.use(modelData)
             }
         }
@@ -98,11 +98,11 @@ Item {
 
     FileDialog {
         id: audioDialog
-        title: ab.tab === 2 ? "Своя атмосфера (ogg/mp3/wav/flac… — переделаю в ogg)" : ab.tab === 1 ? "Свой звук (ogg/mp3/wav/flac… — переделаю в ogg)"
-                                                                                                   : "Своя музыка (ogg/mp3/wav/flac… — переделаю в ogg)"
-        nameFilters: ["Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus)"]
+        title: ab.tab === 2 ? qsTr("Своя атмосфера (ogg/mp3/wav/flac… — переделаю в ogg)") : ab.tab === 1 ? qsTr("Свой звук (ogg/mp3/wav/flac… — переделаю в ogg)")
+                                                                                                   : qsTr("Своя музыка (ogg/mp3/wav/flac… — переделаю в ogg)")
+        nameFilters: [qsTr("Аудио (*.ogg *.mp3 *.wav *.flac *.m4a *.opus)")]
         onAccepted: {
-            const p = Engine.importAudio(selectedFile)
+            const p = Engine.importAudio(selectedFile, ["music", "sfx", "ambience"][ab.tab])
             if (p) ab.insert((ab.tab === 2 ? "атмосфера " : ab.tab === 1 ? "звукфайл " : "музыкафайл ") + p)
         }
     }

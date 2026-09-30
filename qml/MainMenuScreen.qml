@@ -1,32 +1,63 @@
 import QtQuick
 import QtQuick.Particles
 import QtQuick.Shapes
+import QtQuick.Effects
 import GenryBL
 
-// Everlasting Summer's own title screen (screens.rpy: screen main_menu) rebuilt from
-// its art: the INFORMATION board is an imagemap, each sheet lights up from
-// mainmenu_hover.jpg exactly where the game's hotspots are - and each one opens a
-// part of the constructor.
+// The title screen: the INFORMATION board of «Совёнок» - alive (LiveBoard.qml: wind in the leaves, light,
+// mist, lamps, stars, fireflies, butterflies, birds) and different at every time of day, by the clock of
+// this computer or by choice. Each sheet of the board opens a part of the constructor: hovered, it lifts
+// off the board towards you - with a shadow by day and a lantern's warm light at night.
 Item {
     id: menu
     width: 1920
     height: 1080
     signal pick(string what)
-    property string timeOfDay: "day"       // day | sunset | night
     property bool intro: true
     property var lastProject: null
-    property string hovered: ""
+    // --shot launcher <png> night:new  -> the night menu with «Новый мод» lifted (screenshots)
+    readonly property var shotBits: shotPage === "launcher" && shotArg ? shotArg.split(":") : []
+    property string hovered: shotBits.length > 1 ? shotBits[1] : ""
     property real mx: 0
     property real my: 0
 
-    readonly property var spots: [
-        { key: "new",      x: 439,  y: 265, w: 318, h: 621, title: "Новый мод",   sub: "начать новую историю" },
-        { key: "mods",     x: 787,  y: 261, w: 270, h: 537, title: "Мои моды",    sub: "открыть, играть, делиться" },
-        { key: "gallery",  x: 1083, y: 258, w: 229, h: 538, title: "Галерея",     sub: "все персонажи, фоны и CG лагеря" },
-        { key: "settings", x: 1067, y: 748, w: 252, h: 312, title: "Инструменты", sub: "настройки конструктора" },
-        { key: "quit",     x: 1459, y: 532, w: 149, h: 295, title: "Выход",       sub: "до завтра, пионер" },
-        { key: "help",     x: 494,  y: 125, w: 768, h: 86,  title: "Информация",  sub: "как устроен конструктор" }
+    // ---- time of day: the clock of this computer, or the choice («menuTime»: auto | morning | day | evening | night)
+    property string timeSetting: shotBits.length ? shotBits[0] : Engine.setting("menuTime", "auto")
+    function clockTime() {
+        const h = new Date().getHours()
+        return h >= 5 && h < 10 ? "morning" : h >= 10 && h < 18 ? "day" : h >= 18 && h < 22 ? "evening" : "night"
+    }
+    property string clock: clockTime()
+    Timer { interval: 30000; running: true; repeat: true; onTriggered: menu.clock = menu.clockTime() }
+    readonly property string timeOfDay: {
+        const t = timeSetting === "sunset" ? "evening" : timeSetting          // «sunset» = the V1 name of the evening
+        return !t || t === "auto" ? clock : t
+    }
+    readonly property string dayPick: Math.random() < 0.5 ? "day" : "day2"   // two pictures of the day, one per launch
+    readonly property string variant: timeOfDay === "day" ? dayPick : timeOfDay
+    onTimeOfDayChanged: if (shotPage === "") Ambience.play(timeOfDay)
+
+    // the sheets of each picture (1920x1080): [x0, y0, x1, y1]
+    readonly property var layouts: ({
+        day:     { new: [314,238,661,840], mods: [679,267,981,832], gallery: [995,303,1267,825], help: [384,88,1208,232], about: [56,488,176,640], settings: [1056,888,1344,1072], quit: [1512,712,1656,880] },
+        day2:    { new: [334,238,683,870], mods: [701,251,1002,860], gallery: [1019,283,1297,849], help: [408,96,1232,232], about: [88,512,205,672], settings: [1069,909,1352,1072], quit: [1533,733,1680,896] },
+        evening: { new: [341,250,686,840], mods: [705,280,998,830], gallery: [1012,311,1270,820], help: [408,88,1232,244], about: [96,480,200,648], settings: [1064,880,1328,1072], quit: [1496,704,1648,880] },
+        morning: { new: [322,258,674,859], mods: [691,291,990,849], gallery: [1006,325,1274,842], help: [392,96,1216,252], about: [88,456,200,608], settings: [1064,899,1328,1072], quit: [1517,728,1664,896] },
+        night:   { new: [330,244,681,829], mods: [698,274,990,821], gallery: [1005,311,1271,813], help: [400,88,1232,238], about: [96,488,200,640], settings: [1064,864,1328,1072], quit: [1488,696,1632,856] }
+    })
+    readonly property var titles: [
+        ["new",      qsTr("Новый мод"),   qsTr("начать новую историю")],
+        ["mods",     qsTr("Мои моды"),    qsTr("открыть, играть, делиться")],
+        ["gallery",  qsTr("Галерея"),     qsTr("все персонажи, фоны и CG лагеря")],
+        ["settings", qsTr("Инструменты"), qsTr("настройки конструктора")],
+        ["quit",     qsTr("Выход"),       qsTr("до завтра, пионер")],
+        ["help",     qsTr("Информация"),  qsTr("как устроен конструктор")],
+        ["about",    qsTr("Сова"),        qsTr("кто всё это сделал")]
     ]
+    readonly property var spots: {
+        const lay = layouts[variant] || layouts.day
+        return titles.map(t => { const r = lay[t[0]]; return { key: t[0], title: t[1], sub: t[2], x: r[0], y: r[1], w: r[2] - r[0], h: r[3] - r[1] } })
+    }
 
     // eased mouse (-1..1) + a slow idle float, so the board lives even when the mouse rests
     property real ex: 0
@@ -54,62 +85,93 @@ Item {
         ]
         NumberAnimation on push { running: menu.intro; from: 1.12; to: 1.05; duration: 3200; easing.type: Easing.OutCubic }
 
-        Image {
-            source: "image://gb/file/images/gui/title_menu/mainmenu_ground.jpg"
-            asynchronous: true
-            smooth: true
+        LiveBoard {
+            id: board
+            variant: menu.variant
+            tod: menu.timeOfDay
+            ex: menu.ex
+            ey: menu.ey
+            windTest: menu.shotBits.length > 2 && menu.shotBits[2] === "wind"
         }
 
-        // imagemap hover: the lit version of each sheet, only inside its hotspot - and the sheet
-        // lifts off the board towards you (a soft shadow under it, a touch of tilt)
-        Repeater {
-            model: menu.spots
+        // a sheet lifts off the board towards you: its own pixels, a shadow by day, a lantern's glow at night,
+        // and a band of light that crosses it once
+        component LiftCard: Item {
+            id: card
+            property var spot
+            readonly property bool on: menu.hovered === spot.key
+            readonly property bool flat: spot.key === "help"
+            readonly property bool night: menu.timeOfDay === "night"
+            x: spot.x; y: spot.y
+            width: spot.w; height: spot.h
+            z: on ? 3 : 1
+            opacity: on ? 1 : 0
+            visible: opacity > 0.01
+            scale: on ? (flat ? 1.03 : spot.key === "about" ? 1.14 : 1.065) : 1.0
+            rotation: on && !flat ? (spot.x % 2 ? 0.9 : -0.9) : 0
+            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+            Behavior on rotation { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+            ShaderEffectSource {
+                id: cardSrc
+                anchors.fill: parent
+                sourceItem: board.currentComp
+                sourceRect: Qt.rect(card.spot.x, card.spot.y, card.spot.w, card.spot.h)
+                live: card.visible
+                visible: false
+                smooth: true
+            }
+            MultiEffect {
+                source: cardSrc
+                anchors.fill: cardSrc
+                autoPaddingEnabled: true
+                shadowEnabled: true
+                shadowColor: card.night ? "#ffc766" : "#000000"
+                shadowOpacity: card.night ? 0.9 : (card.flat ? 0.35 : 0.75)
+                shadowBlur: 1.0
+                shadowHorizontalOffset: card.night ? 0 : 14 + menu.ex * 10
+                shadowVerticalOffset: card.night ? 0 : 22 + menu.ey * 10
+                brightness: card.night ? 0.22 : menu.timeOfDay === "evening" ? 0.10 : 0.09
+                saturation: 0.06
+            }
             Item {
-                readonly property bool on: menu.hovered === modelData.key
-                x: modelData.x; y: modelData.y
-                width: modelData.w; height: modelData.h
-                z: on ? 3 : 1
-                opacity: on ? 1 : 0
-                scale: on && modelData.key !== "help" ? 1.045 : 1.0
-                rotation: on && modelData.key !== "help" ? (modelData.x % 2 ? 0.8 : -0.8) : 0
-                Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                Behavior on scale { NumberAnimation { duration: 260; easing.type: Easing.OutBack } }
-                Behavior on rotation { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+                anchors.fill: parent
+                clip: true
                 Rectangle {
-                    x: 10 + menu.ex * 6; y: 14 + menu.ey * 6
-                    width: parent.width; height: parent.height
-                    radius: 6
-                    color: "#000000"
-                    opacity: 0.28
-                    visible: modelData.key !== "help"
-                }
-                Item {
-                    anchors.fill: parent
-                    clip: true
-                    Image {
-                        x: -modelData.x; y: -modelData.y
-                        source: "image://gb/file/images/gui/title_menu/mainmenu_hover.jpg"
-                        asynchronous: true
-                        smooth: true
+                    width: 150
+                    height: card.height * 1.8
+                    y: -card.height * 0.4
+                    rotation: 18
+                    x: card.on ? card.width + 220 : -320
+                    Behavior on x { enabled: card.on; NumberAnimation { duration: 1000; easing.type: Easing.OutCubic } }
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "transparent" }
+                        GradientStop { position: 0.5; color: card.night ? "#50ffe2a8" : "#60ffffff" }
+                        GradientStop { position: 1.0; color: "transparent" }
                     }
                 }
             }
         }
+        Repeater {
+            model: menu.spots
+            LiftCard { spot: modelData }
+        }
 
-        // a light that slides over the board with the mouse (the sun on the paper)
+        // a light that slides over the board with the mouse: the sun on the paper by day, a lantern at night
         Shape {
             z: 4
             width: 1400; height: 1400
             x: 960 - 700 + menu.ex * 520
             y: 540 - 700 + menu.ey * 320
-            opacity: menu.timeOfDay === "night" ? 0.05 : 0.13
+            opacity: menu.timeOfDay === "night" ? 0.16 : menu.timeOfDay === "evening" ? 0.10 : 0.12
             Behavior on opacity { NumberAnimation { duration: 1200 } }
             ShapePath {
                 strokeWidth: -1
                 fillGradient: RadialGradient {
-                    centerX: 700; centerY: 700; centerRadius: 700
+                    centerX: 700; centerY: 700; centerRadius: menu.timeOfDay === "night" ? 420 : 700
                     focalX: 700; focalY: 700
-                    GradientStop { position: 0.0; color: menu.timeOfDay === "sunset" ? "#ffd08a" : "#fffbea" }
+                    GradientStop { position: 0.0; color: menu.timeOfDay === "night" ? "#ffd48a" : menu.timeOfDay === "evening" ? "#ffd08a" : "#fffbea" }
                     GradientStop { position: 1.0; color: "transparent" }
                 }
                 startX: 0; startY: 0
@@ -120,54 +182,27 @@ Item {
             }
         }
 
-        // the owl (ES shows it after an ending; here it always watches)
-        Image {
-            id: owl
-            x: 135; y: 606
-            source: owlArea.containsMouse ? "image://gb/file/images/gui/title_menu/owl_hover.png" : "image://gb/file/images/gui/title_menu/owl_idle.png"
-            MouseArea {
-                id: owlArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onEntered: Sfx.play("sound/test.ogg")
-                onClicked: menu.pick("about")
-            }
-        }
-
-        // sun rays through the leaves
-        Repeater {
-            model: 5
-            Rectangle {
-                readonly property real phase: index * 1.7
-                x: 1250 + index * 110
-                y: -260
-                width: 90 + index * 26
-                height: 1500
-                rotation: 28 + index * 3
-                transformOrigin: Item.Top
-                opacity: menu.timeOfDay === "night" ? 0 : (0.10 + 0.07 * Math.sin(rayClock.t + phase))
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: "transparent" }
-                    GradientStop { position: 0.35; color: menu.timeOfDay === "sunset" ? "#ffb35c" : "#fff4c2" }
-                    GradientStop { position: 1.0; color: "transparent" }
-                }
-                Behavior on opacity { NumberAnimation { duration: 900 } }
-            }
-        }
-
-        // time of day grading
+        // the first look: a sweep of light runs across the board as the camp wakes up
         Rectangle {
-            anchors.fill: parent
-            color: "#ff7a2e"
-            opacity: menu.timeOfDay === "sunset" ? 0.22 : 0
-            Behavior on opacity { NumberAnimation { duration: 1200 } }
-        }
-        Rectangle {
-            anchors.fill: parent
-            color: "#07102e"
-            opacity: menu.timeOfDay === "night" ? 0.58 : 0
-            Behavior on opacity { NumberAnimation { duration: 1200 } }
+            id: sweep
+            z: 5
+            width: 520; height: 2600
+            y: -760
+            x: -900
+            rotation: 24
+            visible: menu.intro
+            opacity: 0.55
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: "transparent" }
+                GradientStop { position: 0.5; color: menu.timeOfDay === "night" ? "#40ffe0a0" : "#70fff6dc" }
+                GradientStop { position: 1.0; color: "transparent" }
+            }
+            SequentialAnimation {
+                running: menu.intro
+                PauseAnimation { duration: 700 }
+                NumberAnimation { target: sweep; property: "x"; from: -900; to: 2500; duration: 2600; easing.type: Easing.InOutQuad }
+            }
         }
 
         // hotspots
@@ -176,72 +211,18 @@ Item {
             MouseArea {
                 x: modelData.x; y: modelData.y
                 width: modelData.w; height: modelData.h
+                z: 6
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onEntered: {
                     menu.hovered = modelData.key
                     if (modelData.key === "quit") Sfx.play("sound/sfx/menu_gate.ogg")
+                    else if (modelData.key === "about") Sfx.play("sound/test.ogg")
                 }
                 onExited: if (menu.hovered === modelData.key) menu.hovered = ""
                 onClicked: { Sfx.click(); menu.pick(modelData.key) }
             }
         }
-    }
-
-    QtObject {
-        id: rayClock
-        property real t: 0
-        property NumberAnimation a: NumberAnimation { target: rayClock; property: "t"; from: 0; to: Math.PI * 2; duration: 9000; loops: Animation.Infinite; running: true }
-    }
-
-    // ---- falling leaves (ES's own leaf) / fireflies at night
-    ParticleSystem { id: leaves }
-    ImageParticle {
-        system: leaves
-        groups: ["leaf"]
-        x: -menu.ex * 44          // nearer than the board: they move more
-        y: -menu.ey * 26
-        source: "image://gb/file/images/gui/settings/leaf.png"
-        rotationVariation: 180
-        rotationVelocity: 30
-        rotationVelocityVariation: 60
-        entryEffect: ImageParticle.Fade
-        color: menu.timeOfDay === "night" ? "#5d7a5a" : menu.timeOfDay === "sunset" ? "#e2b04a" : "#ffffff"
-    }
-    Emitter {
-        system: leaves
-        group: "leaf"
-        x: 0; y: -40
-        width: 1920; height: 10
-        emitRate: 1.3
-        lifeSpan: 14000
-        size: 34
-        sizeVariation: 16
-        velocity: AngleDirection { angle: 80; angleVariation: 25; magnitude: 70; magnitudeVariation: 30 }
-    }
-    Wander { system: leaves; groups: ["leaf"]; xVariance: 90; pace: 60; affectedParameter: Wander.Velocity }
-
-    ParticleSystem { id: flies; running: menu.timeOfDay === "night" }
-    ItemParticle {
-        system: flies
-        delegate: Rectangle {
-            width: 7; height: 7; radius: 4
-            color: "#e8ff8a"
-            opacity: 0.85
-            SequentialAnimation on opacity {
-                loops: Animation.Infinite
-                NumberAnimation { to: 0.15; duration: 700 + Math.random() * 900 }
-                NumberAnimation { to: 0.9; duration: 700 + Math.random() * 900 }
-            }
-        }
-    }
-    Emitter {
-        system: flies
-        x: 100; y: 600
-        width: 1720; height: 460
-        emitRate: 3
-        lifeSpan: 7000
-        velocity: AngleDirection { angleVariation: 180; magnitude: 14; magnitudeVariation: 10 }
     }
 
     // ---- the pioneer tag that tells what a sheet does
@@ -255,7 +236,7 @@ Item {
         opacity: spot ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 180 } }
         x: spot ? Math.min(1920 - 420, Math.max(20, spot.x + spot.w / 2 - 190)) : x
-        y: spot ? (spot.key === "settings" ? spot.y - 116 : spot.key === "help" ? spot.y + spot.h + 12 : spot.y + spot.h - 30) : y
+        y: spot ? (spot.key === "settings" || spot.key === "quit" ? spot.y - 116 : spot.key === "help" || spot.key === "about" ? spot.y + spot.h + 12 : spot.y + spot.h - 170) : y
         Behavior on x { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         Behavior on y { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         width: 380
@@ -288,7 +269,7 @@ Item {
         Column {
             x: 22; y: 18
             spacing: 2
-            Text { text: "▶ Продолжить"; color: "#2f6b1c"; font.family: Theme.riffic; font.pixelSize: 30; font.bold: true }
+            Text { text: qsTr("▶ Продолжить"); color: "#2f6b1c"; font.family: Theme.riffic; font.pixelSize: 30; font.bold: true }
             Text {
                 width: 360
                 text: menu.lastProject ? "«" + menu.lastProject.name + "»" : ""
@@ -305,11 +286,14 @@ Item {
         }
     }
 
-    Component.onCompleted: Engine.checkUpdates(false)       // once a session (Updater.cpp), quietly
+    Component.onCompleted: {
+        Engine.checkUpdates(false)                             // once a session (Updater.cpp), quietly
+        if (shotPage === "") Ambience.play(timeOfDay)       // the camp's own sounds under the music
+    }
 
     // ---- the last run fell: the crash catcher's report, one click to send it
     Rectangle {
-        visible: Engine.lastCrash !== ""
+        visible: Engine.lastCrash !== "" && shotPage === ""      // not on the screenshots of the menu
         z: 20
         x: 40; y: 150
         width: 560; height: crashCol.implicitHeight + 36
@@ -320,22 +304,22 @@ Item {
             x: 18; y: 18
             width: parent.width - 36
             spacing: 10
-            Text { text: "В прошлый раз GenryBL вылетел"; color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 26; font.bold: true }
+            Text { text: qsTr("В прошлый раз GenryBL вылетел"); color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 26; font.bold: true }
             Text {
                 width: parent.width
                 wrapMode: Text.Wrap
-                text: "Прости. Отчёт о вылете сохранён — там видно, где именно. Скопируй его и кинь в Discord или GitHub: " +
-                      "по нему вылет чинится наверняка, а не наугад."
+                text: qsTr("Прости. Отчёт о вылете сохранён — там видно, где именно. Скопируй его и кинь в Discord или GitHub: ") +
+                      qsTr("по нему вылет чинится наверняка, а не наугад.")
                 color: Theme.ink; font.family: Theme.ui; font.pixelSize: 17
             }
             Flow {
                 width: parent.width
                 spacing: 8
-                LinkChip { label: "Скопировать отчёт"; tint: "#b3261e"; action: function() { Engine.copyText(Engine.crashText()); Engine.toast("Отчёт скопирован — вставь его в сообщение", 0) } }
-                LinkChip { label: "Открыть папку"; tint: "#7a6440"; action: function() { Engine.revealFile(Engine.lastCrash) } }
+                LinkChip { label: qsTr("Скопировать отчёт"); tint: "#b3261e"; action: function() { Engine.copyText(Engine.crashText()); Engine.toast(qsTr("Отчёт скопирован — вставь его в сообщение"), 0) } }
+                LinkChip { label: qsTr("Открыть папку"); tint: "#7a6440"; action: function() { Engine.revealFile(Engine.lastCrash) } }
                 LinkChip { label: "Discord"; url: "https://discord.gg/2Yy45gJap3"; tint: "#5865f2" }
                 LinkChip { label: "GitHub"; url: "https://github.com/GenryTheFox0/GenryBL/issues/new"; tint: "#2d333b" }
-                LinkChip { label: "Закрыть"; tint: "#8b8b8b"; action: function() { Engine.crashSeen() } }
+                LinkChip { label: qsTr("Закрыть"); tint: "#8b8b8b"; action: function() { Engine.crashSeen() } }
             }
         }
     }
@@ -364,7 +348,7 @@ Item {
         }
     }
     Item {
-        x: 1486; y: 160
+        x: 1486; y: 184
         width: 400; height: supportCol.implicitHeight + 38
         rotation: -1.5
         Rectangle { anchors.fill: parent; radius: 4; color: "#fbf5e1"; border.color: "#c9b58a" }
@@ -374,11 +358,11 @@ Item {
             x: 22; y: 18
             width: parent.width - 44
             spacing: 9
-            Text { text: "Поддержать GenryBL"; color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 28; font.bold: true }
+            Text { text: qsTr("Поддержать GenryBL"); color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 28; font.bold: true }
             Text {
                 width: parent.width
                 wrapMode: Text.Wrap
-                text: "Программа бесплатная. Нравится — закинь на донат, так она и дальше будет расти. Лучше всего — первые три."
+                text: qsTr("Программа бесплатная. Нравится — закинь на донат, так она и дальше будет расти. Лучше всего — первые три.")
                 color: Theme.ink; font.family: Theme.ui; font.pixelSize: 18
             }
             Flow {
@@ -393,15 +377,15 @@ Item {
                 }
             }
             Rectangle { width: parent.width; height: 1; color: "#c9b58a" }
-            Text { text: "Сообщество, отзывы, помощь"; color: "#5a3e1e"; font.family: Theme.ui; font.pixelSize: 19; font.bold: true }
+            Text { text: qsTr("Сообщество, отзывы, помощь"); color: "#5a3e1e"; font.family: Theme.ui; font.pixelSize: 19; font.bold: true }
             Flow {
                 width: parent.width
                 spacing: 8
                 Repeater {
                     model: [["Discord", "https://discord.gg/2Yy45gJap3", "#5865f2"],
                             ["Telegram", "https://t.me/teamgenrythefox", "#229ed9"],
-                            ["Мастерская Steam", "https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763", "#1b2838"],
-                            ["GitHub · отзывы и баги", "https://github.com/GenryTheFox0/GenryBL/issues", "#2d333b"]]
+                            [qsTr("Мастерская Steam"), "https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763", "#1b2838"],
+                            [qsTr("GitHub · отзывы и баги"), "https://github.com/GenryTheFox0/GenryBL/issues", "#2d333b"]]
                     LinkChip { label: modelData[0]; url: modelData[1]; tint: modelData[2] }
                 }
             }
@@ -413,14 +397,14 @@ Item {
                 readonly property bool working: u.state === "checking" || u.state === "downloading" || u.state === "starting"
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Обновления"; color: "#5a3e1e"; font.family: Theme.ui; font.pixelSize: 19; font.bold: true
+                    text: qsTr("Обновления"); color: "#5a3e1e"; font.family: Theme.ui; font.pixelSize: 19; font.bold: true
                 }
                 LinkChip {
                     anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                    label: parent.u.state === "available" ? "Обновить до " + parent.u.version
-                         : parent.u.state === "checking" ? "Проверяю…"
-                         : parent.u.state === "downloading" ? "Качаю " + Math.round(parent.u.progress * 100) + "%"
-                         : parent.u.state === "starting" ? "Ставлю…" : "Проверить"
+                    label: parent.u.state === "available" ? qsTr("Обновить до ") + parent.u.version
+                         : parent.u.state === "checking" ? qsTr("Проверяю…")
+                         : parent.u.state === "downloading" ? qsTr("Качаю ") + Math.round(parent.u.progress * 100) + "%"
+                         : parent.u.state === "starting" ? qsTr("Ставлю…") : qsTr("Проверить")
                     tint: parent.u.state === "available" ? "#2f9e44" : "#7a6440"
                     action: function() {
                         if (parent.u.state === "available") Engine.startUpdate()
@@ -444,21 +428,68 @@ Item {
         }
     }
 
-    // ---- time of day switch (auto by the clock, click to change), under the 18+ plaque
+    // ---- time of day: by the clock of this computer (auto) or chosen; under the 18+ plaque
     Row {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: 26
         anchors.topMargin: 86
         spacing: 10
-        Repeater {
-            model: [["day", "☀"], ["sunset", "◐"], ["night", "☾"]]
+        // the language: a flag, a click opens all 20
+        Column {
+            spacing: 2
             Rectangle {
-                width: 52; height: 52; radius: 26
-                color: menu.timeOfDay === modelData[0] ? "#f4ecd2" : "#80101a0d"
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 64; height: 52; radius: 12
+                color: "#80101a0d"
                 border.color: "#f4ecd2"
-                Text { anchors.centerIn: parent; text: modelData[1]; font.pixelSize: 26; color: menu.timeOfDay === modelData[0] ? Theme.ink : "#f4ecd2" }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { Sfx.click(); menu.timeOfDay = modelData[0]; Engine.setSetting("menuTime", modelData[0]) } }
+                scale: langArea.containsMouse ? 1.1 : 1
+                Behavior on scale { NumberAnimation { duration: 140 } }
+                Image {
+                    anchors.centerIn: parent
+                    width: 48; height: 32; smooth: true; mipmap: true
+                    source: "file:///" + Engine.appRoot + "/data/flags/" + Engine.language + ".png"
+                }
+                MouseArea { id: langArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                    onClicked: { Sfx.click(); langPicker.open() } }
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: qsTr("язык")
+                color: "#f4ecd2"; style: Text.Outline; styleColor: "#a0000000"
+                font.family: Theme.ui; font.pixelSize: 15
+            }
+        }
+        Item { width: 8; height: 1 }
+        Repeater {
+            model: [["auto", "⟳", qsTr("по часам")], ["morning", "☼", qsTr("утро")], ["day", "☀", qsTr("день")], ["evening", "◐", qsTr("вечер")], ["night", "☾", qsTr("ночь")]]
+            Column {
+                id: tChip
+                spacing: 2
+                readonly property bool chosen: modelData[0] === "auto" ? (menu.timeSetting === "auto" || !menu.timeSetting)
+                                                                   : menu.timeSetting === modelData[0] || (modelData[0] === "evening" && menu.timeSetting === "sunset")
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 52; height: 52; radius: 26
+                    color: tChip.chosen ? "#f4ecd2" : "#80101a0d"
+                    border.color: "#f4ecd2"
+                    scale: tArea.containsMouse ? 1.1 : 1
+                    Behavior on scale { NumberAnimation { duration: 140 } }
+                    Text { anchors.centerIn: parent; text: modelData[1]; font.pixelSize: 26; color: tChip.chosen ? Theme.ink : "#f4ecd2" }
+                    MouseArea {
+                        id: tArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: { Sfx.click(); menu.timeSetting = modelData[0]; Engine.setSetting("menuTime", modelData[0]) }
+                    }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: modelData[2]
+                    color: "#f4ecd2"; style: Text.Outline; styleColor: "#a0000000"
+                    font.family: Theme.ui; font.pixelSize: 15
+                }
             }
         }
     }
@@ -466,13 +497,15 @@ Item {
     Text {
         anchors.right: parent.right; anchors.bottom: parent.bottom
         anchors.margins: 18
-        text: "GenryBL " + Engine.version + " · конструктор модов «Бесконечного лета» · GenryTheFox"
+        text: "GenryBL " + Engine.version + qsTr(" · конструктор модов «Бесконечного лета» · GenryTheFox")
         color: "#e8f0dc"
         style: Text.Outline
         styleColor: "#80000000"
         font.family: Theme.ui
         font.pixelSize: 20
     }
+
+    LanguagePicker { id: langPicker }
 
     HoverHandler {
         onPointChanged: {

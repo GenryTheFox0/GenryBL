@@ -18,7 +18,7 @@ Item {
 
     Text {
         x: 470; y: 180
-        text: "Мои моды"
+        text: qsTr("Мои моды")
         color: "#f1e7c8"
         style: Text.Raised
         styleColor: "#40000000"
@@ -26,7 +26,7 @@ Item {
     }
     Text {
         x: 480; y: 262
-        text: Engine.projects.length ? "Альбом лагеря: " + Engine.projects.length + " шт. Двойной клик — открыть." : "Альбом пока пуст — начни с первого мода."
+        text: Engine.projects.length ? qsTr("Альбом лагеря: ") + Engine.projects.length + qsTr(" шт. Двойной клик — открыть.") : qsTr("Альбом пока пуст — начни с первого мода.")
         color: "#d9ccaa"; font.family: Theme.ui; font.pixelSize: 24
     }
 
@@ -65,7 +65,7 @@ Item {
                     visible: !!modelData.create
                     anchors.centerIn: parent
                     Text { anchors.horizontalCenter: parent.horizontalCenter; text: "＋"; color: "#9bd35a"; font.pixelSize: 64 }
-                    Text { text: "Новый мод"; color: "#f1e7c8"; font.family: Theme.riffic; font.pixelSize: 28; font.bold: true }
+                    Text { text: qsTr("Новый мод"); color: "#f1e7c8"; font.family: Theme.riffic; font.pixelSize: 28; font.bold: true }
                 }
                 Image {
                     anchors.fill: parent
@@ -84,15 +84,15 @@ Item {
             Text {
                 x: 24; y: 250
                 visible: !modelData.create
-                text: modelData.create ? "" : ("сцен " + modelData.scenes + " · строк " + modelData.lines + " · " + modelData.modified)
+                text: modelData.create ? "" : (qsTr("сцен ") + modelData.scenes + qsTr(" · строк ") + modelData.lines + " · " + modelData.modified)
                 color: "#cbbd99"; font.family: Theme.ui; font.pixelSize: 17
             }
             Row {
                 x: 30; y: 22
                 spacing: 6
                 visible: hot && !modelData.create
-                PillButton { text: "Открыть"; onClicked: album.open(modelData.id) }
-                PillButton { text: "▶ Играть"; accent: true; onClicked: album.play(modelData.id) }
+                PillButton { text: qsTr("Открыть"); onClicked: album.open(modelData.id) }
+                PillButton { text: qsTr("▶ Играть"); accent: true; onClicked: album.play(modelData.id) }
             }
             PillButton {
                 x: 20 + 336 - width - 10; y: 22
@@ -119,18 +119,18 @@ Item {
     Menu {
         id: menu
         property var project
-        MenuItem { text: "Открыть"; onTriggered: album.open(menu.project.id) }
-        MenuItem { text: "Переименовать"; onTriggered: { renameField.text = menu.project.name; renameDialog.open() } }
-        MenuItem { text: "Сделать копию"; onTriggered: Engine.duplicateProject(menu.project.id) }
-        MenuItem { text: "Открыть папку"; onTriggered: Engine.openFolder(Engine.projectDir(menu.project.id)) }
+        MenuItem { text: qsTr("Открыть"); onTriggered: album.open(menu.project.id) }
+        MenuItem { text: qsTr("Переименовать"); onTriggered: { renameField.text = menu.project.name; renameDialog.open() } }
+        MenuItem { text: qsTr("Сделать копию"); onTriggered: Engine.duplicateProject(menu.project.id) }
+        MenuItem { text: qsTr("Открыть папку"); onTriggered: Engine.openFolder(Engine.projectDir(menu.project.id)) }
         MenuSeparator {}
-        MenuItem { text: "В корзину"; onTriggered: trashDialog.open() }
+        MenuItem { text: qsTr("В корзину"); onTriggered: trashDialog.open() }
     }
     Dialog {
         id: renameDialog
         anchors.centerIn: parent
         modal: true
-        title: "Новое название"
+        title: qsTr("Новое название")
         standardButtons: Dialog.Ok | Dialog.Cancel
         TextField { id: renameField; width: 420; selectByMouse: true; onAccepted: renameDialog.accept() }
         onAccepted: Engine.renameProject(menu.project.id, renameField.text)
@@ -139,9 +139,9 @@ Item {
         id: trashDialog
         anchors.centerIn: parent
         modal: true
-        title: "Убрать мод в корзину?"
+        title: qsTr("Убрать мод в корзину?")
         standardButtons: Dialog.Yes | Dialog.No
-        Label { text: menu.project ? "«" + menu.project.name + "» переедет в projects/_trash — вернуть можно руками." : "" }
+        Label { text: menu.project ? "«" + menu.project.name + qsTr("» переедет в projects/_trash — вернуть можно руками.") : "" }
         onAccepted: Engine.trashProject(menu.project.id)
     }
 
@@ -149,14 +149,14 @@ Item {
     Text {
         id: backText
         x: 470; y: 960
-        text: "‹ Назад"
+        text: qsTr("‹ Назад")
         color: backArea.containsMouse ? "#9bd35a" : "#f1e7c8"
         font.family: Theme.riffic; font.pixelSize: 36; font.bold: true
         MouseArea { id: backArea; anchors.fill: parent; anchors.margins: -10; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Sfx.click(); album.back() } }
     }
     Text {
         x: 1180; y: 968
-        text: "Папка модов"
+        text: qsTr("Папка модов")
         color: folderArea.containsMouse ? "#9bd35a" : "#cbbd99"
         font.family: Theme.ui; font.pixelSize: 24
         MouseArea { id: folderArea; anchors.fill: parent; anchors.margins: -8; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Engine.openFolder(Engine.appRoot + "/projects") }

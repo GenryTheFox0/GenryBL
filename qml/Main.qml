@@ -14,9 +14,9 @@ ApplicationWindow {
     color: Theme.bg
     // a developer build says so in the title (the public one does not)
     readonly property string edition: Engine.editionBadge ? "  ·  " + Engine.editionBadge : ""
-    title: Engine.mode === "install" ? "Установка GenryBL" : Engine.mode === "uninstall" ? "Удаление GenryBL" : (Engine.currentProject && stack.depth && stack.currentItem && stack.currentItem.objectName === "editor"
+    title: Engine.mode === "install" ? qsTr("Установка GenryBL") : Engine.mode === "uninstall" ? qsTr("Удаление GenryBL") : (Engine.currentProject && stack.depth && stack.currentItem && stack.currentItem.objectName === "editor"
             ? Engine.currentProjectName + " — GenryBL " + Engine.version
-            : "GenryBL " + Engine.version + " — конструктор модов «Бесконечного лета»") + edition
+            : "GenryBL " + Engine.version + qsTr(" — конструктор модов «Бесконечного лета»")) + edition
 
     // --shot mode: park the window off-screen so the user's desktop is never touched
     Component.onCompleted: {
@@ -117,7 +117,7 @@ ApplicationWindow {
         Column {
             anchors.centerIn: parent
             spacing: 12
-            Text { text: "GenryBL не может стартовать"; color: Theme.text; font.pixelSize: 28; font.bold: true }
+            Text { text: qsTr("GenryBL не может стартовать"); color: Theme.text; font.pixelSize: 28; font.bold: true }
             Text { text: Engine.startupError; color: Theme.bad; font.pixelSize: 18 }
         }
     }

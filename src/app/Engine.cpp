@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "Tr.h"
 #include "CrashCatcher.h"
 #include "Screenplay.h"
 #include "Compiler.h"
@@ -136,9 +137,10 @@ Engine::Engine(QObject* parent)
         else if (!d.cdUp()) break;
     }
     if (m_root.isEmpty()) {
-        m_startupError = QStringLiteral("Не найдена папка data рядом с программой.");
+        m_startupError = gbTr("Не найдена папка data рядом с программой.");
         return;
     }
+    applyLanguage();                          // before any window: the installer speaks it too
     // the installer / uninstaller: no projects - just the files, dressed in the game's own art when it is found
     if (!mode().isEmpty()) {
         QString es = m_settings.value(QStringLiteral("esRoot")).toString();     // the uninstaller: the installed settings
@@ -170,7 +172,7 @@ QString Engine::useEsRoot(const QString& folder)
     if (QFileInfo(dir).isFile()) dir = QFileInfo(dir).absolutePath();
     if (!build::isEsRoot(dir) && dir.endsWith(QLatin1String("/game"), Qt::CaseInsensitive)) dir = QFileInfo(dir).absolutePath();
     if (!build::isEsRoot(dir))
-        return U("Тут нет «Бесконечного лета»: нужна папка, где лежат Everlasting Summer.exe и папка game");
+        return gbTr("Тут нет «Бесконечного лета»: нужна папка, где лежат Everlasting Summer.exe и папка game");
     m_settings.setValue(QStringLiteral("esRoot"), dir);
     if (m_ready) return {};                   // changed later: the next start takes it
     m_startupError.clear();
@@ -205,7 +207,7 @@ bool Engine::start(const QString& esRoot)
             m_watch.stop();
             build::removeHook(m_es.esRoot());
             emit gameRunningChanged();
-            emit toast(QStringLiteral("Игра закрыта"), 0);
+            emit toast(gbTr("Игра закрыта"), 0);
         }
     });
     refreshProjects();
@@ -384,7 +386,7 @@ void Engine::startWardrobe()
 void Engine::waitForWardrobe(const std::function<void(const QString&)>& log) const
 {
     if (gb::wardrobe() || m_wardrobeState.load() == 0) return;
-    if (log) log(U("Жду гардероб мастерской…"));
+    if (log) log(gbTr("Жду гардероб мастерской…"));
     for (int i = 0; i < 1200 && !gb::wardrobe(); ++i) QThread::msleep(100);
 }
 
@@ -440,21 +442,21 @@ void Engine::hideSprite(const QString& tag, const QString& name)
 {
     QSet<QString> k = m_hidden;
     k.insert(tag + QStringLiteral("|look:") + name.simplified());
-    setHidden(k, U("Удалено навсегда: ") + tag + QLatin1Char(' ') + name + U("  (вернуть — «Удалённые»)"));
+    setHidden(k, gbTr("Удалено навсегда: ") + tag + QLatin1Char(' ') + name + gbTr("  (вернуть — «Удалённые»)"));
 }
 
 void Engine::hideEmotion(const QString& tag, const QString& emotion)
 {
     QSet<QString> k = m_hidden;
     k.insert(tag + QStringLiteral("|face:") + emotion.simplified());
-    setHidden(k, U("Эмоция «%1» удалена у всех нарядов").arg(emotion));
+    setHidden(k, gbTr("Эмоция «%1» удалена у всех нарядов").arg(emotion));
 }
 
 void Engine::hideOutfit(const QString& tag, const QString& outfit)
 {
     QSet<QString> k = m_hidden;
     k.insert(tag + QStringLiteral("|outfit:") + outfit.simplified());
-    setHidden(k, U("Наряд «%1» удалён целиком").arg(outfit));
+    setHidden(k, gbTr("Наряд «%1» удалён целиком").arg(outfit));
 }
 
 QVariantList Engine::hiddenSprites(const QString& tag) const
@@ -466,8 +468,8 @@ QVariantList Engine::hiddenSprites(const QString& tag) const
     for (const QString& k : keys) {
         const QString rest = k.section(QLatin1Char('|'), 1);
         const QString kind = rest.section(QLatin1Char(':'), 0, 0), what = rest.section(QLatin1Char(':'), 1);
-        const QString label = kind == QLatin1String("face") ? U("эмоция %1 (у всех нарядов)").arg(what)
-                            : kind == QLatin1String("outfit") ? U("наряд %1 целиком").arg(what) : what;
+        const QString label = kind == QLatin1String("face") ? gbTr("эмоция %1 (у всех нарядов)").arg(what)
+                            : kind == QLatin1String("outfit") ? gbTr("наряд %1 целиком").arg(what) : what;
         out << QVariantMap{{QStringLiteral("key"), k}, {QStringLiteral("label"), label}};
     }
     return out;
@@ -477,7 +479,7 @@ void Engine::unhideSprite(const QString& key)
 {
     QSet<QString> k = m_hidden;
     k.remove(key);
-    setHidden(k, U("Вернул: ") + key.section(QLatin1Char('|'), 1).section(QLatin1Char(':'), 1));
+    setHidden(k, gbTr("Вернул: ") + key.section(QLatin1Char('|'), 1).section(QLatin1Char(':'), 1));
 }
 
 bool Engine::wardrobeKnows(const QString& image) const
@@ -511,7 +513,7 @@ void Engine::setFaceShift(const QString& tag, const QString& name, const QString
     m_renderer.dropSpriteCache();
     emit wardrobeChanged();
     emit assetsChanged();
-    emit toast(dx == 0 && dy == 0 ? U("Лицо на месте (сдвиг убран)") : U("Лицо поправлено: %1, %2").arg(dx).arg(dy), 0);
+    emit toast(dx == 0 && dy == 0 ? gbTr("Лицо на месте (сдвиг убран)") : gbTr("Лицо поправлено: %1, %2").arg(dx).arg(dy), 0);
 }
 
 QString Engine::faceFixUrl(const QString& image, int dx, int dy, bool head) const
@@ -547,7 +549,7 @@ QString Engine::libraryImport(const QString& ref, const QString& kind, const QSt
 {
     if (m_current.isEmpty()) return {};
     const QImage img = QImage::fromData(m_library.read(ref));
-    if (img.isNull()) { emit toast(U("Картинку не удалось прочитать"), 2); return {}; }
+    if (img.isNull()) { emit toast(gbTr("Картинку не удалось прочитать"), 2); return {}; }
     const QString n = saveProjectImage(img, kind, name);
     if (n.isEmpty()) return {};
     // who made it: the mod's page, so the author can be credited when the mod is published
@@ -613,7 +615,7 @@ QString Engine::importFile(const QString& fileUrl, const QString& subdir)
     QDir().mkpath(QFileInfo(dst).absolutePath());
     if (QFileInfo(dst).canonicalFilePath() != fi.canonicalFilePath()) {
         QFile::remove(dst);
-        if (!QFile::copy(fi.absoluteFilePath(), dst)) { emit toast(U("Не удалось скопировать ") + fi.fileName(), 2); return {}; }
+        if (!QFile::copy(fi.absoluteFilePath(), dst)) { emit toast(gbTr("Не удалось скопировать ") + fi.fileName(), 2); return {}; }
     }
     if (subdir == QLatin1String("images")) m_renderer.setCustomImages(build::customImageFiles(assetsDir(m_current)));
     emit assetsChanged();
@@ -629,11 +631,11 @@ QString Engine::importVideo(const QString& fileUrl)
     // Ren'Py 7.4 plays WebM (VP8/VP9) and Ogg Theora; H.264 mp4/mkv/mov get converted to WebM
     if (ext == QLatin1String("webm") || ext == QLatin1String("ogv")) return importFile(fileUrl, QStringLiteral("video"));
     const QString ffmpeg = ffmpegPath();
-    if (ffmpeg.isEmpty()) { emit toast(U("Для mp4/mkv нужен ffmpeg (или сразу .webm)"), 2); return {}; }
+    if (ffmpeg.isEmpty()) { emit toast(gbTr("Для mp4/mkv нужен ffmpeg (или сразу .webm)"), 2); return {}; }
     const QString name = slug(fi.completeBaseName(), QStringLiteral("video"), false) + QStringLiteral(".webm");
     const QString dst = assetsDir(m_current) + QStringLiteral("/video/") + name;
     QDir().mkpath(QFileInfo(dst).absolutePath());
-    setBusy(true, U("Перегоняю ") + fi.fileName() + U(" в WebM для игры…"));
+    setBusy(true, gbTr("Перегоняю ") + fi.fileName() + gbTr(" в WebM для игры…"));
     const QString src = fi.absoluteFilePath();
     auto* w = new QFutureWatcher<bool>(this);
     connect(w, &QFutureWatcher<bool>::finished, this, [this, w, name] {
@@ -641,7 +643,7 @@ QString Engine::importVideo(const QString& fileUrl)
         w->deleteLater();
         setBusy(false);
         emit assetsChanged();
-        emit toast(ok ? U("Видео готово: video/") + name : U("ffmpeg не смог сконвертировать видео"), ok ? 0 : 2);
+        emit toast(ok ? gbTr("Видео готово: video/") + name : gbTr("ffmpeg не смог сконвертировать видео"), ok ? 0 : 2);
     });
     w->setFuture(QtConcurrent::run([ffmpeg, src, dst] {
         QProcess p;
@@ -789,11 +791,13 @@ QString Engine::importCommunity(const QString& file)
     const QString name = QFileInfo(src).fileName();
     const QString dst = assetsDir(m_current) + QStringLiteral("/audio/") + name;
     QDir().mkpath(QFileInfo(dst).absolutePath());
-    if (!QFileInfo::exists(dst) && !QFile::copy(src, dst)) { emit toast(U("Не удалось скопировать ") + name, 2); return {}; }
+    if (!QFileInfo::exists(dst) && !QFile::copy(src, dst)) { emit toast(gbTr("Не удалось скопировать ") + name, 2); return {}; }
     // the author goes with the file: CREDITS.txt of the mod
     for (const QVariant& v : communitySounds()) {
         const QVariantMap s = v.toMap();
         if (s.value(QStringLiteral("file")).toString() != file) continue;
+        const QString kind = s.value(QStringLiteral("kind")).toString();
+        rememberAudioKind(name, kind == QLatin1String("music") || kind == QLatin1String("ambience") ? kind : QStringLiteral("sfx"));
         QFile credits(assetsDir(m_current) + QStringLiteral("/CREDITS.txt"));
         if (credits.open(QIODevice::Append | QIODevice::Text))
             credits.write((QStringLiteral("audio/") + name + U("  <-  «") + s.value(QStringLiteral("title")).toString() + U("» (") +
@@ -832,10 +836,7 @@ QVariantList Engine::music() const
     for (auto it = m_es.music.begin(); it != m_es.music.end(); ++it)
         out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("музыка ") + it.key()},
                            {QStringLiteral("title"), esName(QStringLiteral("music"), it.key())}};
-    if (!m_current.isEmpty())
-        for (const QString& f : QDir(assetsDir(m_current) + QStringLiteral("/audio")).entryList(QDir::Files))
-            out << QVariantMap{{QStringLiteral("word"), f}, {QStringLiteral("path"), QStringLiteral("audio/") + f},
-                               {QStringLiteral("cmd"), U("музыкафайл audio/") + f}, {QStringLiteral("custom"), true}};
+    out << customAudio(QStringLiteral("music"), U("музыкафайл"));
     return out;
 }
 
@@ -845,10 +846,7 @@ QVariantList Engine::sounds() const
     for (auto it = m_es.sounds.begin(); it != m_es.sounds.end(); ++it)
         out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("звук ") + it.key()},
                            {QStringLiteral("title"), esName(QStringLiteral("sfx"), it.key())}};
-    if (!m_current.isEmpty())
-        for (const QString& f : QDir(assetsDir(m_current) + QStringLiteral("/audio")).entryList(QDir::Files))
-            out << QVariantMap{{QStringLiteral("word"), f}, {QStringLiteral("path"), QStringLiteral("audio/") + f},
-                               {QStringLiteral("cmd"), U("звукфайл audio/") + f}, {QStringLiteral("custom"), true}};
+    out << customAudio(QStringLiteral("sfx"), U("звукфайл"));
     return out;
 }
 
@@ -859,10 +857,55 @@ QVariantList Engine::ambience() const
         out << QVariantMap{{QStringLiteral("word"), it.key()}, {QStringLiteral("path"), it.value()}, {QStringLiteral("cmd"), U("атмосфера ") + it.key()},
                            {QStringLiteral("title"), esName(QStringLiteral("ambience"), it.key())}};
     // the mod's own files loop on the ambience channel too («атмосфера audio/лес.ogg»)
-    if (!m_current.isEmpty())
-        for (const QString& f : QDir(assetsDir(m_current) + QStringLiteral("/audio")).entryList(QDir::Files))
-            out << QVariantMap{{QStringLiteral("word"), f}, {QStringLiteral("path"), QStringLiteral("audio/") + f},
-                               {QStringLiteral("cmd"), U("атмосфера audio/") + f}, {QStringLiteral("custom"), true}};
+    out << customAudio(QStringLiteral("ambience"), U("атмосфера"));
+    return out;
+}
+
+// A song added as music used to show up under «Атмосфера» too (and a click there made it «атмосфера …»): every
+// tab listed every file of audio/. Now a file shows where it belongs - what it was imported as, else what the
+// story already plays it as; a file nobody knows (an old project, dropped in by hand) still shows everywhere.
+QHash<QString, QString> Engine::audioKinds() const
+{
+    QHash<QString, QString> kinds;
+    if (m_current.isEmpty()) return kinds;
+    static const QHash<QString, QString> byCommand{{U("музыкафайл"), QStringLiteral("music")}, {QStringLiteral("musicfile"), QStringLiteral("music")},
+                                                  {U("звукфайл"), QStringLiteral("sfx")}, {QStringLiteral("soundfile"), QStringLiteral("sfx")},
+                                                  {U("атмосфера"), QStringLiteral("ambience")}, {QStringLiteral("ambience"), QStringLiteral("ambience")},
+                                                  {U("озвучкафайл"), QStringLiteral("voice")}, {QStringLiteral("voicefile"), QStringLiteral("voice")}};
+    static const QRegularExpression use(QStringLiteral("^\\s*(\\S+)\\s+audio/([^\\s|]+)"));
+    static const QRegularExpression voiced(QStringLiteral("\\|\\s*audio/([^\\s|]+)\\s*\\|"));
+    for (const QString& line : loadStory(m_current).split(QLatin1Char('\n'))) {
+        const auto m = use.match(line);
+        if (m.hasMatch() && byCommand.contains(m.captured(1).toLower())) kinds.insert(m.captured(2), byCommand.value(m.captured(1).toLower()));
+        else if (const auto v = voiced.match(line); v.hasMatch()) kinds.insert(v.captured(1), QStringLiteral("voice"));
+    }
+    // what a file was imported as wins over a guess from the story
+    const QJsonObject o = QJsonDocument::fromJson(readFile(projectDir(m_current) + QStringLiteral("/audio_kinds.json"))).object();
+    for (auto it = o.begin(); it != o.end(); ++it) kinds.insert(it.key(), it.value().toString());
+    return kinds;
+}
+
+void Engine::rememberAudioKind(const QString& file, const QString& kind)
+{
+    if (m_current.isEmpty() || kind.isEmpty()) return;
+    const QString path = projectDir(m_current) + QStringLiteral("/audio_kinds.json");
+    QJsonObject o = QJsonDocument::fromJson(readFile(path)).object();
+    o.insert(QFileInfo(file).fileName(), kind);
+    writeFile(path, QJsonDocument(o).toJson(QJsonDocument::Indented));
+}
+
+QVariantList Engine::customAudio(const QString& kind, const QString& command) const
+{
+    QVariantList out;
+    if (m_current.isEmpty()) return out;
+    const QHash<QString, QString> kinds = audioKinds();
+    for (const QString& f : QDir(assetsDir(m_current) + QStringLiteral("/audio")).entryList({QStringLiteral("*.ogg"), QStringLiteral("*.mp3"),
+                                                                                            QStringLiteral("*.wav"), QStringLiteral("*.opus")}, QDir::Files)) {
+        const QString k = kinds.value(f);
+        if (!k.isEmpty() && k != kind) continue;
+        out << QVariantMap{{QStringLiteral("word"), f}, {QStringLiteral("path"), QStringLiteral("audio/") + f},
+                           {QStringLiteral("cmd"), command + QStringLiteral(" audio/") + f}, {QStringLiteral("custom"), true}};
+    }
     return out;
 }
 
@@ -1383,24 +1426,24 @@ QVariantMap Engine::suggest(const QString& lineText, int col, const QString& ful
                 items << QVariantMap{{QStringLiteral("text"), text}, {QStringLiteral("hint"), hint}, {QStringLiteral("kind"), kind}};
             };
             if (sp < 0) {
-                offer(QStringLiteral("+1"), U("очки: [+1 Славя]"), QStringLiteral("cmd"));
-                offer(QStringLiteral("-1"), U("минус очки: [-1 Алиса]"), QStringLiteral("cmd"));
-                offer(U("нужно"), U("замок: [нужно Славя 3]"), QStringLiteral("cmd"));
-                offer(U("если"), U("появится, если: [если ключ]"), QStringLiteral("cmd"));
-                offer(U("запомнит"), U("«Славя это запомнит»"), QStringLiteral("cmd"));
-                offer(U("флаг"), U("отметка на потом: [флаг помог]"), QStringLiteral("cmd"));
-                offer(U("выход]"), U("закончить расспросы (по кругу)"), QStringLiteral("cmd"));
-                offer(U("всегда]"), U("не пропадает (по кругу)"), QStringLiteral("cmd"));
+                offer(QStringLiteral("+1"), gbTr("очки: [+1 Славя]"), QStringLiteral("cmd"));
+                offer(QStringLiteral("-1"), gbTr("минус очки: [-1 Алиса]"), QStringLiteral("cmd"));
+                offer(U("нужно"), gbTr("замок: [нужно Славя 3]"), QStringLiteral("cmd"));
+                offer(U("если"), gbTr("появится, если: [если ключ]"), QStringLiteral("cmd"));
+                offer(U("запомнит"), gbTr("«Славя это запомнит»"), QStringLiteral("cmd"));
+                offer(U("флаг"), gbTr("отметка на потом: [флаг помог]"), QStringLiteral("cmd"));
+                offer(U("выход]"), gbTr("закончить расспросы (по кругу)"), QStringLiteral("cmd"));
+                offer(U("всегда]"), gbTr("не пропадает (по кругу)"), QStringLiteral("cmd"));
             } else {
                 const QString w0 = firstWord(inside).toLower();
                 const bool counts = w0.startsWith(QLatin1Char('+')) || w0.startsWith(QLatin1Char('-')) || w0 == U("нужно") || w0 == U("если");
                 if (w0 == U("если") && sp == int(firstWord(inside).size())) {
-                    offer(U("предмет"), U("есть предмет"), QStringLiteral("cmd"));
-                    offer(U("не"), U("наоборот"), QStringLiteral("cmd"));
+                    offer(U("предмет"), gbTr("есть предмет"), QStringLiteral("cmd"));
+                    offer(U("не"), gbTr("наоборот"), QStringLiteral("cmd"));
                 }
-                if (counts) for (const QString& v : storyVarNames(fullText)) offer(v, U("очки"), QStringLiteral("code"));
+                if (counts) for (const QString& v : storyVarNames(fullText)) offer(v, gbTr("очки"), QStringLiteral("code"));
                 if (counts || w0 == U("запомнит"))
-                    for (const QVariant& v : cast()) offer(v.toMap().value(QStringLiteral("name")).toString(), U("героиня"), QStringLiteral("char"));
+                    for (const QVariant& v : cast()) offer(v.toMap().value(QStringLiteral("name")).toString(), gbTr("героиня"), QStringLiteral("char"));
             }
             return {{QStringLiteral("start"), at}, {QStringLiteral("items"), items}};
         }
@@ -1417,8 +1460,8 @@ QVariantMap Engine::suggest(const QString& lineText, int col, const QString& ful
         items << QVariantMap{{QStringLiteral("text"), text}, {QStringLiteral("hint"), hint}, {QStringLiteral("kind"), kind}};
     };
     const QStringList words = pySplit(before.left(start));
-    auto effects = [&] { for (const char* e : {"dissolve", "fade", "fade2", "fade3", "dspr", "pixellate", "moveinleft", "moveinright", "hpunch", "vpunch", "none"}) offer(U(e), U("переход"), QStringLiteral("fx")); };
-    auto positions = [&] { for (const char* p : {"left", "center", "right", "fleft", "fright", "cleft", "cright"}) offer(U(p), U("позиция"), QStringLiteral("pos")); };
+    auto effects = [&] { for (const char* e : {"dissolve", "fade", "fade2", "fade3", "dspr", "pixellate", "moveinleft", "moveinright", "hpunch", "vpunch", "none"}) offer(U(e), gbTr("переход"), QStringLiteral("fx")); };
+    auto positions = [&] { for (const char* p : {"left", "center", "right", "fleft", "fright", "cleft", "cright"}) offer(U(p), gbTr("позиция"), QStringLiteral("pos")); };
     auto scenes = [&] { for (const QString& s : sceneNames(fullText)) offer(slug(s, QStringLiteral("label"), false), s, QStringLiteral("scene")); };
     if (words.isEmpty()) {
         for (const QVariant& fv : m_forms.forms()) {           // every variant's command word
@@ -1431,8 +1474,8 @@ QVariantMap Engine::suggest(const QString& lineText, int col, const QString& ful
                 if (i > 1) offer(t.left(i), f.value(QStringLiteral("title")).toString(), QStringLiteral("cmd"));
             }
         }
-        for (const QVariant& v : cast()) offer(v.toMap().value(QStringLiteral("name")).toString() + QLatin1Char(':'), U("реплика"), QStringLiteral("say"));
-        offer(U("Семён:"), U("реплика"), QStringLiteral("say"));
+        for (const QVariant& v : cast()) offer(v.toMap().value(QStringLiteral("name")).toString() + QLatin1Char(':'), gbTr("реплика"), QStringLiteral("say"));
+        offer(U("Семён:"), gbTr("реплика"), QStringLiteral("say"));
         return {{QStringLiteral("start"), start}, {QStringLiteral("items"), items}};
     }
     const QString cmd = normalizeCommand(words.first());
@@ -1444,54 +1487,54 @@ QVariantMap Engine::suggest(const QString& lineText, int col, const QString& ful
             for (const QString& t : m_es.spriteTags()) offer(t, m_es.characterName(t), QStringLiteral("char"));
             const auto custom = m_renderer.customImages();
             for (auto it = custom.begin(); it != custom.end(); ++it)
-                if (!it.key().startsWith(QLatin1String("bg ")) && !it.key().startsWith(QLatin1String("cg "))) offer(it.key().section(QLatin1Char(' '), 0, 0), U("свой"), QStringLiteral("char"));
+                if (!it.key().startsWith(QLatin1String("bg ")) && !it.key().startsWith(QLatin1String("cg "))) offer(it.key().section(QLatin1Char(' '), 0, 0), gbTr("свой"), QStringLiteral("char"));
         } else if (arg == 1) {
-            for (const QString& e : spriteEmotions(words[1])) offer(e, U("эмоция"), QStringLiteral("code"));
+            for (const QString& e : spriteEmotions(words[1])) offer(e, gbTr("эмоция"), QStringLiteral("code"));
         } else if (arg == 2) {
             for (const QString& n : m_es.spriteNames(words[1]))
-                if (n.section(QLatin1Char(' '), 0, 0) == words[2]) offer(n.section(QLatin1Char(' '), 1), U("одежда"), QStringLiteral("code"));
+                if (n.section(QLatin1Char(' '), 0, 0) == words[2]) offer(n.section(QLatin1Char(' '), 1), gbTr("одежда"), QStringLiteral("code"));
             if (const Wardrobe* wr = gb::wardrobe())
                 for (const Wardrobe::Outfit& o : wr->outfits(words[1]))
                     if (wr->resolve(words[1] + QLatin1Char(' ') + words[2] + QLatin1Char(' ') + o.part + (o.dists.contains(QString()) ? QString() : QLatin1Char(' ') + o.dists.value(0))))
-                        offer(o.part, o.adult ? U("мастерская 18+") : U("мастерская"), QStringLiteral("code"));
+                        offer(o.part, o.adult ? gbTr("мастерская 18+") : gbTr("мастерская"), QStringLiteral("code"));
             positions();
         } else {
             positions();
-            for (const char* d : {"close", "far"}) offer(U(d), U("дистанция"), QStringLiteral("code"));
+            for (const char* d : {"close", "far"}) offer(U(d), gbTr("дистанция"), QStringLiteral("code"));
             effects();
         }
     } else if (cmd == QLatin1String("hide")) {
         if (arg == 0) for (const QString& t : m_es.spriteTags()) offer(t, m_es.characterName(t), QStringLiteral("char"));
         else effects();
     } else if (cmd == QLatin1String("bg") || cmd == QLatin1String("showbg")) {
-        if (arg == 0) for (const QVariant& b : backgrounds()) offer(b.toMap().value(QStringLiteral("id")).toString(), U("фон"), QStringLiteral("bg"));
+        if (arg == 0) for (const QVariant& b : backgrounds()) offer(b.toMap().value(QStringLiteral("id")).toString(), gbTr("фон"), QStringLiteral("bg"));
         else effects();
     } else if (cmd == QLatin1String("cg")) {
         if (arg == 0) for (const QVariant& b : cgs()) offer(b.toMap().value(QStringLiteral("id")).toString(), QStringLiteral("CG"), QStringLiteral("bg"));
         else effects();
     } else if (cmd == QLatin1String("music") || cmd == QLatin1String("musicqueue")) {
-        for (auto it = m_es.music.begin(); it != m_es.music.end(); ++it) offer(it.key(), U("трек"), QStringLiteral("music"));
-        for (const char* o : {"fadein", "loop", "noloop"}) offer(U(o), U("опция"), QStringLiteral("fx"));
+        for (auto it = m_es.music.begin(); it != m_es.music.end(); ++it) offer(it.key(), gbTr("трек"), QStringLiteral("music"));
+        for (const char* o : {"fadein", "loop", "noloop"}) offer(U(o), gbTr("опция"), QStringLiteral("fx"));
     } else if (cmd == QLatin1String("sound") || cmd == QLatin1String("voice")) {
-        for (auto it = m_es.sounds.begin(); it != m_es.sounds.end(); ++it) offer(it.key(), U("звук"), QStringLiteral("sfx"));
+        for (auto it = m_es.sounds.begin(); it != m_es.sounds.end(); ++it) offer(it.key(), gbTr("звук"), QStringLiteral("sfx"));
     } else if (cmd == QLatin1String("ambience")) {
-        for (auto it = m_es.ambience.begin(); it != m_es.ambience.end(); ++it) offer(it.key(), U("атмосфера"), QStringLiteral("sfx"));
+        for (auto it = m_es.ambience.begin(); it != m_es.ambience.end(); ++it) offer(it.key(), gbTr("атмосфера"), QStringLiteral("sfx"));
     } else if (cmd == QLatin1String("jump") || cmd == QLatin1String("callscene")) {
         scenes();
     } else if (cmd == QLatin1String("weather")) {
-        for (const char* w : {"снег", "дождь", "листья", "сердца", "искры", "пыль", "стоп"}) offer(U(w), U("погода"), QStringLiteral("fx"));
+        for (const char* w : {"снег", "дождь", "листья", "сердца", "искры", "пыль", "стоп"}) offer(U(w), gbTr("погода"), QStringLiteral("fx"));
     } else if (cmd == QLatin1String("colorfilter")) {
-        for (const char* w : {"сепия", "чб", "ночь", "тепло", "холод", "сон", "выцвет", "хоррор", "нет"}) offer(U(w), U("фильтр"), QStringLiteral("fx"));
+        for (const char* w : {"сепия", "чб", "ночь", "тепло", "холод", "сон", "выцвет", "хоррор", "нет"}) offer(U(w), gbTr("фильтр"), QStringLiteral("fx"));
     } else if (cmd == QLatin1String("timeofday")) {
-        for (const char* w : {"день", "вечер", "ночь", "пролог"}) offer(U(w), U("время"), QStringLiteral("fx"));
+        for (const char* w : {"день", "вечер", "ночь", "пролог"}) offer(U(w), gbTr("время"), QStringLiteral("fx"));
     } else if (cmd == QLatin1String("effect")) {
         effects();
     } else if (cmd == QLatin1String("shake")) {
-        for (const char* w : {"слабо", "сильно", "вертикально", "hpunch", "vpunch"}) offer(U(w), U("тряска"), QStringLiteral("fx"));
+        for (const char* w : {"слабо", "сильно", "вертикально", "hpunch", "vpunch"}) offer(U(w), gbTr("тряска"), QStringLiteral("fx"));
     } else if (cmd == QLatin1String("sms") || cmd == QLatin1String("phonestart")) {
         if (arg == 0) {
-            for (const QVariant& v : cast()) offer(v.toMap().value(QStringLiteral("name")).toString() + (cmd == QLatin1String("sms") ? QStringLiteral(":") : QString()), U("контакт"), QStringLiteral("say"));
-            if (cmd == QLatin1String("sms")) offer(U("я:"), U("своё"), QStringLiteral("say"));
+            for (const QVariant& v : cast()) offer(v.toMap().value(QStringLiteral("name")).toString() + (cmd == QLatin1String("sms") ? QStringLiteral(":") : QString()), gbTr("контакт"), QStringLiteral("say"));
+            if (cmd == QLatin1String("sms")) offer(U("я:"), gbTr("своё"), QStringLiteral("say"));
         }
     } else if (cmd == QLatin1String("ifjump") || cmd == QLatin1String("ifpersistent") || cmd == QLatin1String("ifitem")) {
         if (before.contains(QLatin1String("->"))) scenes();
@@ -1571,7 +1614,7 @@ bool Engine::saveStory(const QString& id, const QString& text)
     const QString path = projectDir(id) + QStringLiteral("/story.txt");
     if (loadStory(id) == text) return true;
     const bool ok = writeFile(path, text.toUtf8());
-    if (!ok) emit toast(QStringLiteral("Не удалось сохранить %1").arg(QDir::toNativeSeparators(path)), 2);
+    if (!ok) emit toast(gbTr("Не удалось сохранить %1").arg(QDir::toNativeSeparators(path)), 2);
     return ok;
 }
 
@@ -1646,7 +1689,7 @@ QString Engine::importImage(const QString& fileUrl, const QString& kind, const Q
 {
     if (m_current.isEmpty()) return {};
     const QImage img(localPath(fileUrl));
-    if (img.isNull()) { emit toast(U("Это не картинка"), 2); return {}; }
+    if (img.isNull()) { emit toast(gbTr("Это не картинка"), 2); return {}; }
     return saveProjectImage(img, kind, name);
 }
 
@@ -1669,13 +1712,13 @@ QString Engine::saveProjectImage(const QImage& img, const QString& kind, const Q
     QString note;
     if (kind == QLatin1String("bg") || kind == QLatin1String("cg")) {
         if (pic.size() != QSize(1920, 1080)) {
-            note = U(" (подогнал %1×%2 под экран 1920×1080)").arg(pic.width()).arg(pic.height());
+            note = gbTr(" (подогнал %1×%2 под экран 1920×1080)").arg(pic.width()).arg(pic.height());
             pic = pic.scaled(1920, 1080, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
             pic = pic.copy((pic.width() - 1920) / 2, (pic.height() - 1080) / 2, 1920, 1080);
         }
         if (!pic.hasAlphaChannel()) ext = QStringLiteral(".jpg");
     } else if (kind == QLatin1String("sprite") && pic.height() > 1500) {
-        note = U(" (уменьшил %1×%2 до высоты 1080, как спрайты БЛ)").arg(pic.width()).arg(pic.height());
+        note = gbTr(" (уменьшил %1×%2 до высоты 1080, как спрайты БЛ)").arg(pic.width()).arg(pic.height());
         pic = pic.scaledToHeight(1080, Qt::SmoothTransformation);
     }
     const QString base = assetsDir(m_current) + QStringLiteral("/images/") + n;
@@ -1684,16 +1727,16 @@ QString Engine::saveProjectImage(const QImage& img, const QString& kind, const Q
     for (const char* other : {".png", ".jpg", ".jpeg", ".webp"})      // the same name in another format would win half the time
         if (base + QLatin1String(other) != dst) QFile::remove(base + QLatin1String(other));
     if (!pic.save(dst, ext == QLatin1String(".jpg") ? "JPG" : "PNG", ext == QLatin1String(".jpg") ? 92 : -1)) {
-        emit toast(U("Не удалось сохранить картинку"), 2);
+        emit toast(gbTr("Не удалось сохранить картинку"), 2);
         return {};
     }
     m_renderer.setCustomImages(build::customImageFiles(assetsDir(m_current)));
     emit assetsChanged();
-    emit toast(U("Добавлено: ") + n + note, 0);
+    emit toast(gbTr("Добавлено: ") + n + note, 0);
     return n;
 }
 
-QString Engine::importAudio(const QString& fileUrl)
+QString Engine::importAudio(const QString& fileUrl, const QString& kind)
 {
     if (m_current.isEmpty() || m_busy) return {};
     const QString src = localPath(fileUrl);
@@ -1701,6 +1744,7 @@ QString Engine::importAudio(const QString& fileUrl)
     const QString name = slug(fi.completeBaseName(), QStringLiteral("track"), false) + QStringLiteral(".ogg");
     const QString dst = assetsDir(m_current) + QStringLiteral("/audio/") + name;
     QDir().mkpath(QFileInfo(dst).absolutePath());
+    rememberAudioKind(name, kind);
     if (fi.suffix().compare(QLatin1String("ogg"), Qt::CaseInsensitive) == 0) {
         QFile::remove(dst);
         QFile::copy(src, dst);
@@ -1708,15 +1752,15 @@ QString Engine::importAudio(const QString& fileUrl)
         return QStringLiteral("audio/") + name;
     }
     const QString ffmpeg = ffmpegPath();
-    if (ffmpeg.isEmpty()) { emit toast(U("Нужен ffmpeg (в PATH) или сразу .ogg"), 2); return {}; }
-    setBusy(true, U("Конвертирую ") + fi.fileName() + U(" в ogg…"));
+    if (ffmpeg.isEmpty()) { emit toast(gbTr("Нужен ffmpeg (в PATH) или сразу .ogg"), 2); return {}; }
+    setBusy(true, gbTr("Конвертирую ") + fi.fileName() + gbTr(" в ogg…"));
     auto* w = new QFutureWatcher<bool>(this);
     connect(w, &QFutureWatcher<bool>::finished, this, [this, w, name] {
         const bool ok = w->result();
         w->deleteLater();
         setBusy(false);
         emit assetsChanged();
-        emit toast(ok ? U("Файл готов: audio/") + name : U("ffmpeg не смог сконвертировать"), ok ? 0 : 2);
+        emit toast(ok ? gbTr("Файл готов: audio/") + name : gbTr("ffmpeg не смог сконвертировать"), ok ? 0 : 2);
     });
     w->setFuture(QtConcurrent::run([ffmpeg, src, dst] {
         QProcess p;
@@ -1756,6 +1800,7 @@ QStringList Engine::importAudioFiles(const QVariantList& fileUrls)
         if (fi.suffix().compare(QLatin1String("ogg"), Qt::CaseInsensitive) == 0) QFile::copy(src, dst);
         else convert.push_back({src, dst});
         rels << QStringLiteral("audio/") + name;
+        rememberAudioKind(name, QStringLiteral("voice"));       // voice lines never show up as music
     }
     if (convert.isEmpty()) {
         emit assetsChanged();
@@ -1764,10 +1809,10 @@ QStringList Engine::importAudioFiles(const QVariantList& fileUrls)
     }
     const QString ffmpeg = ffmpegPath();
     if (ffmpeg.isEmpty()) {
-        emit toast(U("Нужен ffmpeg (в PATH) или сразу .ogg"), 2);
+        emit toast(gbTr("Нужен ffmpeg (в PATH) или сразу .ogg"), 2);
         return {};
     }
-    setBusy(true, U("Озвучка → ogg: %1 файл(ов)…").arg(convert.size()));
+    setBusy(true, gbTr("Озвучка → ogg: %1 файл(ов)…").arg(convert.size()));
     auto* w = new QFutureWatcher<int>(this);
     connect(w, &QFutureWatcher<int>::finished, this, [this, w, rels, total = int(convert.size())] {
         const int ok = w->result();
@@ -1775,7 +1820,7 @@ QStringList Engine::importAudioFiles(const QVariantList& fileUrls)
         setBusy(false);
         emit assetsChanged();
         emit audioImported(rels, ok == total);
-        emit toast(ok == total ? U("Озвучка готова: %1 файл(ов)").arg(rels.size()) : U("ffmpeg не смог: %1 из %2").arg(total - ok).arg(total),
+        emit toast(ok == total ? gbTr("Озвучка готова: %1 файл(ов)").arg(rels.size()) : gbTr("ffmpeg не смог: %1 из %2").arg(total - ok).arg(total),
                    ok == total ? 0 : 2);
     });
     w->setFuture(QtConcurrent::run([ffmpeg, convert] {
@@ -1885,7 +1930,7 @@ QString Engine::importFont(const QString& fileUrl)
     const QFileInfo fi(localPath(fileUrl));
     const QString ext = fi.suffix().toLower();
     if (!fi.isFile() || (ext != QLatin1String("ttf") && ext != QLatin1String("otf"))) {
-        emit toast(U("Нужен шрифт .ttf или .otf"), 2);
+        emit toast(gbTr("Нужен шрифт .ttf или .otf"), 2);
         return {};
     }
     const QString name = slug(fi.completeBaseName(), QStringLiteral("font"), false) + QLatin1Char('.') + ext;
@@ -1893,7 +1938,7 @@ QString Engine::importFont(const QString& fileUrl)
     QDir().mkpath(QFileInfo(dst).absolutePath());
     QFile::remove(dst);
     QFile::copy(fi.absoluteFilePath(), dst);
-    emit toast(U("Шрифт в проекте: fonts/") + name, 0);
+    emit toast(gbTr("Шрифт в проекте: fonts/") + name, 0);
     return QStringLiteral("fonts/") + name;
 }
 
@@ -1988,15 +2033,42 @@ QString Engine::labelAtLine(const QString& text, int line) const
     return {};
 }
 
-void Engine::play(const QString& id, const QString& text, int line)
+// A second install of GenryBL (or a project copied over from one) builds into the same game: the mod name there
+// belongs to the other copy. That used to be a wall («поменяй @mod_id» - what is that?); now the mod simply gets its
+// own free name from its project, the line in the story is rewritten, and the build goes on.
+QString Engine::claimModId(const QString& id, const QString& text)
 {
-    if (m_busy) { emit toast(U("Уже собираю, секунду"), 1); return; }
-    saveStory(id, text);
+    const BuildEnv env = envFor(id);
+    const QString modId = parseMeta(pySplitLines(stripBom(text)), nullptr, options()).modId;
+    const QString project = QDir::cleanPath(QFileInfo(env.assetsDir).absolutePath());
+    auto takenByOther = [&](const QString& mid) {
+        const QString owner = build::modOwner(env.esRoot, mid);
+        return !owner.isEmpty() && owner.compare(project, Qt::CaseInsensitive) != 0 && QFileInfo::exists(owner + QStringLiteral("/story.txt"));
+    };
+    if (modId.isEmpty() || !build::isEsRoot(env.esRoot) || !takenByOther(modId)) return text;
+    const QString base = QStringLiteral("genry_") + slug(id, QStringLiteral("mod"), false);
+    QString fresh = base;
+    for (int n = 2; takenByOther(fresh) || fresh == modId; ++n) fresh = QStringLiteral("%1_%2").arg(base).arg(n);
+    static const QRegularExpression line(QStringLiteral("(?m)^@mod_id[ \\t].*$"));
+    QString out = text;
+    if (out.contains(line)) out.replace(line, QStringLiteral("@mod_id ") + fresh);
+    else out.prepend(QStringLiteral("@mod_id ") + fresh + QLatin1Char('\n'));
+    saveStory(id, out);
+    emit storyRewritten(id, out);
+    emit toast(gbTr("Имя мода в игре «%1» занято другой копией GenryBL — у мода теперь своё: %2").arg(modId, fresh), 1);
+    return out;
+}
+
+void Engine::play(const QString& id, const QString& storyText, int line)
+{
+    if (m_busy) { emit toast(gbTr("Уже собираю, секунду"), 1); return; }
+    saveStory(id, storyText);
+    const QString text = claimModId(id, storyText);
     stopGame();
     const BuildEnv env = envFor(id);
     const CompileOptions opt = options();
     QString label = labelAtLine(text, line);
-    setBusy(true, U("Собираю мод…"));
+    setBusy(true, gbTr("Собираю мод…"));
     auto log = [this](const QString& s) { QMetaObject::invokeMethod(this, [this, s] { setBusy(true, s); }, Qt::QueuedConnection); };
     auto* w = new QFutureWatcher<BuildReport>(this);
     connect(w, &QFutureWatcher<BuildReport>::finished, this, [this, w, env, label] {
@@ -2011,7 +2083,7 @@ void Engine::play(const QString& id, const QString& text, int line)
         if (!m_gamePid) { emit buildFinished(false, err); return; }
         m_watch.start();
         emit gameRunningChanged();
-        emit buildFinished(true, target == r.meta.modId ? U("БЛ запускается с начала мода") : U("БЛ запускается со сцены «") + target + U("»"));
+        emit buildFinished(true, target == r.meta.modId ? gbTr("БЛ запускается с начала мода") : gbTr("БЛ запускается со сцены «") + target + U("»"));
     });
     w->setFuture(QtConcurrent::run([this, env, text, opt, log] {
         waitForWardrobe(log);
@@ -2029,13 +2101,14 @@ void Engine::stopGame()
     emit gameRunningChanged();
 }
 
-void Engine::engineCheck(const QString& id, const QString& text)
+void Engine::engineCheck(const QString& id, const QString& storyText)
 {
     if (m_busy) return;
-    saveStory(id, text);
+    saveStory(id, storyText);
+    const QString text = claimModId(id, storyText);
     const BuildEnv env = envFor(id);
     const CompileOptions opt = options();
-    setBusy(true, U("Проверка движком БЛ (Ren'Py lint)… до пары минут"));
+    setBusy(true, gbTr("Проверка движком БЛ (Ren'Py lint)… до пары минут"));
     auto* w = new QFutureWatcher<QPair<bool, QStringList>>(this);
     connect(w, &QFutureWatcher<QPair<bool, QStringList>>::finished, this, [this, w] {
         const auto res = w->result();
@@ -2063,15 +2136,16 @@ QString Engine::exportDir() const
     return dir;
 }
 
-void Engine::exportMod(const QString& id, const QString& text, const QString& kind)
+void Engine::exportMod(const QString& id, const QString& storyText, const QString& kind)
 {
-    if (m_busy) { emit toast(U("Уже собираю, секунду"), 1); return; }
-    saveStory(id, text);
+    if (m_busy) { emit toast(gbTr("Уже собираю, секунду"), 1); return; }
+    saveStory(id, storyText);
+    const QString text = claimModId(id, storyText);
     const BuildEnv env = envFor(id);
     const CompileOptions opt = options();
     const bool workshop = kind == QLatin1String("workshop");
     const QString base = exportDir();
-    setBusy(true, U("Экспорт: собираю мод…"));
+    setBusy(true, gbTr("Экспорт: собираю мод…"));
     auto log = [this](const QString& s) { QMetaObject::invokeMethod(this, [this, s] { setBusy(true, s); }, Qt::QueuedConnection); };
     struct Result { bool ok = false; QString message, path, modId; };
     auto* w = new QFutureWatcher<Result>(this);
@@ -2098,30 +2172,30 @@ void Engine::exportMod(const QString& id, const QString& text, const QString& ki
         const BuildReport r = build::install(env, text, opt, log);
         if (!r.ok) { res.message = r.error; return res; }
         res.modId = r.meta.modId;
-        log(U("Экспорт: мод проверяет сама игра (Ren'Py lint) — до пары минут…"));
+        log(gbTr("Экспорт: мод проверяет сама игра (Ren'Py lint) — до пары минут…"));
         QString err;
         const QStringList hits = build::lint(env.esRoot, r.meta.modId, &err, 600000);
         if (!err.isEmpty()) { res.message = err; return res; }
         if (!hits.isEmpty()) {
-            res.message = U("Игра нашла в моде ошибки — экспорт остановлен, чтобы люди не получили сломанный мод:\n") +
+            res.message = gbTr("Игра нашла в моде ошибки — экспорт остановлен, чтобы люди не получили сломанный мод:\n") +
                           QStringList(hits.mid(0, 8)).join(QLatin1Char('\n'));
             return res;
         }
         const QStringList missing = build::missingModFiles(r.modDir, r.meta.modId);
         if (!missing.isEmpty()) {
-            res.message = U("Мод ссылается на файлы, которых нет в его папке — у другого человека он не заведётся:\n") +
+            res.message = gbTr("Мод ссылается на файлы, которых нет в его папке — у другого человека он не заведётся:\n") +
                           QStringList(missing.mid(0, 8)).join(QLatin1Char('\n'));
             return res;
         }
-        log(workshop ? U("Экспорт: готовлю папку для Мастерской…") : U("Экспорт: пакую архив и перечитываю его…"));
+        log(workshop ? gbTr("Экспорт: готовлю папку для Мастерской…") : gbTr("Экспорт: пакую архив и перечитываю его…"));
         if (workshop) {
             res.path = base + QString::fromUtf8("/Мастерская/") + r.meta.modId;
             if (!build::exportWorkshopFolder(r.modDir, r.meta.modId, r.meta.modName, res.path, &err)) { res.message = err; return res; }
-            res.message = U("Папка для Мастерской готова: там mods, обложка preview.jpg и «КАК_ВЫЛОЖИТЬ.txt»");
+            res.message = gbTr("Папка для Мастерской готова: там mods, обложка preview.jpg и «КАК_ВЫЛОЖИТЬ.txt»");
         } else {
             res.path = base + QString::fromUtf8("/Экспорт/") + r.meta.modId + QStringLiteral("_pc.zip");
             if (!build::exportZip(r.modDir, r.meta.modId, r.meta.modName, res.path, &err)) { res.message = err; return res; }
-            res.message = U("Архив готов — игра его проверила, все файлы внутри. Отдавай людям: внутри «КАК_УСТАНОВИТЬ.txt»");
+            res.message = gbTr("Архив готов — игра его проверила, все файлы внутри. Отдавай людям: внутри «КАК_УСТАНОВИТЬ.txt»");
         }
         res.ok = true;
         return res;
@@ -2182,6 +2256,40 @@ QString Engine::audioUrl(const QString& gamePath) const
 }
 
 QVariant Engine::setting(const QString& key, const QVariant& def) const { return m_settings.value(key, def); }
+
+// ---- the language of the UI (I18n.h): data/i18n/<code>.json, Russian = no translator at all
+void Engine::applyLanguage()
+{
+    // GenryBL.exe --lang de: this run only, the setting stays (screenshots, a quick look)
+    const QStringList args = QCoreApplication::arguments();
+    const int at = int(args.indexOf(QStringLiteral("--lang")));
+    const QString code = i18n::resolve(at > 0 && at + 1 < args.size() && m_lang.isEmpty() == false && !m_langForced ? args[at + 1] : languageSetting());
+    if (at > 0 && at + 1 < args.size()) m_langForced = true;
+    if (m_tr) { QCoreApplication::removeTranslator(m_tr); delete m_tr; m_tr = nullptr; }
+    m_lang = code;
+    if (code != QLatin1String("ru")) {
+        m_tr = new i18n::JsonTranslator;
+        if (m_tr->loadJson(m_root + QStringLiteral("/data/i18n/") + code + QStringLiteral(".json"))) QCoreApplication::installTranslator(m_tr);
+        else { delete m_tr; m_tr = nullptr; }
+    }
+}
+
+void Engine::setLanguage(const QString& setting)
+{
+    m_settings.setValue(QStringLiteral("language"), setting.isEmpty() ? QStringLiteral("auto") : setting);
+    applyLanguage();
+    emit languageChanged();
+}
+
+QVariantList Engine::languages() const
+{
+    QVariantList out;
+    for (const i18n::Language& l : i18n::languages())
+        out << QVariantMap{ { QStringLiteral("code"), QString::fromUtf8(l.code) },
+                            { QStringLiteral("name"), QString::fromUtf8(l.native) },
+                            { QStringLiteral("english"), QString::fromUtf8(l.english) } };
+    return out;
+}
 void Engine::setSetting(const QString& key, const QVariant& value) { m_settings.setValue(key, value); }
 
 // ================================================================== images (provider thread)

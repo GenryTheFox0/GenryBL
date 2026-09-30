@@ -105,6 +105,8 @@ int main(int argc, char** argv)
     const int sizeAt = int(args.indexOf(QStringLiteral("--size")));
     qml.rootContext()->setContextProperty(QStringLiteral("shotSize"), shot && sizeAt > 0 && args.size() > sizeAt + 1 ? args[sizeAt + 1] : QString());
     QObject::connect(&qml, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(3); }, Qt::QueuedConnection);
+    // a new language in «Инструменты»: every qsTr() in the window is re-read at once
+    QObject::connect(&engine, &Engine::languageChanged, &qml, [&qml] { qml.retranslate(); });
     qml.loadFromModule("GenryBL", "Main");
     if (qml.rootObjects().isEmpty()) return 3;
 

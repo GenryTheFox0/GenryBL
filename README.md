@@ -2,7 +2,7 @@
   <img src="docs/images/logo.png" width="1000" alt="Конструктор БЛ — GenryBL">
 </p>
 
-<h1 align="center">GenryBL — Конструктор БЛ · V2.0</h1>
+<h1 align="center">GenryBL — Конструктор БЛ · V2.1</h1>
 <p align="center"><strong>Твой лагерь. Твои истории.</strong><br>Your camp. Your stories.</p>
 <p align="center"><strong>От создателя Project 2099 и Project Iron 6 · From the creator of Project 2099 and Project Iron 6</strong></p>
 
@@ -97,6 +97,15 @@ GenryBL — **для взрослых**, и я этого не прячу.
 
 Нужны Windows 10/11 и «Бесконечное лето» из Steam (оно бесплатное). **Больше ничего качать не надо**: Qt,
 Visual C++, ffmpeg и 18+ патч уже внутри — заводится даже на голой Windows.
+
+## Что нового в V2.1
+
+**Главное меню ожило.** Доска «Информация» в «Совёнке» — пять картин лагеря под время суток **по часам твоего
+компьютера** (утро в тумане, два дня, золотой вечер, ночь с луной и фонарями) или по выбору. **Ветер качает листву,
+траву и ромашки** (доска и текст стоят), налетают порывы, светятся солнце и луна, мерцают фонари с мотыльками,
+светлячки, бабочки, птицы, падающие звёзды — и **звуки природы** из самой БЛ под музыку. **Наведение работает везде,
+даже ночью:** лист приподнимается к тебе с тенью днём и тёплым светом фонаря ночью. На фотках доски — настоящие Лена и
+Мику из игры.
 
 ## Что нового в V2.0
 
@@ -285,6 +294,14 @@ ES right at that scene. Three months of work. **V1.0 is here. Fucking finally.**
   automatically.
 - **Any audio / video format** is converted for the game (ffmpeg inside).
 - **An installer in the game's own style** that finds ES through Steam.
+
+### What's new in V2.1
+
+A living main menu: the camp's INFORMATION board in five pictures that follow the clock of your computer (morning mist,
+two days, a golden evening, a moonlit night) — wind sways the leaves, grass and flowers (a shader with a mask per
+picture; the board and its text stay still), gusts, glowing sun and moon, flickering lamps with moths, fireflies,
+butterflies, birds, shooting stars and ES's own nature sounds under the music. Hover works everywhere, even at night:
+the sheet lifts towards you with a shadow by day and a lantern's glow at night.
 
 ### What's new in V2.0
 

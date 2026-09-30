@@ -4,6 +4,7 @@
 // makes the shortcuts and the «Programs and Features» entry. The user's mods (projects/) and
 // settings are never touched by an update; the uninstaller keeps projects/ unless asked.
 #include "Engine.h"
+#include "Tr.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -118,7 +119,7 @@ QString Engine::loadEsArt(const QString& folder)
     QString d = QDir::cleanPath(localPathOf(folder));
     if (QFileInfo(d).isFile()) d = QFileInfo(d).absolutePath();
     if (d.endsWith(QLatin1String("/game"), Qt::CaseInsensitive)) d = QFileInfo(d).absolutePath();
-    if (!build::isEsRoot(d)) return U("Тут нет «Бесконечного лета»: нужна папка, где лежат Everlasting Summer.exe и папка game");
+    if (!build::isEsRoot(d)) return gbTr("Тут нет «Бесконечного лета»: нужна папка, где лежат Everlasting Summer.exe и папка game");
     QString err;
     if (!m_es.load(m_root + QStringLiteral("/data/es_catalog.json"), d, &err)) return err;
     m_renderer.setAssets(&m_es, m_root + QStringLiteral("/data"));
@@ -151,10 +152,10 @@ QVariantMap Engine::installCheck(const QString& folder) const
     const qint64 freeMB = si.isValid() ? si.bytesAvailable() / (1024 * 1024) : -1;
     r.insert(QStringLiteral("freeMB"), int(qMin<qint64>(freeMB, INT_MAX)));
     QString error;
-    if (dir.isEmpty() || !QDir::isAbsolutePath(dir)) error = U("Выбери папку");
-    else if (isForeignTree(dir)) error = U("Тут уже лежит другая копия GenryBL или сама игра — не трогаю, выбери другую папку");
-    else if (QDir::cleanPath(dir).startsWith(QDir::cleanPath(m_root), Qt::CaseInsensitive)) error = U("Это временная папка установщика — выбери другую");
-    else if (freeMB >= 0 && freeMB < bytes / (1024 * 1024) + 50) error = U("Не хватает места: нужно %1 МБ, свободно %2 МБ").arg(bytes / (1024 * 1024) + 50).arg(freeMB);
+    if (dir.isEmpty() || !QDir::isAbsolutePath(dir)) error = gbTr("Выбери папку");
+    else if (isForeignTree(dir)) error = gbTr("Тут уже лежит другая копия GenryBL или сама игра — не трогаю, выбери другую папку");
+    else if (QDir::cleanPath(dir).startsWith(QDir::cleanPath(m_root), Qt::CaseInsensitive)) error = gbTr("Это временная папка установщика — выбери другую");
+    else if (freeMB >= 0 && freeMB < bytes / (1024 * 1024) + 50) error = gbTr("Не хватает места: нужно %1 МБ, свободно %2 МБ").arg(bytes / (1024 * 1024) + 50).arg(freeMB);
     r.insert(QStringLiteral("ok"), error.isEmpty());
     r.insert(QStringLiteral("error"), error);
     return r;
@@ -170,14 +171,14 @@ void Engine::install(const QString& folder, const QString& esRootIn, bool deskto
     connect(w, &QFutureWatcher<QString>::finished, this, [this, w] {
         const QString err = w->result();
         w->deleteLater();
-        emit installFinished(err.isEmpty(), err.isEmpty() ? U("Готово") : err);
+        emit installFinished(err.isEmpty(), err.isEmpty() ? gbTr("Готово") : err);
     });
     w->setFuture(QtConcurrent::run([this, src, dir, esRoot, desktop, startMenu]() -> QString {
         qint64 bytes = 0;
         const QStringList files = payloadFiles(src, &bytes);
-        if (files.isEmpty()) return U("Установщик пустой — скачай его заново");
-        if (isForeignTree(dir)) return U("Тут уже лежит другая копия GenryBL или сама игра — не трогаю");
-        if (!QDir().mkpath(dir)) return U("Не могу создать папку %1").arg(QDir::toNativeSeparators(dir));
+        if (files.isEmpty()) return gbTr("Установщик пустой — скачай его заново");
+        if (isForeignTree(dir)) return gbTr("Тут уже лежит другая копия GenryBL или сама игра — не трогаю");
+        if (!QDir().mkpath(dir)) return gbTr("Не могу создать папку %1").arg(QDir::toNativeSeparators(dir));
         // an update: the running old version holds its exe
         const QString oldExe = dir + QStringLiteral("/app/GenryBL.exe");
         if (QFileInfo::exists(oldExe)) {
@@ -189,7 +190,7 @@ void Engine::install(const QString& folder, const QString& esRootIn, bool deskto
                 free = probe.open(QIODevice::ReadWrite);
                 if (!free && t + 1 < tries) QThread::msleep(500);
             }
-            if (!free) return U("GenryBL сейчас открыт — закрой его и нажми «Установить» ещё раз");
+            if (!free) return gbTr("GenryBL сейчас открыт — закрой его и нажми «Установить» ещё раз");
         }
         qint64 done = 0;
         int n = 0;
@@ -197,7 +198,7 @@ void Engine::install(const QString& folder, const QString& esRootIn, bool deskto
             const QString from = src + QLatin1Char('/') + rel, to = dir + QLatin1Char('/') + rel;
             QDir().mkpath(QFileInfo(to).absolutePath());
             QFile::remove(to);
-            if (!QFile::copy(from, to)) return U("Не удалось записать %1").arg(QDir::toNativeSeparators(to));
+            if (!QFile::copy(from, to)) return gbTr("Не удалось записать %1").arg(QDir::toNativeSeparators(to));
             done += QFileInfo(from).size();
             if (++n % 8 == 0 || n == files.size()) {
                 const int pct = int(done * 1000 / qMax<qint64>(1, bytes));
@@ -267,5 +268,5 @@ void Engine::uninstall(bool removeProjects)
 #endif
     cmd.setWorkingDirectory(QDir::tempPath());          // not inside the folder being removed
     cmd.startDetached();
-    emit installFinished(true, removeProjects ? U("GenryBL удалён вместе с модами") : U("GenryBL удалён. Твои моды остались в %1").arg(QDir::toNativeSeparators(root + QStringLiteral("/projects"))));
+    emit installFinished(true, removeProjects ? gbTr("GenryBL удалён вместе с модами") : gbTr("GenryBL удалён. Твои моды остались в %1").arg(QDir::toNativeSeparators(root + QStringLiteral("/projects"))));
 }

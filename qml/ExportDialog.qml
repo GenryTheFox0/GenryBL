@@ -70,7 +70,7 @@ Popup {
                 color: Theme.text; font.family: Theme.ui; font.pixelSize: 17; lineHeight: 1.15
             }
             Item { Layout.fillHeight: true }
-            PillButton { accent: true; text: "Собрать"; onClicked: ex.run(way.kind) }
+            PillButton { accent: true; text: qsTr("Собрать"); onClicked: ex.run(way.kind) }
         }
         MouseArea { id: wayArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ex.run(way.kind); z: -1 }
     }
@@ -82,7 +82,7 @@ Popup {
 
         RowLayout {
             Layout.fillWidth: true
-            InkText { text: "Экспорт мода"; size: 32; color: Theme.gold }
+            InkText { text: qsTr("Экспорт мода"); size: 32; color: Theme.gold }
             Item { Layout.fillWidth: true }
             PillButton { dark: true; text: "✕"; enabled: ex.state_ !== "working"; onClicked: ex.close() }
         }
@@ -90,8 +90,8 @@ Popup {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
             visible: ex.state_ === "choose"
-            text: "Сначала мод соберётся и его проверит сама игра (1–2 минуты) — сломанный мод никому не уйдёт. " +
-                  "Заодно проверю, что каждая картинка, звук и шрифт лежат внутри мода: у другого человека нет твоих файлов."
+            text: qsTr("Сначала мод соберётся и его проверит сама игра (1–2 минуты) — сломанный мод никому не уйдёт. ") +
+                  qsTr("Заодно проверю, что каждая картинка, звук и шрифт лежат внутри мода: у другого человека нет твоих файлов.")
             color: Theme.dim; font.family: Theme.ui; font.pixelSize: 16
         }
 
@@ -102,16 +102,16 @@ Popup {
             Layout.fillHeight: true
             spacing: 16
             Way {
-                title: "Архив для игроков"
+                title: qsTr("Архив для игроков")
                 kind: "zip"
-                body: "ZIP: папка мода и «КАК_УСТАНОВИТЬ.txt». Человек распаковал её в game\\mods — и играет.\n\n" +
-                      "Кидай куда хочешь: ВК, Телеграм, Дискорд, диск. Русские имена файлов не побьются."
+                body: qsTr("ZIP: папка мода и «КАК_УСТАНОВИТЬ.txt». Человек распаковал её в game\\mods — и играет.\n\n") +
+                      qsTr("Кидай куда хочешь: ВК, Телеграм, Дискорд, диск. Русские имена файлов не побьются.")
             }
             Way {
-                title: "Папка для Мастерской"
+                title: qsTr("Папка для Мастерской")
                 kind: "workshop"
-                body: "Готовая папка для загрузчика самой игры (ES_Content_Uploader): mods\\<мод> с .rpyc, " +
-                      "обложка preview.jpg из первого кадра мода и «КАК_ВЫЛОЖИТЬ.txt» по шагам."
+                body: qsTr("Готовая папка для загрузчика самой игры (ES_Content_Uploader): mods\\<мод> с .rpyc, ") +
+                      qsTr("обложка preview.jpg из первого кадра мода и «КАК_ВЫЛОЖИТЬ.txt» по шагам.")
             }
         }
 
@@ -134,7 +134,7 @@ Popup {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
-                text: ex.state_ === "working" ? (Engine.busyText || "Собираю…") : ex.message
+                text: ex.state_ === "working" ? (Engine.busyText || qsTr("Собираю…")) : ex.message
                 color: ex.state_ === "failed" ? Theme.bad : Theme.text
                 font.family: Theme.ui; font.pixelSize: 18
             }
@@ -151,9 +151,9 @@ Popup {
                 Layout.alignment: Qt.AlignHCenter
                 spacing: 10
                 visible: ex.state_ !== "working"
-                PillButton { visible: ex.state_ === "done"; accent: true; text: "Показать в папке"; onClicked: Engine.revealFile(ex.path) }
-                PillButton { dark: true; text: ex.state_ === "failed" ? "Назад" : "Ещё экспорт"; onClicked: ex.state_ = "choose" }
-                PillButton { dark: true; text: "Закрыть"; onClicked: ex.close() }
+                PillButton { visible: ex.state_ === "done"; accent: true; text: qsTr("Показать в папке"); onClicked: Engine.revealFile(ex.path) }
+                PillButton { dark: true; text: ex.state_ === "failed" ? qsTr("Назад") : qsTr("Ещё экспорт"); onClicked: ex.state_ = "choose" }
+                PillButton { dark: true; text: qsTr("Закрыть"); onClicked: ex.close() }
             }
         }
 
@@ -162,10 +162,10 @@ Popup {
             Text {
                 Layout.fillWidth: true
                 elide: Text.ElideMiddle
-                text: "Куда кладу: " + Engine.exportDir()
+                text: qsTr("Куда кладу: ") + Engine.exportDir()
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14
             }
-            PillButton { dark: true; text: "Открыть папку"; onClicked: Engine.openFolder(Engine.exportDir()) }
+            PillButton { dark: true; text: qsTr("Открыть папку"); onClicked: Engine.openFolder(Engine.exportDir()) }
         }
     }
 }

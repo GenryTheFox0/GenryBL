@@ -98,25 +98,25 @@ Item {
                     width: parent.width - 72
                     spacing: 14
                     Text { text: "GenryBL"; color: Theme.gold; font.family: Theme.riffic; font.pixelSize: 56; font.bold: true }
-                    Text { text: "Где у тебя стоит «Бесконечное лето»?"; color: Theme.text; font.family: Theme.ui; font.pixelSize: 26; font.bold: true }
+                    Text { text: qsTr("Где у тебя стоит «Бесконечное лето»?"); color: Theme.text; font.family: Theme.ui; font.pixelSize: 26; font.bold: true }
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
-                        text: "Через Steam не нашёл. Steam → Библиотека → Бесконечное лето → ⚙ → Управление → Просмотреть локальные файлы — вот эта папка (там Everlasting Summer.exe)."
+                        text: qsTr("Через Steam не нашёл. Steam → Библиотека → Бесконечное лето → ⚙ → Управление → Просмотреть локальные файлы — вот эта папка (там Everlasting Summer.exe).")
                         color: Theme.dim; font.family: Theme.ui; font.pixelSize: 16
                     }
                     Text { visible: inst.error !== ""; text: "⚠ " + inst.error; color: Theme.bad; font.family: Theme.ui; font.pixelSize: 16; wrapMode: Text.Wrap; Layout.fillWidth: true }
                     RowLayout {
-                        PillButton { accent: true; text: "Выбрать папку…"; implicitHeight: 42; onClicked: esDialog.open() }
+                        PillButton { accent: true; text: qsTr("Выбрать папку…"); implicitHeight: 42; onClicked: esDialog.open() }
                         Item { Layout.fillWidth: true }
                         Text {
-                            text: "<a href='steam://install/331470'>Нет игры? Она бесплатная в Steam</a>"
+                            text: qsTr("<a href='steam://install/331470'>Нет игры? Она бесплатная в Steam</a>")
                             textFormat: Text.RichText
                             color: Theme.dim; linkColor: Theme.gold
                             font.family: Theme.ui; font.pixelSize: 15
                             onLinkActivated: (l) => Qt.openUrlExternally(l)
                         }
-                        PillButton { dark: true; text: "Выйти"; onClicked: Qt.quit() }
+                        PillButton { dark: true; text: qsTr("Выйти"); onClicked: Qt.quit() }
                     }
                 }
             }
@@ -200,7 +200,7 @@ Item {
                 onEditingFinished: ep.edited(text)
                 background: Rectangle { color: "transparent"; Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: inst.ink; opacity: 0.6 } }
             }
-            EsLink { x: 640; text: "Обзор…"; size: 32; onClicked: ep.browse() }
+            EsLink { x: 640; text: qsTr("Обзор…"); size: 32; onClicked: ep.browse() }
         }
 
         // the notebook of the settings screen
@@ -224,7 +224,7 @@ Item {
             width: 800; height: 740
 
             // the title and the steps, like the game's settings menu
-            Text { x: 0; y: 0; text: inst.uninstalling ? "Удаление GenryBL" : "Установка GenryBL"; color: inst.ink; font.family: Theme.riffic; font.pixelSize: 62; font.bold: true }
+            Text { x: 0; y: 0; text: inst.uninstalling ? qsTr("Удаление GenryBL") : qsTr("Установка GenryBL"); color: inst.ink; font.family: Theme.riffic; font.pixelSize: 62; font.bold: true }
             // a red «18+» stamp on the corner of the sheet
             Rectangle {
                 x: 690; y: -6
@@ -240,7 +240,7 @@ Item {
                 y: 82
                 spacing: 18
                 Repeater {
-                    model: ["18+", "Куда", "Игра", "Установка", "Готово"]
+                    model: ["18+", qsTr("Куда"), qsTr("Игра"), qsTr("Установка"), qsTr("Готово")]
                     Row {
                         required property int index
                         required property var modelData
@@ -292,7 +292,7 @@ Item {
                             id: agreeText
                             width: 780
                             wrapMode: Text.Wrap
-                            text: words.words + "\n\n— Генри"
+                            text: words.words + qsTr("\n\n— Генри")
                             color: inst.ink; font.family: Theme.ui; font.pixelSize: 22; lineHeight: 1.05
                         }
                     }
@@ -302,10 +302,10 @@ Item {
                         Text {
                             width: 780
                             wrapMode: Text.Wrap
-                            text: "Программа, её настройки и кэш уйдут. Твои моды (папка projects) останутся, если не отметишь ниже."
+                            text: qsTr("Программа, её настройки и кэш уйдут. Твои моды (папка projects) останутся, если не отметишь ниже.")
                             color: inst.ink; font.family: Theme.ui; font.pixelSize: 28
                         }
-                        EsCheck { text: "удалить и мои моды тоже"; checked: inst.removeProjects; onToggled: (on) => inst.removeProjects = on }
+                        EsCheck { text: qsTr("удалить и мои моды тоже"); checked: inst.removeProjects; onToggled: (on) => inst.removeProjects = on }
                     }
                     Text {
                         visible: inst.error !== ""
@@ -316,9 +316,9 @@ Item {
                     Row {
                         y: 520
                         spacing: 60
-                        EsLink { text: inst.uninstalling ? "Не удалять" : "Выйти"; onClicked: Qt.quit() }
+                        EsLink { text: inst.uninstalling ? qsTr("Не удалять") : qsTr("Выйти"); onClicked: Qt.quit() }
                         EsLink {
-                            text: inst.uninstalling ? "Удалить" : "Мне есть 18 →"
+                            text: inst.uninstalling ? qsTr("Удалить") : qsTr("Мне есть 18 →")
                             onClicked: { Sfx.click(); if (inst.uninstalling) Engine.uninstall(inst.removeProjects); else inst.askAge = true }
                         }
                     }
@@ -329,29 +329,29 @@ Item {
                     n: 1
                     Column {
                         spacing: 16
-                        Text { text: "Куда поставить?"; color: inst.ink; font.family: Theme.riffic; font.pixelSize: 40; font.bold: true }
+                        Text { text: qsTr("Куда поставить?"); color: inst.ink; font.family: Theme.riffic; font.pixelSize: 40; font.bold: true }
                         Text {
                             width: 780; wrapMode: Text.Wrap
-                            text: "Всё будет лежать в одной папке: программа, её данные и твои моды. Админ не нужен."
+                            text: qsTr("Всё будет лежать в одной папке: программа, её данные и твои моды. Админ не нужен.")
                             color: inst.ink; font.family: Theme.ui; font.pixelSize: 24
                         }
                         EsPath { text: inst.dir; onEdited: (t) => inst.dir = t; onBrowse: dirDialog.open() }
                         Text {
                             width: 780; wrapMode: Text.Wrap
-                            text: inst.check.ok ? "Нужно " + inst.check.needMB + " МБ, свободно " + inst.check.freeMB + " МБ" +
-                                                  (inst.check.existing ? ". Тут уже есть GenryBL — обновлю, моды и настройки не трону." : ".")
+                            text: inst.check.ok ? qsTr("Нужно ") + inst.check.needMB + qsTr(" МБ, свободно ") + inst.check.freeMB + qsTr(" МБ") +
+                                                  (inst.check.existing ? qsTr(". Тут уже есть GenryBL — обновлю, моды и настройки не трону.") : ".")
                                                 : inst.check.error
                             color: inst.check.ok ? "#3f6b1f" : inst.red; font.family: Theme.ui; font.pixelSize: 22
                         }
                         Text { visible: inst.error !== ""; width: 780; wrapMode: Text.Wrap; text: inst.error; color: inst.red; font.family: Theme.ui; font.pixelSize: 22 }
-                        EsCheck { text: "Ярлык на рабочем столе"; checked: inst.desktop; onToggled: (on) => inst.desktop = on }
-                        EsCheck { text: "В меню «Пуск»"; checked: inst.startMenu; onToggled: (on) => inst.startMenu = on }
+                        EsCheck { text: qsTr("Ярлык на рабочем столе"); checked: inst.desktop; onToggled: (on) => inst.desktop = on }
+                        EsCheck { text: qsTr("В меню «Пуск»"); checked: inst.startMenu; onToggled: (on) => inst.startMenu = on }
                     }
                     Row {
                         y: 520
                         spacing: 60
-                        EsLink { text: "← Назад"; onClicked: inst.go(0) }
-                        EsLink { text: "Дальше →"; enabledLink: inst.check.ok; onClicked: inst.go(2) }
+                        EsLink { text: qsTr("← Назад"); onClicked: inst.go(0) }
+                        EsLink { text: qsTr("Дальше →"); enabledLink: inst.check.ok; onClicked: inst.go(2) }
                     }
                 }
 
@@ -360,23 +360,23 @@ Item {
                     n: 2
                     Column {
                         spacing: 16
-                        Text { text: "«Бесконечное лето»"; color: inst.ink; font.family: Theme.riffic; font.pixelSize: 40; font.bold: true }
+                        Text { text: qsTr("«Бесконечное лето»"); color: inst.ink; font.family: Theme.riffic; font.pixelSize: 40; font.bold: true }
                         Text {
                             width: 780; wrapMode: Text.Wrap
-                            text: "Нашёл через Steam. Если у тебя их несколько или это не та — выбери свою папку (там лежит Everlasting Summer.exe)."
+                            text: qsTr("Нашёл через Steam. Если у тебя их несколько или это не та — выбери свою папку (там лежит Everlasting Summer.exe).")
                             color: inst.ink; font.family: Theme.ui; font.pixelSize: 24
                         }
                         EsPath { text: inst.esRoot; onEdited: (t) => inst.esRoot = t; onBrowse: esDialog.open() }
                         Text {
-                            text: Engine.esFolderOk(inst.esRoot) ? "✓ это оно" : "⚠ тут нет Everlasting Summer.exe и папки game"
+                            text: Engine.esFolderOk(inst.esRoot) ? qsTr("✓ это оно") : qsTr("⚠ тут нет Everlasting Summer.exe и папки game")
                             color: Engine.esFolderOk(inst.esRoot) ? "#3f6b1f" : inst.red; font.family: Theme.ui; font.pixelSize: 22
                         }
                     }
                     Row {
                         y: 520
                         spacing: 60
-                        EsLink { text: "← Назад"; onClicked: inst.go(1) }
-                        EsLink { text: "Установить"; enabledLink: Engine.esFolderOk(inst.esRoot); onClicked: { Sfx.click(); inst.startInstall() } }
+                        EsLink { text: qsTr("← Назад"); onClicked: inst.go(1) }
+                        EsLink { text: qsTr("Установить"); enabledLink: Engine.esFolderOk(inst.esRoot); onClicked: { Sfx.click(); inst.startInstall() } }
                     }
                 }
 
@@ -386,7 +386,7 @@ Item {
                     Column {
                         y: 120
                         spacing: 28
-                        Text { text: "Ставлю GenryBL…"; color: inst.ink; font.family: Theme.riffic; font.pixelSize: 48; font.bold: true }
+                        Text { text: qsTr("Ставлю GenryBL…"); color: inst.ink; font.family: Theme.riffic; font.pixelSize: 48; font.bold: true }
                         Item {
                             width: 780; height: 40
                             Image { width: parent.width; height: 34; source: Engine.esArt ? "image://gb/file/images/gui/settings/bar_null.png" : ""; fillMode: Image.Stretch }
@@ -418,7 +418,7 @@ Item {
                         y: 60
                         spacing: 22
                         Text {
-                            text: inst.uninstalling ? "Удалено" : "Готово!"
+                            text: inst.uninstalling ? qsTr("Удалено") : qsTr("Готово!")
                             color: inst.ink; font.family: Theme.riffic; font.pixelSize: 80; font.bold: true
                             scale: inst.step === 4 ? 1 : 0.6
                             Behavior on scale { NumberAnimation { duration: 600; easing.type: Easing.OutBack } }
@@ -426,16 +426,16 @@ Item {
                         Text {
                             width: 780; wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                             text: inst.uninstalling ? inst.doneText
-                                                    : "GenryBL стоит в " + inst.check.dir + "." + (inst.desktop ? " Ярлык — на рабочем столе." : "") +
-                                                      "\nУдалить можно в «Параметры → Приложения».\n\nХороших модов, пионер."
+                                                    : qsTr("GenryBL стоит в ") + inst.check.dir + "." + (inst.desktop ? qsTr(" Ярлык — на рабочем столе.") : "") +
+                                                      qsTr("\nУдалить можно в «Параметры → Приложения».\n\nХороших модов, пионер.")
                             color: inst.ink; font.family: Theme.ui; font.pixelSize: 26
                         }
                     }
                     Row {
                         y: 520
                         spacing: 60
-                        EsLink { text: "Закрыть"; onClicked: Qt.quit() }
-                        EsLink { visible: !inst.uninstalling; text: "Запустить GenryBL"; onClicked: { Engine.launchInstalled(inst.dir); Qt.quit() } }
+                        EsLink { text: qsTr("Закрыть"); onClicked: Qt.quit() }
+                        EsLink { visible: !inst.uninstalling; text: qsTr("Запустить GenryBL"); onClicked: { Engine.launchInstalled(inst.dir); Qt.quit() } }
                     }
                 }
             }
@@ -454,15 +454,15 @@ Item {
             Text {
                 x: 516; y: 412; width: 880
                 horizontalAlignment: Text.AlignHCenter
-                text: "Тебе точно есть 18?"
+                text: qsTr("Тебе точно есть 18?")
                 color: inst.ink; font.family: Theme.riffic; font.pixelSize: 48; font.bold: true
             }
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 500
                 spacing: 160
-                EsLink { text: "Да"; size: 48; onClicked: { inst.askAge = false; inst.go(1) } }
-                EsLink { text: "Нет"; size: 48; onClicked: Qt.quit() }
+                EsLink { text: qsTr("Да"); size: 48; onClicked: { inst.askAge = false; inst.go(1) } }
+                EsLink { text: qsTr("Нет"); size: 48; onClicked: Qt.quit() }
             }
         }
 
@@ -490,7 +490,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 640
-                text: "конструктор модов «Бесконечного лета»"
+                text: qsTr("конструктор модов «Бесконечного лета»")
                 color: "white"; style: Text.Raised; styleColor: "#aa000000"
                 font.family: Theme.ui; font.pixelSize: 40
             }
@@ -501,12 +501,12 @@ Item {
 
     FolderDialog {
         id: dirDialog
-        title: "Куда поставить GenryBL"
+        title: qsTr("Куда поставить GenryBL")
         onAccepted: inst.dir = decodeURIComponent(String(selectedFolder).replace("file:///", "")) + "/GenryBL"
     }
     FolderDialog {
         id: esDialog
-        title: "Папка «Бесконечного лета» (там Everlasting Summer.exe)"
+        title: qsTr("Папка «Бесконечного лета» (там Everlasting Summer.exe)")
         onAccepted: {
             const f = decodeURIComponent(String(selectedFolder).replace("file:///", ""))
             if (Engine.esArt) { inst.esRoot = f; return }

@@ -26,10 +26,10 @@ Item {
         return m
     }
     readonly property var defaultPins: [
-        { key: "label" }, { tab: 2, title: "Фон" }, { tab: 1, title: "Персонаж" },
-        { key: "say" }, { key: "say/narr", title: "Рассказчик" }, { key: "choice", title: "Выбор" },
-        { key: "dialogue", title: "Диалог" }, { key: "jump/jump", title: "Переход" }, { key: "note" },
-        { tab: 3, title: "Музыка" }, { key: "stop/all", title: "Тишина" }, { key: "jump/scene", title: "Конец сцены" }
+        { key: "label" }, { tab: 2, title: qsTr("Фон") }, { tab: 1, title: qsTr("Персонаж") },
+        { key: "say" }, { key: "say/narr", title: qsTr("Рассказчик") }, { key: "choice", title: qsTr("Выбор") },
+        { key: "dialogue", title: qsTr("Диалог") }, { key: "jump/jump", title: qsTr("Переход") }, { key: "note" },
+        { tab: 3, title: qsTr("Музыка") }, { key: "stop/all", title: qsTr("Тишина") }, { key: "jump/scene", title: qsTr("Конец сцены") }
     ]
     property var pins: load("ui/quickPins", defaultPins)
     property var recent: load("ui/recentCmds", [])
@@ -98,9 +98,9 @@ Item {
         const q = search.text.trim().toLowerCase()
         if (q.length < 2) return []
         const n = (arr, f) => arr.filter(x => String(f(x)).toLowerCase().indexOf(q) >= 0).length
-        return [[1, "Персонажи", n(Engine.cast, c => c.name + " " + c.id)],
-                [2, "Фоны и CG", n(Engine.backgrounds, b => b.id) + n(Engine.cgs, b => b.id)],
-                [3, "Звук", n(Engine.music, m => m.word) + n(Engine.sounds, m => m.word) + n(Engine.ambience, m => m.word)]].filter(x => x[2] > 0)
+        return [[1, qsTr("Персонажи"), n(Engine.cast, c => c.name + " " + c.id)],
+                [2, qsTr("Фоны и CG"), n(Engine.backgrounds, b => b.id) + n(Engine.cgs, b => b.id)],
+                [3, qsTr("Звук"), n(Engine.music, m => m.word) + n(Engine.sounds, m => m.word) + n(Engine.ambience, m => m.word)]].filter(x => x[2] > 0)
     }
     readonly property var grouped: {
         const out = []
@@ -120,7 +120,7 @@ Item {
         id: search
         x: 10; y: 10
         width: parent.width - 20
-        placeholderText: "Найти команду…   Ctrl+K"
+        placeholderText: qsTr("Найти команду…   Ctrl+K")
         placeholderTextColor: Theme.faint
         color: Theme.text
         font.family: Theme.ui
@@ -165,20 +165,20 @@ Item {
             // quick inserts
             Item {
                 width: parent.width; height: 24
-                Text { x: 12; anchors.verticalCenter: parent.verticalCenter; text: "БЫСТРЫЕ ВСТАВКИ"; color: Theme.gold; font.family: Theme.riffic; font.pixelSize: 13 }
+                Text { x: 12; anchors.verticalCenter: parent.verticalCenter; text: qsTr("БЫСТРЫЕ ВСТАВКИ"); color: Theme.gold; font.family: Theme.riffic; font.pixelSize: 13 }
                 Row {
                     anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
                     spacing: 10
                     Text {
                         visible: pal.editPins
-                        text: "сбросить"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                        text: qsTr("сбросить"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
                         MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: pal.setPins(pal.defaultPins) }
                     }
                     Text {
-                        text: pal.editPins ? "готово" : "✎"; color: pal.editPins ? Theme.accent : Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+                        text: pal.editPins ? qsTr("готово") : "✎"; color: pal.editPins ? Theme.accent : Theme.dim; font.family: Theme.ui; font.pixelSize: 13
                         MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: pal.editPins = !pal.editPins }
                         ToolTip.visible: !pal.editPins && hoverHint.containsMouse
-                        ToolTip.text: "Убрать или переставить. Добавить — ★ у любой команды ниже"
+                        ToolTip.text: qsTr("Убрать или переставить. Добавить — ★ у любой команды ниже")
                         MouseArea { id: hoverHint; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
                     }
                 }
@@ -204,7 +204,7 @@ Item {
                         Text {
                             x: 12; width: parent.width - 30
                             anchors.verticalCenter: parent.verticalCenter
-                            text: pal.titleOf(modelData)
+                            text: qsTr(pal.titleOf(modelData))
                             elide: Text.ElideRight
                             color: Theme.text; font.family: Theme.ui; font.pixelSize: 14; font.bold: true
                         }
@@ -228,7 +228,7 @@ Item {
                         }
                         ToolTip.visible: tileArea.containsMouse && !!row
                         ToolTip.delay: 700
-                        ToolTip.text: row ? row.title + (index < 9 ? "   ·   Alt+" + (index + 1) : "") + "\nПравый клик — вставить сразу / убрать" : ""
+                        ToolTip.text: row ? qsTr(row.title) + (index < 9 ? "   ·   Alt+" + (index + 1) : "") + qsTr("\nПравый клик — вставить сразу / убрать") : ""
                         Row {                                   // edit mode: move / remove
                             visible: pal.editPins
                             anchors.right: parent.right; anchors.rightMargin: 4; anchors.verticalCenter: parent.verticalCenter
@@ -254,14 +254,14 @@ Item {
                 x: 10; width: parent.width - 20
                 spacing: 5
                 visible: pal.recent.length > 0
-                Text { text: "Недавние:"; color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12; height: 26; verticalAlignment: Text.AlignVCenter }
+                Text { text: qsTr("Недавние:"); color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12; height: 26; verticalAlignment: Text.AlignVCenter }
                 Repeater {
                     model: pal.recent.map(k => pal.byKey[k]).filter(r => !!r)
                     PillButton {
                         required property var modelData
                         dark: true
                         implicitHeight: 26
-                        text: modelData.short || modelData.title
+                        text: qsTr(modelData.short || modelData.title)
                         onClicked: pal.run(modelData)
                         onHoveredChanged: pal.hoverCommand(hovered ? modelData.templ : "")
                     }
@@ -276,7 +276,7 @@ Item {
             padding: 10
             spacing: 6
             Text {
-                text: pal.found.length ? "Ещё найдено:" : "Команд не нашлось. Поищи в картинках и звуках:"
+                text: pal.found.length ? qsTr("Ещё найдено:") : qsTr("Команд не нашлось. Поищи в картинках и звуках:")
                 visible: pal.assetHits.length > 0
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13; height: 28; verticalAlignment: Text.AlignVCenter
             }
@@ -306,7 +306,7 @@ Item {
                     x: 12; y: 12; spacing: 8
                     Text { text: pal.collapsed[dl.modelData.header || ""] ? "▸" : "▾"; color: Theme.faint; font.pixelSize: 13 }
                     Rectangle { width: 10; height: 10; radius: 5; color: Theme.categoryColor(dl.modelData.header || ""); anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: (dl.modelData.header || "") + "  " + (dl.modelData.count || ""); color: Theme.categoryColor(dl.modelData.header || ""); font.family: Theme.riffic; font.pixelSize: 15 }
+                    Text { text: qsTr(dl.modelData.header || "") + "  " + (dl.modelData.count || ""); color: Theme.categoryColor(dl.modelData.header || ""); font.family: Theme.riffic; font.pixelSize: 15 }
                 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: pal.toggleCat(dl.modelData.header) }
             }
@@ -327,7 +327,7 @@ Item {
                     x: 12; y: 7
                     width: parent.width - 24 - tools.width
                     spacing: 2
-                    Text { text: dl.modelData.title || ""; color: Theme.text; font.family: Theme.ui; font.pixelSize: 15; font.bold: true; width: parent.width; elide: Text.ElideRight }
+                    Text { text: qsTr(dl.modelData.title || ""); color: Theme.text; font.family: Theme.ui; font.pixelSize: 15; font.bold: true; width: parent.width; elide: Text.ElideRight }
                     Text {
                         width: parent.width
                         text: (dl.modelData.templ || "").split("\n")[0]
@@ -338,7 +338,7 @@ Item {
                     Text {                              // the old Command Center's description line
                         visible: pal.showHelp || pal.searching
                         width: parent.width
-                        text: dl.modelData.help || ""
+                        text: qsTr(dl.modelData.help || "")
                         wrapMode: Text.Wrap
                         maximumLineCount: pal.searching ? 2 : 3
                         elide: Text.ElideRight
@@ -347,7 +347,7 @@ Item {
                 }
                 ToolTip.visible: area.containsMouse && !!dl.modelData.help && !pal.showHelp && !pal.searching
                 ToolTip.delay: 600
-                ToolTip.text: dl.modelData.help || ""
+                ToolTip.text: qsTr(dl.modelData.help || "")
                 MouseArea {
                     id: area
                     anchors.fill: parent
@@ -371,7 +371,7 @@ Item {
                         Text { anchors.centerIn: parent; text: pal.isPinned(dl.modelData.key) ? "★" : "☆"; color: pal.isPinned(dl.modelData.key) ? Theme.gold : Theme.dim; font.pixelSize: 16 }
                         MouseArea { id: star; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: pal.togglePin(dl.modelData) }
                         ToolTip.visible: star.containsMouse
-                        ToolTip.text: pal.isPinned(dl.modelData.key) ? "Убрать из быстрых вставок" : "В быстрые вставки"
+                        ToolTip.text: pal.isPinned(dl.modelData.key) ? qsTr("Убрать из быстрых вставок") : qsTr("В быстрые вставки")
                     }
                     // ⤓ straight in
                     Rectangle {
@@ -389,7 +389,7 @@ Item {
                             onClicked: pal.quick(dl.modelData)
                         }
                         ToolTip.visible: qa.containsMouse
-                        ToolTip.text: "Вставить сразу, без настройки (Shift+Enter в поиске)"
+                        ToolTip.text: qsTr("Вставить сразу, без настройки (Shift+Enter в поиске)")
                     }
                 }
             }
@@ -400,15 +400,15 @@ Item {
         id: tileMenu
         property int index: -1
         readonly property var row: pal.rowOf(pal.pins[index])
-        MenuItem { text: "Вставить сразу"; enabled: !!tileMenu.row; onTriggered: pal.quick(tileMenu.row) }
-        MenuItem { text: "Открыть окно команды"; enabled: !!tileMenu.row; onTriggered: pal.run(tileMenu.row) }
+        MenuItem { text: qsTr("Вставить сразу"); enabled: !!tileMenu.row; onTriggered: pal.quick(tileMenu.row) }
+        MenuItem { text: qsTr("Открыть окно команды"); enabled: !!tileMenu.row; onTriggered: pal.run(tileMenu.row) }
         MenuSeparator {}
-        MenuItem { text: "‹ Левее"; onTriggered: pal.movePin(tileMenu.index, -1) }
-        MenuItem { text: "Правее ›"; onTriggered: pal.movePin(tileMenu.index, 1) }
-        MenuItem { text: "Убрать из быстрых"; onTriggered: pal.setPins(pal.pins.filter((p, j) => j !== tileMenu.index)) }
+        MenuItem { text: qsTr("‹ Левее"); onTriggered: pal.movePin(tileMenu.index, -1) }
+        MenuItem { text: qsTr("Правее ›"); onTriggered: pal.movePin(tileMenu.index, 1) }
+        MenuItem { text: qsTr("Убрать из быстрых"); onTriggered: pal.setPins(pal.pins.filter((p, j) => j !== tileMenu.index)) }
         MenuSeparator {}
         MenuItem {
-            text: pal.showHelp ? "Прятать описания команд" : "Показывать описания команд"
+            text: pal.showHelp ? qsTr("Прятать описания команд") : qsTr("Показывать описания команд")
             onTriggered: { pal.showHelp = !pal.showHelp; Engine.setSetting("ui/paletteHelp", pal.showHelp ? "true" : "false") }
         }
     }

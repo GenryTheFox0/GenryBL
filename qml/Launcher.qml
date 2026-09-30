@@ -18,11 +18,9 @@ Item {
         for (const p of Engine.projects) if (p.id === id) return p
         return null
     }
-    function clockTime() {
-        const h = new Date().getHours()
-        return h >= 7 && h < 18 ? "day" : (h >= 18 && h < 21 ? "sunset" : "night")
-    }
-    function open(id) { Music.stopTheme(); launcher.openEditor(id) }
+    function open(id) { Music.stopTheme(); Ambience.stop(); launcher.openEditor(id) }
+    // back on the board from «Инструменты»: the time of day may have been changed there
+    onScreenChanged: if (screen === "menu") mainMenu.timeSetting = Engine.setting("menuTime", "auto")
 
     Component.onCompleted: {
         Music.playTheme("sound/music/blow_with_the_fires.ogg", 0)
@@ -52,12 +50,9 @@ Item {
         Screen {
             shown: launcher.screen === "menu"
             MainMenuScreen {
+                id: mainMenu
                 intro: launcher.intro
                 lastProject: launcher.lastProject()
-                timeOfDay: {
-                    const t = Engine.setting("menuTime", "auto")
-                    return t === "auto" || !t ? launcher.clockTime() : t
-                }
                 onPick: (what) => {
                     if (what === "quit") Qt.quit()
                     else if (what === "continue") { const p = launcher.lastProject(); if (p) launcher.open(p.id) }
@@ -97,7 +92,7 @@ Item {
             Rectangle {
                 height: 42; width: adultText.implicitWidth + 30; radius: 21
                 color: "#c0392b"; border.color: "#7d1d14"; border.width: 2
-                Text { id: adultText; anchors.centerIn: parent; text: "18+ · только для взрослых"; color: "white"; font.family: Theme.ui; font.pixelSize: 20; font.bold: true }
+                Text { id: adultText; anchors.centerIn: parent; text: qsTr("18+ · только для взрослых"); color: "white"; font.family: Theme.ui; font.pixelSize: 20; font.bold: true }
             }
         }
 
@@ -119,11 +114,11 @@ Item {
             Item {
                 visible: launcher.dialog === "new"
                 x: 520; y: 410; width: 880; height: 180
-                Text { x: 20; y: 8; text: "Как назовём мод?"; color: "#5a3e1e"; font.family: Theme.riffic; font.pixelSize: 44; font.bold: true }
+                Text { x: 20; y: 8; text: qsTr("Как назовём мод?"); color: "#5a3e1e"; font.family: Theme.riffic; font.pixelSize: 44; font.bold: true }
                 TextField {
                     id: nameField
                     x: 20; y: 78; width: 560; height: 58
-                    placeholderText: "Например: Последний день смены"
+                    placeholderText: qsTr("Например: Последний день смены")
                     font.family: Theme.ui; font.pixelSize: 28
                     color: Theme.ink
                     selectByMouse: true
@@ -133,12 +128,12 @@ Item {
                 PillButton {
                     id: createBtn
                     x: 600; y: 82; height: 50; width: 150
-                    text: "Создать"
+                    text: qsTr("Создать")
                     accent: true
                     font.pixelSize: 22
                     onClicked: { const id = Engine.createProject(nameField.text, exampleBox.on); nameField.text = ""; launcher.dialog = ""; launcher.open(id) }
                 }
-                PillButton { x: 760; y: 82; height: 50; width: 100; text: "Отмена"; onClicked: launcher.dialog = "" }
+                PillButton { x: 760; y: 82; height: 50; width: 100; text: qsTr("Отмена"); onClicked: launcher.dialog = "" }
                 // a clean page by default; the sample story only for those who want to see how it is done
                 Row {
                     id: exampleBox
@@ -153,7 +148,7 @@ Item {
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "С примером внутри (Славя, Алиса, выбор) — иначе чистый лист"
+                        text: qsTr("С примером внутри (Славя, Алиса, выбор) — иначе чистый лист")
                         color: "#5a3e1e"; font.family: Theme.ui; font.pixelSize: 20
                     }
                     TapHandler { onTapped: exampleBox.on = !exampleBox.on }
@@ -174,7 +169,7 @@ Item {
                     x: 50; y: 36; width: parent.width - 100
                     spacing: 14
                     Text {
-                        text: launcher.dialog === "help" ? "Как это работает" : "GenryBL " + Engine.version
+                        text: launcher.dialog === "help" ? qsTr("Как это работает") : "GenryBL " + Engine.version
                         color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 46; font.bold: true
                     }
                     Text {
@@ -182,37 +177,37 @@ Item {
                         wrapMode: Text.Wrap
                         color: Theme.ink; font.family: Theme.ui; font.pixelSize: 25
                         text: launcher.dialog === "help"
-                              ? "• Пишешь историю простыми командами: «фон ext_square_day», «показать dv smile pioneer left», «Алиса: Привет!».\n" +
-                                "• Справа сразу видно, что увидит игрок — тот же кадр, что нарисует игра, из её же архива.\n" +
-                                "• Наведи мышь на эмоцию, фон или команду слева — кадр примерит её до вставки.\n" +
-                                "• Подсказки при наборе: после «показать » — персонажи, потом эмоции, одежда, позиции.\n" +
-                                "• Ошибки подчёркиваются до запуска: несуществующая эмоция, фон, трек, сцена.\n" +
-                                "• «Играть» (F5) собирает мод в game/mods и открывает БЛ окном прямо в сцене под курсором, со своими сохранениями.\n" +
-                                "• «Проверить движком» — родной lint Ren'Py самой игры."
-                              : "Конструктор модов «Бесконечного лета» на C++ и Qt.\nСделан Генри и Шрамом.\n\n" +
-                                "18+ патч внутри — «Deleted hentai scenes» из Мастерской Steam, автор — Лена. Спасибо ей.\n\nСова всё видит."
+                              ? qsTr("• Пишешь историю простыми командами: «фон ext_square_day», «показать dv smile pioneer left», «Алиса: Привет!».\n") +
+                                qsTr("• Справа сразу видно, что увидит игрок — тот же кадр, что нарисует игра, из её же архива.\n") +
+                                qsTr("• Наведи мышь на эмоцию, фон или команду слева — кадр примерит её до вставки.\n") +
+                                qsTr("• Подсказки при наборе: после «показать » — персонажи, потом эмоции, одежда, позиции.\n") +
+                                qsTr("• Ошибки подчёркиваются до запуска: несуществующая эмоция, фон, трек, сцена.\n") +
+                                qsTr("• «Играть» (F5) собирает мод в game/mods и открывает БЛ окном прямо в сцене под курсором, со своими сохранениями.\n") +
+                                qsTr("• «Проверить движком» — родной lint Ren'Py самой игры.")
+                              : qsTr("Конструктор модов «Бесконечного лета» на C++ и Qt.\nСделан Генри и Шрамом.\n\n") +
+                                qsTr("18+ патч внутри — «Deleted hentai scenes» из Мастерской Steam, автор — Лена. Спасибо ей.\n\nСова всё видит.")
                     }
                     Row {
                         spacing: 10
-                        PillButton { text: "Понятно"; accent: true; onClicked: launcher.dialog = "" }
+                        PillButton { text: qsTr("Понятно"); accent: true; onClicked: launcher.dialog = "" }
                         PillButton {
                             visible: launcher.dialog === "about"
-                            text: "Патч в Мастерской"
+                            text: qsTr("Патч в Мастерской")
                             onClicked: Qt.openUrlExternally("https://steamcommunity.com/sharedfiles/filedetails/?id=1118110148")
                         }
                         PillButton {
                             visible: launcher.dialog === "about"
-                            text: "Автор патча"
+                            text: qsTr("Автор патча")
                             onClicked: Qt.openUrlExternally("https://steamcommunity.com/id/Lena_sova")
                         }
                         PillButton {
                             visible: launcher.dialog === "about"
-                            text: "Мастерская Steam"
+                            text: qsTr("Мастерская Steam")
                             onClicked: Qt.openUrlExternally("https://steamcommunity.com/sharedfiles/filedetails/?id=3809725763")
                         }
                         PillButton {
                             visible: launcher.dialog === "about"
-                            text: "Отзывы и баги"
+                            text: qsTr("Отзывы и баги")
                             onClicked: Qt.openUrlExternally("https://github.com/GenryTheFox0/GenryBL/issues")
                         }
                     }

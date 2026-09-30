@@ -25,7 +25,7 @@ Item {
         code.focusEditor()
         if (shotPage.indexOf("editor") === 0) code.gotoLine(shotPage === "editor-top" || shotPage === "editor-top-hover" ? 1 : 13)
         if (shotPage === "editor-top-hover") hoverExtra = "погода снег"
-        if (shotPage === "editor-hover") hoverExtra = "показать un shy pioneer center dissolve"
+        if (shotPage === "editor-hover") hoverExtra = qsTr("показать un shy pioneer center dissolve")
         const tabs = { "editor-scene": [0, 1], "editor-chars": [1, 1], "editor-bgs": [2, 2], "editor-audio": [3, 0], "editor-rpy": [0, 2] }
         if (tabs[shotPage]) { leftTabs.currentIndex = tabs[shotPage][0]; infoTabs.currentIndex = tabs[shotPage][1] }
         if (shotPage === "editor-big") big.open = true
@@ -56,7 +56,7 @@ Item {
         if (shotPage === "editor-choice") Qt.callLater(() => { choiceWizard.openFor(code.text, code.currentLine); choiceWizard.fillDemo() })
         // «умный Enter»: «выбор», the options and their answers typed the way a person would
         if (shotPage === "editor-smart-enter") Qt.callLater(() => {
-            code.setText("@mod_id genry_enter\n\n: start\nфон ext_square_day\nСлавя: Куда пойдём?\n")
+            code.setText(qsTr("@mod_id genry_enter\n\n: start\nфон ext_square_day\nСлавя: Куда пойдём?\n"))
             code.gotoLine(6)
             code.typeLikeAPerson(["выбор", "\n", "На площадь [+1 Славя]", "\n", "Славя: Пошли!", "\n", "\n",
                                   "Остаться здесь", "\n", "Славя: Ну и ладно.", "\n", "\n", "\n", "Славя: Идём дальше."])
@@ -99,18 +99,18 @@ Item {
     readonly property string playKind: Engine.screenplayKind(code.lineText(code.currentLine))
     function expandLine() {
         const r = Engine.expandScreenplayLine(code.text, code.currentLine)
-        if (!r.lines.length) { Engine.toast("Эта строка — не сценарная: разворачивать нечего", 1); return }
+        if (!r.lines.length) { Engine.toast(qsTr("Эта строка — не сценарная: разворачивать нечего"), 1); return }
         code.replaceLine(code.currentLine, r.lines.join("
 "))
         const warn = r.notes.filter(n => n.warn)
-        Engine.toast(warn.length ? "⚠ " + warn[0].text : "Развернул в " + r.lines.length + " стр.", warn.length ? 1 : 0)
+        Engine.toast(warn.length ? "⚠ " + warn[0].text : qsTr("Развернул в ") + r.lines.length + qsTr(" стр."), warn.length ? 1 : 0)
     }
     function editLine() {
         // a line of a «выбор» block: the whole choice opens in its studio
         if (Engine.choiceBlockAt(code.text, code.currentLine).from) { choiceWizard.openFor(code.text, code.currentLine); return }
         if (playKind !== "" && playKind !== "prose" && !lineForm.id) { expandLine(); return }
         const p = Engine.parseCommand(code.lineText(code.currentLine))
-        if (!p.id) { Engine.toast("Эту строку в форме не настроить — выбери команду в палитре", 1); return }
+        if (!p.id) { Engine.toast(qsTr("Эту строку в форме не настроить — выбери команду в палитре"), 1); return }
         if (p.id === "map") mapEditor.openEdit(p.values, code.text, code.currentLine)
         else cmdForm.openEdit(p.id, p.values, code.text, code.currentLine)
     }
@@ -139,9 +139,16 @@ Item {
     Connections {
         target: Engine
         function onAssetsChanged() { previewTimer.restart(); lintTimer.restart() }
+        // GenryBL gave the mod a free @mod_id: the editor shows the story as it is on disk, the cursor stays
+        function onStoryRewritten(id, text) {
+            if (id !== ed.projectId || text === code.text) return
+            const line = code.currentLine
+            code.setText(text)
+            code.gotoLine(line)
+        }
     }
 
-    Shortcut { sequences: [StandardKey.Save]; onActivated: { ed.save(); Engine.toast("Сохранено", 0) } }
+    Shortcut { sequences: [StandardKey.Save]; onActivated: { ed.save(); Engine.toast(qsTr("Сохранено"), 0) } }
     Shortcut { sequence: "F5"; onActivated: ed.play() }
     Shortcut { sequence: "F6"; enabled: !cinemaView.opened; onActivated: ed.cinema() }
     Shortcut { sequence: "Ctrl+D"; enabled: !dialogue.opened; onActivated: dialogue.openFor(code.text, code.currentLine) }
@@ -215,14 +222,14 @@ Item {
     }
     Menu {
         id: lineMenu
-        MenuItem { text: "Реплика героя"; onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + ed.lastSpeaker() + ": ") }
-        MenuItem { text: "Слова рассказчика"; onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + "текст ") }
-        MenuItem { text: "Сменить локацию (фон)…"; onTriggered: cmdForm.openNew("bg", {}, code.text, code.currentLine) }
-        MenuItem { text: "Выбор…"; onTriggered: choiceWizard.openFor(code.text, code.currentLine) }
-        MenuItem { text: "Конец выбора — дальше история"; visible: ed.inChoice; height: visible ? implicitHeight : 0; onTriggered: ed.endChoice() }
+        MenuItem { text: qsTr("Реплика героя"); onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + ed.lastSpeaker() + ": ") }
+        MenuItem { text: qsTr("Слова рассказчика"); onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + "текст ") }
+        MenuItem { text: qsTr("Сменить локацию (фон)…"); onTriggered: cmdForm.openNew("bg", {}, code.text, code.currentLine) }
+        MenuItem { text: qsTr("Выбор…"); onTriggered: choiceWizard.openFor(code.text, code.currentLine) }
+        MenuItem { text: qsTr("Конец выбора — дальше история"); visible: ed.inChoice; height: visible ? implicitHeight : 0; onTriggered: ed.endChoice() }
         Menu {
             id: lineJumpMenu
-            title: "Перейти в сцену"
+            title: qsTr("Перейти в сцену")
             Instantiator {
                 model: ed.lineScenes
                 delegate: MenuItem {
@@ -234,10 +241,10 @@ Item {
                 onObjectRemoved: (index, object) => lineJumpMenu.removeItem(object)
             }
             MenuSeparator {}
-            MenuItem { text: "Другая…"; onTriggered: cmdForm.openNew("jump", {}, code.text, code.currentLine) }
+            MenuItem { text: qsTr("Другая…"); onTriggered: cmdForm.openNew("jump", {}, code.text, code.currentLine) }
         }
-        MenuItem { text: "Новая сцена…"; onTriggered: cmdForm.openNew("label", {}, code.text, code.currentLine) }
-        MenuItem { text: "Конец игры"; onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + "конецигры") }
+        MenuItem { text: qsTr("Новая сцена…"); onTriggered: cmdForm.openNew("label", {}, code.text, code.currentLine) }
+        MenuItem { text: qsTr("Конец игры"); onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + "конецигры") }
     }
     ChoiceDialog {
         id: choiceWizard
@@ -248,7 +255,7 @@ Item {
     ExportDialog { id: exportDialog; onClosed: code.focusEditor() }
     ModTitleDialog {
         id: titleDialog
-        onApplied: (text) => { code.setText(text); ed.save(); ed.issues = Engine.lint(code.text); ed.refreshPreview(); Engine.toast("Название мода обновлено", 0) }
+        onApplied: (text) => { code.setText(text); ed.save(); ed.issues = Engine.lint(code.text); ed.refreshPreview(); Engine.toast(qsTr("Название мода обновлено"), 0) }
         onClosed: code.focusEditor()
     }
     Connections {
@@ -266,7 +273,7 @@ Item {
         anchors.centerIn: parent
         width: Math.min(ed.width - 80, 1100)
         modal: true
-        title: clean ? "Движок БЛ: мод чистый" : "Движок БЛ нашёл проблемы"
+        title: clean ? qsTr("Движок БЛ: мод чистый") : qsTr("Движок БЛ нашёл проблемы")
         standardButtons: Dialog.Ok
         ScrollView {
             implicitHeight: Math.min(480, report.implicitHeight + 10)
@@ -275,7 +282,7 @@ Item {
                 id: report
                 readOnly: true
                 wrapMode: TextEdit.Wrap
-                text: checkDialog.clean ? "Ren'Py 7.4 (lint самой игры) не нашёл ни одной ошибки в моде." : checkDialog.lines.join("\n")
+                text: checkDialog.clean ? qsTr("Ren'Py 7.4 (lint самой игры) не нашёл ни одной ошибки в моде.") : checkDialog.lines.join("\n")
                 font.family: Theme.mono
                 font.pixelSize: 13
             }
@@ -304,7 +311,7 @@ Item {
             anchors.leftMargin: 12
             anchors.rightMargin: 14
             spacing: 10
-            PillButton { id: menuBtn; dark: true; text: "← Меню"; onClicked: { ed.save(); ed.back() } }
+            PillButton { id: menuBtn; dark: true; text: qsTr("← Меню"); onClicked: { ed.save(); ed.back() } }
             InkText {
                 id: titleInk
                 text: Engine.currentProjectName; size: 26; color: Theme.gold; Layout.alignment: Qt.AlignVCenter
@@ -315,10 +322,10 @@ Item {
             PillButton {
                 id: nameBtn
                 dark: true
-                text: "Aa Название"
+                text: qsTr("Aa Название")
                 onClicked: titleDialog.openFor(code.text)
                 ToolTip.visible: hovered
-                ToolTip.text: "Как мод выглядит в списке модов БЛ: свой шрифт, цвет, размер"
+                ToolTip.text: qsTr("Как мод выглядит в списке модов БЛ: свой шрифт, цвет, размер")
             }
             Rectangle {
                 id: chipBox
@@ -330,8 +337,8 @@ Item {
                 Text {
                     id: chip
                     anchors.centerIn: parent
-                    text: ed.errors ? "✖ ошибок: " + ed.errors + (ed.warnings ? " · ⚠ " + ed.warnings : "")
-                                    : ed.warnings ? "⚠ предупреждений: " + ed.warnings : "✓ всё чисто"
+                    text: ed.errors ? qsTr("✖ ошибок: ") + ed.errors + (ed.warnings ? " · ⚠ " + ed.warnings : "")
+                                    : ed.warnings ? qsTr("⚠ предупреждений: ") + ed.warnings : qsTr("✓ всё чисто")
                     color: Theme.text; font.family: Theme.ui; font.pixelSize: 13; font.bold: true
                 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: infoTabs.currentIndex = 0 }
@@ -348,92 +355,92 @@ Item {
                     readonly property bool linePlay: ed.playKind !== "" && ed.playKind !== "prose" && !ed.lineForm.id
                     PillButton {
                         dark: true
-                        text: tools.linePlay ? "⇲ Развернуть строку" : "✎ Настроить строку"
+                        text: tools.linePlay ? qsTr("⇲ Развернуть строку") : qsTr("✎ Настроить строку")
                         enabled: tools.linePlay || !!ed.lineForm.id || ed.inChoice
                         onClicked: tools.linePlay ? ed.expandLine() : ed.editLine()
                         ToolTip.visible: hovered
-                        ToolTip.text: tools.linePlay ? "Сценарная строка → команды, которые она означает: показать …, фон …, реплика (Ctrl+Shift+E)"
-                                                     : "Открыть строку под курсором в её окне: все параметры, картинки, превью (Ctrl+E)"
+                        ToolTip.text: tools.linePlay ? qsTr("Сценарная строка → команды, которые она означает: показать …, фон …, реплика (Ctrl+Shift+E)")
+                                                     : qsTr("Открыть строку под курсором в её окне: все параметры, картинки, превью (Ctrl+E)")
                     }
                     PillButton {
                         dark: true
-                        text: "✍ Сценарий"
+                        text: qsTr("✍ Сценарий")
                         onClicked: screenplay.openFor(code.text, code.currentLine, "")
                         ToolTip.visible: hovered
-                        ToolTip.text: "Пиши как сценарий: вставь сценарий, переписку или главу — станут фонами, спрайтами и репликами (Ctrl+Shift+V — из буфера)"
+                        ToolTip.text: qsTr("Пиши как сценарий: вставь сценарий, переписку или главу — станут фонами, спрайтами и репликами (Ctrl+Shift+V — из буфера)")
                     }
                     PillButton {
                         dark: true
                         accent: ed.inChoice
-                        text: ed.inChoice ? "⑂ Этот выбор" : "⑂ Выбор"
+                        text: ed.inChoice ? qsTr("⑂ Этот выбор") : qsTr("⑂ Выбор")
                         onClicked: choiceWizard.openFor(code.text, code.currentLine)
                         ToolTip.visible: hovered
-                        ToolTip.text: ed.inChoice ? "Открыть выбор под курсором в студии: текст, превью, карточка варианта (Ctrl+E)"
-                                                  : "Студия выбора: пишешь варианты текстом, окно помогает — очки, замки, «запомнит», превью меню БЛ"
+                        ToolTip.text: ed.inChoice ? qsTr("Открыть выбор под курсором в студии: текст, превью, карточка варианта (Ctrl+E)")
+                                                  : qsTr("Студия выбора: пишешь варианты текстом, окно помогает — очки, замки, «запомнит», превью меню БЛ")
                     }
                     PillButton {
                         dark: true
-                        text: "♪ Диалог"
+                        text: qsTr("♪ Диалог")
                         onClicked: dialogue.openFor(code.text, code.currentLine)
                         ToolTip.visible: hovered
-                        ToolTip.text: "Диалог + озвучка: реплики таблицей, озвучка файлами по порядку, кадр игры сразу (Ctrl+D)"
+                        ToolTip.text: qsTr("Диалог + озвучка: реплики таблицей, озвучка файлами по порядку, кадр игры сразу (Ctrl+D)")
                     }
                     PillButton {
                         dark: true
-                        text: "Библиотека"
+                        text: qsTr("Библиотека")
                         onClicked: libraryBrowser.open()
                         ToolTip.visible: hovered
-                        ToolTip.text: "Картинки всех модов из твоей мастерской БЛ: спрайты, фоны, CG — взять в свой мод"
+                        ToolTip.text: qsTr("Картинки всех модов из твоей мастерской БЛ: спрайты, фоны, CG — взять в свой мод")
                     }
-                    PillButton { dark: true; text: "Папка мода"; onClicked: Engine.openFolder(Engine.projectDir(ed.projectId)) }
+                    PillButton { dark: true; text: qsTr("Папка мода"); onClicked: Engine.openFolder(Engine.projectDir(ed.projectId)) }
                     PillButton {
                         dark: true
-                        text: "Проверить движком"
+                        text: qsTr("Проверить движком")
                         enabled: !Engine.busy
                         onClicked: Engine.engineCheck(ed.projectId, code.text)
                         ToolTip.visible: hovered
-                        ToolTip.text: "Родной lint Ren'Py самой игры: картинки, метки, синтаксис (1-2 минуты)"
+                        ToolTip.text: qsTr("Родной lint Ren'Py самой игры: картинки, метки, синтаксис (1-2 минуты)")
                     }
                 }
             }
             PillButton {
                 visible: top.compact
                 dark: true
-                text: "☰ Ещё"
+                text: qsTr("☰ Ещё")
                 onClicked: moreMenu.popup()
                 Menu {
                     id: moreMenu
                     MenuItem {
-                        text: tools.linePlay ? "Развернуть строку" : "Настроить строку"
+                        text: tools.linePlay ? qsTr("Развернуть строку") : qsTr("Настроить строку")
                         enabled: tools.linePlay || !!ed.lineForm.id || ed.inChoice
                         onTriggered: tools.linePlay ? ed.expandLine() : ed.editLine()
                     }
-                    MenuItem { text: "Сценарий — пиши как сценарий"; onTriggered: screenplay.openFor(code.text, code.currentLine, "") }
-                    MenuItem { text: "Выбор и последствия"; onTriggered: choiceWizard.openFor(code.text, code.currentLine) }
-                    MenuItem { text: "Диалог + озвучка"; onTriggered: dialogue.openFor(code.text, code.currentLine) }
-                    MenuItem { text: "Библиотека картинок"; onTriggered: libraryBrowser.open() }
+                    MenuItem { text: qsTr("Сценарий — пиши как сценарий"); onTriggered: screenplay.openFor(code.text, code.currentLine, "") }
+                    MenuItem { text: qsTr("Выбор и последствия"); onTriggered: choiceWizard.openFor(code.text, code.currentLine) }
+                    MenuItem { text: qsTr("Диалог + озвучка"); onTriggered: dialogue.openFor(code.text, code.currentLine) }
+                    MenuItem { text: qsTr("Библиотека картинок"); onTriggered: libraryBrowser.open() }
                     MenuSeparator {}
-                    MenuItem { text: "Папка мода"; onTriggered: Engine.openFolder(Engine.projectDir(ed.projectId)) }
-                    MenuItem { text: "Проверить движком игры"; enabled: !Engine.busy; onTriggered: Engine.engineCheck(ed.projectId, code.text) }
+                    MenuItem { text: qsTr("Папка мода"); onTriggered: Engine.openFolder(Engine.projectDir(ed.projectId)) }
+                    MenuItem { text: qsTr("Проверить движком игры"); enabled: !Engine.busy; onTriggered: Engine.engineCheck(ed.projectId, code.text) }
                 }
             }
             PillButton {
                 id: exportBtn
                 dark: true
-                text: "⇪ Экспорт"
+                text: qsTr("⇪ Экспорт")
                 enabled: !Engine.busy
                 onClicked: exportDialog.openFor(ed.projectId, code.text)
                 ToolTip.visible: hovered
-                ToolTip.text: "Отдать мод людям: архив для игроков или папка для Мастерской Steam — после проверки самой игрой"
+                ToolTip.text: qsTr("Отдать мод людям: архив для игроков или папка для Мастерской Steam — после проверки самой игрой")
             }
-            PillButton { id: stopBtn; visible: Engine.gameRunning; text: "■ Стоп"; onClicked: Engine.stopGame() }
+            PillButton { id: stopBtn; visible: Engine.gameRunning; text: qsTr("■ Стоп"); onClicked: Engine.stopGame() }
             PillButton {
                 id: cinemaBtn
                 accent: true
-                text: "▶ Кино  F6"
+                text: qsTr("▶ Кино  F6")
                 onClicked: ed.cinema()
                 ToolTip.visible: hovered
-                ToolTip.text: "Кино-режим: мод играет прямо тут, как в игре — печать текста, музыка, выборы по веткам, без загрузки БЛ (F6)"
+                ToolTip.text: qsTr("Кино-режим: мод играет прямо тут, как в игре — печать текста, музыка, выборы по веткам, без загрузки БЛ (F6)")
             }
             // the big one
             AbstractButton {
@@ -459,11 +466,11 @@ Item {
                     spacing: 8
                     leftPadding: 18
                     Text { text: Engine.busy ? "…" : "▶"; color: "#16240c"; font.pixelSize: 18; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: Engine.gameRunning ? "Заново" : "Играть"; color: "#16240c"; font.family: Theme.riffic; font.pixelSize: 20; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: Engine.gameRunning ? qsTr("Заново") : qsTr("Играть"); color: "#16240c"; font.family: Theme.riffic; font.pixelSize: 20; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
                     Text { text: "F5"; color: "#2e4a16"; font.family: Theme.mono; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
                 }
                 ToolTip.visible: hovered
-                ToolTip.text: "Собрать мод и открыть Бесконечное лето прямо в сцене под курсором"
+                ToolTip.text: qsTr("Собрать мод и открыть Бесконечное лето прямо в сцене под курсором")
             }
         }
     }
@@ -489,10 +496,10 @@ Item {
                 id: leftTabs
                 width: parent.width
                 background: Rectangle { color: Theme.bg2 }
-                DarkTab { text: "Команды" }
-                DarkTab { text: "Персонажи"; accentColor: "#5fb3ff" }
-                DarkTab { text: "Фоны"; accentColor: "#8be9fd" }
-                DarkTab { text: "Звук"; accentColor: "#50fa7b" }
+                DarkTab { text: qsTr("Команды") }
+                DarkTab { text: qsTr("Персонажи"); accentColor: "#5fb3ff" }
+                DarkTab { text: qsTr("Фоны"); accentColor: "#8be9fd" }
+                DarkTab { text: qsTr("Звук"); accentColor: "#50fa7b" }
             }
             StackLayout {
                 anchors.top: leftTabs.bottom
@@ -545,9 +552,9 @@ Item {
                     id: infoTabs
                     Layout.fillWidth: true
                     background: Rectangle { color: Theme.bg2 }
-                    DarkTab { text: "Проблемы" + (ed.issues.length ? " (" + ed.issues.length + ")" : ""); accentColor: ed.errors ? Theme.bad : ed.warnings ? Theme.warn : Theme.good }
-                    DarkTab { text: "Сцена" }
-                    DarkTab { text: "Код Ren'Py" }
+                    DarkTab { text: qsTr("Проблемы") + (ed.issues.length ? " (" + ed.issues.length + ")" : ""); accentColor: ed.errors ? Theme.bad : ed.warnings ? Theme.warn : Theme.good }
+                    DarkTab { text: qsTr("Сцена") }
+                    DarkTab { text: qsTr("Код Ren'Py") }
                 }
                 StackLayout {
                     Layout.fillWidth: true
@@ -570,7 +577,7 @@ Item {
                                 radius: 6
                                 color: ia.containsMouse ? Theme.panel3 : "transparent"
                                 Rectangle { x: 10; anchors.verticalCenter: parent.verticalCenter; width: 10; height: 10; radius: 5; color: Theme.levelColor(modelData.level) }
-                                Text { x: 30; anchors.verticalCenter: parent.verticalCenter; text: modelData.line > 0 ? "стр. " + modelData.line : "файл"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 13; width: 70 }
+                                Text { x: 30; anchors.verticalCenter: parent.verticalCenter; text: modelData.line > 0 ? qsTr("стр. ") + modelData.line : qsTr("файл"); color: Theme.dim; font.family: Theme.mono; font.pixelSize: 13; width: 70 }
                                 Text {
                                     id: msg
                                     x: 104; width: parent.width - 114
@@ -586,7 +593,7 @@ Item {
                             visible: ed.issues.length === 0
                             spacing: 8
                             Text { anchors.horizontalCenter: parent.horizontalCenter; text: "✓"; color: Theme.good; font.pixelSize: 42 }
-                            Text { text: "Проблем нет — жми «Играть»"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 16 }
+                            Text { text: qsTr("Проблем нет — жми «Играть»"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 16 }
                         }
                     }
 
@@ -607,11 +614,11 @@ Item {
                                 }
                                 Column {
                                     anchors.verticalCenter: parent.verticalCenter
-                                    Text { text: "Фон"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
-                                    Text { text: (ed.scene.bg || "—") + "   ·   " + (ed.scene.time === "day" ? "день" : ed.scene.time === "sunset" ? "вечер" : ed.scene.time === "night" ? "ночь" : "пролог") + (ed.scene.music ? "   ·   ♪ " + ed.scene.music : "") + (ed.scene.weather ? "   ·   " + ed.scene.weather : "") + (ed.scene.filter ? "   ·   фильтр " + ed.scene.filter : ""); color: Theme.text; font.family: Theme.mono; font.pixelSize: 15 }
+                                    Text { text: qsTr("Фон"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                                    Text { text: (ed.scene.bg || "—") + "   ·   " + (ed.scene.time === "day" ? qsTr("день") : ed.scene.time === "sunset" ? qsTr("вечер") : ed.scene.time === "night" ? qsTr("ночь") : qsTr("пролог")) + (ed.scene.music ? "   ·   ♪ " + ed.scene.music : "") + (ed.scene.weather ? "   ·   " + ed.scene.weather : "") + (ed.scene.filter ? qsTr("   ·   фильтр ") + ed.scene.filter : ""); color: Theme.text; font.family: Theme.mono; font.pixelSize: 15 }
                                 }
                             }
-                            Text { text: "На сцене"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                            Text { text: qsTr("На сцене"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                             Flow {
                                 width: parent.width
                                 spacing: 8
@@ -630,13 +637,13 @@ Item {
                                             anchors.bottom: parent.bottom; anchors.bottomMargin: 4
                                             anchors.horizontalCenter: parent.horizontalCenter
                                             Text { anchors.horizontalCenter: parent.horizontalCenter; width: 104; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; text: modelData.image; color: Theme.charColor(modelData.image.split(" ")[0]); font.family: Theme.mono; font.pixelSize: 12 }
-                                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.mirror ? "⇋ зеркально" : ""; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11 }
+                                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.mirror ? qsTr("⇋ зеркально") : ""; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11 }
                                         }
                                     }
                                 }
-                                Text { visible: !(ed.scene.sprites && ed.scene.sprites.length); text: "никого"; color: Theme.faint; font.family: Theme.ui; font.pixelSize: 14 }
+                                Text { visible: !(ed.scene.sprites && ed.scene.sprites.length); text: qsTr("никого"); color: Theme.faint; font.family: Theme.ui; font.pixelSize: 14 }
                             }
-                            Text { visible: !!ed.scene.text; text: "Говорит"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                            Text { visible: !!ed.scene.text; text: qsTr("Говорит"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                             Text {
                                 visible: !!ed.scene.text
                                 width: parent.width; wrapMode: Text.Wrap
@@ -647,11 +654,11 @@ Item {
                             Text {
                                 visible: !!(ed.scene.ambience || ed.scene.sound || ed.scene.moment || ed.scene.nvl)
                                 width: parent.width; wrapMode: Text.Wrap
-                                text: [ed.scene.nvl ? "режим NVL" : "", ed.scene.ambience ? "≈ атмосфера " + ed.scene.ambience : "",
-                                       ed.scene.sound ? "♬ звук " + ed.scene.sound : "", ed.scene.moment ? "✦ " + ed.scene.moment : ""].filter(x => x).join("   ·   ")
+                                text: [ed.scene.nvl ? qsTr("режим NVL") : "", ed.scene.ambience ? qsTr("≈ атмосфера ") + ed.scene.ambience : "",
+                                       ed.scene.sound ? qsTr("♬ звук ") + ed.scene.sound : "", ed.scene.moment ? "✦ " + ed.scene.moment : ""].filter(x => x).join("   ·   ")
                                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 14
                             }
-                            Text { visible: !!(ed.scene.vars && ed.scene.vars.length); text: "Очки и флаги мода"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
+                            Text { visible: !!(ed.scene.vars && ed.scene.vars.length); text: qsTr("Очки и флаги мода"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13 }
                             Repeater {
                                 model: ed.scene.vars || []
                                 Rectangle {
@@ -666,7 +673,7 @@ Item {
                                         width: parent.width - 20
                                         spacing: 2
                                         Text {
-                                            text: "<b>" + modelData.name + "</b> = " + modelData.init + (modelData.persistent ? "   <i>(постоянная — живёт между играми)</i>" : "") + (modelData.here ? "   ← меняется на этой строке" : "")
+                                            text: "<b>" + modelData.name + "</b> = " + modelData.init + (modelData.persistent ? qsTr("   <i>(постоянная — живёт между играми)</i>") : "") + (modelData.here ? qsTr("   ← меняется на этой строке") : "")
                                             textFormat: Text.StyledText
                                             color: Theme.text; font.family: Theme.ui; font.pixelSize: 14
                                         }
@@ -731,7 +738,7 @@ Item {
         Text {
             anchors.bottom: parent.bottom; anchors.bottomMargin: 16
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "строка " + code.currentLine + " из " + code.starts.length + "   ·   клик / → / пробел — дальше   ·   ← — назад   ·   Esc — выйти"
+            text: qsTr("строка ") + code.currentLine + qsTr(" из ") + code.starts.length + qsTr("   ·   клик / → / пробел — дальше   ·   ← — назад   ·   Esc — выйти")
             color: Theme.dim; font.family: Theme.ui; font.pixelSize: 15
         }
     }

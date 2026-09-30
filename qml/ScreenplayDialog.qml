@@ -18,13 +18,13 @@ Popup {
 
     readonly property var outLines: result.lines || []
     readonly property var cheatRows: [
-        ["НАТ. ПЛЯЖ — ДЕНЬ", "фон и время суток (ИНТ. — внутри)"],
-        ["Алиса (злая, слева): …", "эмоция, место, одежда, близко/вдали"],
-        ["Славя (входит справа)", "выход на сцену / (уходит налево)"],
-        ["— Привет, — улыбнулась Лена.", "реплика как в книге"],
-        ["Семён (думает): …", "мысли героя, (кричит) — крик с тряской"],
-        ["Солнце садилось.", "просто текст — рассказчик"],
-        ["(Пауза)  ЗАТЕМНЕНИЕ.", "пауза, чёрный экран"]
+        ["НАТ. ПЛЯЖ — ДЕНЬ", qsTr("фон и время суток (ИНТ. — внутри)")],
+        ["Алиса (злая, слева): …", qsTr("эмоция, место, одежда, близко/вдали")],
+        ["Славя (входит справа)", qsTr("выход на сцену / (уходит налево)")],
+        ["— Привет, — улыбнулась Лена.", qsTr("реплика как в книге")],
+        ["Семён (думает): …", qsTr("мысли героя, (кричит) — крик с тряской")],
+        ["Солнце садилось.", qsTr("просто текст — рассказчик")],
+        ["(Пауза)  ЗАТЕМНЕНИЕ.", qsTr("пауза, чёрный экран")]
     ]
     readonly property var notes: result.notes || []
 
@@ -51,22 +51,22 @@ Popup {
         previewTimer.restart()
     }
     function fillDemo() {
-        src.text = "НАТ. ПЛЯЖ — ДЕНЬ\n\nЖаркий полдень. На песке ни души, только чайки орут над водой.\n\n"
-                 + "АЛИСА\n(ухмыляясь, слева)\nНу что, струсил?\n\n"
-                 + "— Ещё чего, — буркнул я.\n\n"
-                 + "Славя (входит справа, улыбается): Вот вы где! Ольга Дмитриевна всех ищет.\n"
-                 + "Алиса (недовольно): Опять эта вожатая...\n"
-                 + "Алиса (уходит налево)\n\n"
-                 + "ИНТ. СТОЛОВАЯ — ВЕЧЕР\n\n"
-                 + "Лена (смущённо, в центре): Можно... я сяду с тобой?\n"
+        src.text = qsTr("НАТ. ПЛЯЖ — ДЕНЬ\n\nЖаркий полдень. На песке ни души, только чайки орут над водой.\n\n")
+                 + qsTr("АЛИСА\n(ухмыляясь, слева)\nНу что, струсил?\n\n")
+                 + qsTr("— Ещё чего, — буркнул я.\n\n")
+                 + qsTr("Славя (входит справа, улыбается): Вот вы где! Ольга Дмитриевна всех ищет.\n")
+                 + qsTr("Алиса (недовольно): Опять эта вожатая...\n")
+                 + qsTr("Алиса (уходит налево)\n\n")
+                 + qsTr("ИНТ. СТОЛОВАЯ — ВЕЧЕР\n\n")
+                 + qsTr("Лена (смущённо, в центре): Можно... я сяду с тобой?\n")
                  + "Семён (думает): Кажется, день налаживается."
         refresh()
     }
     function noteFor(i) { return notes.filter(n => n.line === i + 1) }
     function commit() {
-        if (!outLines.length) { Engine.toast("Вставь текст слева — сценарий, переписку или главу книги", 1); return }
+        if (!outLines.length) { Engine.toast(qsTr("Вставь текст слева — сценарий, переписку или главу книги"), 1); return }
         insertBlock(outLines.join("\n"))
-        Engine.toast("Вставлено строк: " + outLines.length, 0)
+        Engine.toast(qsTr("Вставлено строк: ") + outLines.length, 0)
         close()
     }
     function kindColor(line) {
@@ -104,15 +104,15 @@ Popup {
         RowLayout {
             spacing: 12
             Rectangle { width: 12; height: 12; radius: 6; color: Theme.categoryColor("Диалог") }
-            InkText { text: "Пиши как сценарий"; size: 30; color: Theme.gold }
+            InkText { text: qsTr("Пиши как сценарий"); size: 30; color: Theme.gold }
             Text {
                 Layout.fillWidth: true
-                text: "Вставь сценарий, переписку или главу книги — заголовки станут фонами, ремарки в скобках — спрайтами, проза — текстом рассказчика"
+                text: qsTr("Вставь сценарий, переписку или главу книги — заголовки станут фонами, ремарки в скобках — спрайтами, проза — текстом рассказчика")
                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14
                 elide: Text.ElideRight
             }
-            PillButton { dark: true; text: "Пример"; onClicked: sd.fillDemo() }
-            PillButton { dark: true; text: "Очистить"; onClicked: { src.text = ""; sd.refresh() } }
+            PillButton { dark: true; text: qsTr("Пример"); onClicked: sd.fillDemo() }
+            PillButton { dark: true; text: qsTr("Очистить"); onClicked: { src.text = ""; sd.refresh() } }
         }
 
         RowLayout {
@@ -126,7 +126,7 @@ Popup {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                Text { text: "ТЕКСТ"; color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12; font.bold: true; font.letterSpacing: 1.5 }
+                Text { text: qsTr("ТЕКСТ"); color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12; font.bold: true; font.letterSpacing: 1.5 }
                 ScrollView {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -139,7 +139,7 @@ Popup {
                         selectionColor: Theme.panel3
                         font.family: Theme.ui
                         font.pixelSize: 15
-                        placeholderText: "НАТ. ПЛЯЖ — ДЕНЬ\n\nАлиса (злая, слева): Ну и чего ты встал?\n— Иду, — буркнул я.\nСлавя (уходит направо)\n\nСолнце садилось за лес."
+                        placeholderText: qsTr("НАТ. ПЛЯЖ — ДЕНЬ\n\nАлиса (злая, слева): Ну и чего ты встал?\n— Иду, — буркнул я.\nСлавя (уходит направо)\n\nСолнце садилось за лес.")
                         placeholderTextColor: Theme.faint
                         background: null
                         onTextChanged: convertTimer.restart()
@@ -194,15 +194,15 @@ Popup {
                 Layout.fillHeight: true
                 spacing: 8
                 RowLayout {
-                    Text { text: "В ИСТОРИЮ · " + sd.outLines.length + " стр."; color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12; font.bold: true; font.letterSpacing: 1.5 }
+                    Text { text: qsTr("В ИСТОРИЮ · ") + sd.outLines.length + qsTr(" стр."); color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12; font.bold: true; font.letterSpacing: 1.5 }
                     Item { Layout.fillWidth: true }
                     PillButton {
                         dark: !sd.expand
                         accent: sd.expand
-                        text: sd.expand ? "✓ сразу командами" : "сразу командами"
+                        text: sd.expand ? qsTr("✓ сразу командами") : qsTr("сразу командами")
                         onClicked: { sd.expand = !sd.expand; sd.refresh() }
                         ToolTip.visible: hovered
-                        ToolTip.text: "Выкл: в истории остаётся читаемый сценарий (он сам развернётся при сборке). Вкл: сразу «показать dv …», «фон …»"
+                        ToolTip.text: qsTr("Выкл: в истории остаётся читаемый сценарий (он сам развернётся при сборке). Вкл: сразу «показать dv …», «фон …»")
                     }
                 }
                 ListView {
@@ -250,7 +250,7 @@ Popup {
                     Text {
                         anchors.centerIn: parent
                         visible: !sd.outLines.length
-                        text: "Слева — текст, здесь — строки мода"
+                        text: qsTr("Слева — текст, здесь — строки мода")
                         color: Theme.faint; font.family: Theme.ui; font.pixelSize: 15
                     }
                 }
@@ -262,7 +262,7 @@ Popup {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                Text { text: "КАДР · строка " + (sd.current + 1); color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12; font.bold: true; font.letterSpacing: 1.5 }
+                Text { text: qsTr("КАДР · строка ") + (sd.current + 1); color: Theme.faint; font.family: Theme.ui; font.pixelSize: 12; font.bold: true; font.letterSpacing: 1.5 }
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: width * 9 / 16
@@ -286,7 +286,7 @@ Popup {
                     PillButton { dark: true; text: "↓"; enabled: sd.current < sd.outLines.length - 1; onClicked: sd.current++ }
                     Text {
                         Layout.fillWidth: true
-                        text: sd.notes.filter(n => n.warn).length ? "⚠ есть что поправить: " + sd.notes.filter(n => n.warn).length : sd.outLines.length ? "✓ всё понял" : ""
+                        text: sd.notes.filter(n => n.warn).length ? qsTr("⚠ есть что поправить: ") + sd.notes.filter(n => n.warn).length : sd.outLines.length ? qsTr("✓ всё понял") : ""
                         color: sd.notes.filter(n => n.warn).length ? Theme.warn : Theme.good
                         font.family: Theme.ui; font.pixelSize: 14; font.bold: true
                     }
@@ -295,8 +295,8 @@ Popup {
                 RowLayout {
                     Layout.alignment: Qt.AlignRight
                     spacing: 10
-                    PillButton { dark: true; text: "Отмена"; onClicked: sd.close() }
-                    PillButton { accent: true; text: "＋ Вставить " + sd.outLines.length + " стр."; enabled: sd.outLines.length > 0; onClicked: sd.commit() }
+                    PillButton { dark: true; text: qsTr("Отмена"); onClicked: sd.close() }
+                    PillButton { accent: true; text: qsTr("＋ Вставить ") + sd.outLines.length + qsTr(" стр."); enabled: sd.outLines.length > 0; onClicked: sd.commit() }
                 }
             }
         }

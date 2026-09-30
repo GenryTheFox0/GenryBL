@@ -19,7 +19,7 @@ Item {
         x: 470; y: 180
         spacing: 26
         Repeater {
-            model: ["Пионеры", "Фоны", "CG"]
+            model: [qsTr("Пионеры"), qsTr("Фоны"), "CG"]
             Text {
                 text: modelData
                 color: gal.tab === index ? "#9bd35a" : (tArea.containsMouse ? "#ffffff" : "#f1e7c8")
@@ -117,7 +117,7 @@ Item {
 
     Text {
         x: 470; y: 960
-        text: "‹ Назад"
+        text: qsTr("‹ Назад")
         color: backArea.containsMouse ? "#9bd35a" : "#f1e7c8"
         font.family: Theme.riffic; font.pixelSize: 36; font.bold: true
         MouseArea { id: backArea; anchors.fill: parent; anchors.margins: -10; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Sfx.click(); gal.back() } }

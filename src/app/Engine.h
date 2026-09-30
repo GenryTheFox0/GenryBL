@@ -3,6 +3,7 @@
 // preview, emotion faces, backgrounds, project covers, the ES main menu art in the
 // launcher - comes through the "gb" image provider.
 #pragma once
+#include "I18n.h"
 #include "Builder.h"
 #include "Cinema.h"
 #include "EsAssets.h"
@@ -55,6 +56,10 @@ class Engine : public QObject {
     // the report the crash catcher wrote last time (work/crash/GenryBL_*.txt) if nobody has seen it yet, else ""
     Q_PROPERTY(QString lastCrash READ lastCrash NOTIFY lastCrashChanged)
     Q_PROPERTY(QString version READ version CONSTANT)
+    // the language of the UI (I18n.h): the resolved code, the setting ("auto" = the language of Windows), the list
+    Q_PROPERTY(QString language READ language NOTIFY languageChanged)
+    Q_PROPERTY(QString languageSetting READ languageSetting NOTIFY languageChanged)
+    Q_PROPERTY(QVariantList languages READ languages CONSTANT)
     Q_PROPERTY(int libraryState READ libraryState NOTIFY libraryChanged)   // 0 not scanned, 1 scanning, 2 ready
     Q_PROPERTY(int wardrobeState READ wardrobeState NOTIFY wardrobeChanged) // 0 / 1 loading / 2 ready
     Q_PROPERTY(bool needsEs READ needsEs NOTIFY readyChanged)            // the first start: where is the game?
@@ -134,7 +139,7 @@ public:
     Q_INVOKABLE QString importCommunity(const QString& file);           // -> "audio/x.ogg" in the mod + CREDITS.txt
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
-    QString version() const { return QStringLiteral("V2.0.0"); }
+    QString version() const { return QStringLiteral("V2.1.0"); }
 
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;
@@ -180,7 +185,8 @@ public:
     Q_INVOKABLE QString coverUrl(const QString& id) const;
     // kind: "bg" | "cg" | "sprite"; name: Ren'Py image name (for sprites "genry_x smile")
     Q_INVOKABLE QString importImage(const QString& fileUrl, const QString& kind, const QString& name);
-    Q_INVOKABLE QString importAudio(const QString& fileUrl);
+    // kind: "music" | "sfx" | "ambience" | "voice" - which tab of the audio browser the file belongs to
+    Q_INVOKABLE QString importAudio(const QString& fileUrl, const QString& kind = QString());
     // voice lines: every file its own name ("audio/001_2.ogg"), converted to ogg in order -> audioImported
     Q_INVOKABLE QStringList importAudioFiles(const QVariantList& fileUrls);
     Q_INVOKABLE QVariantList storySpeakers(const QString& text) const;      // [{name, color}]: story's own first, then ES cast
@@ -254,6 +260,11 @@ public:
     Q_INVOKABLE QString font() const { return m_renderer.fontFamily(); }
     Q_INVOKABLE QVariant setting(const QString& key, const QVariant& def = QVariant()) const;
     Q_INVOKABLE void setSetting(const QString& key, const QVariant& value);
+    QString language() const { return m_lang; }
+    QString languageSetting() const { return m_settings.value(QStringLiteral("language"), QStringLiteral("auto")).toString(); }
+    QVariantList languages() const;
+    Q_INVOKABLE void setLanguage(const QString& setting);
+    Q_INVOKABLE QString systemLanguage() const { return i18n::systemLanguage(); }        // "auto" or a code - applied at once (main.cpp retranslates)
     Q_INVOKABLE void restartApp();
     QString lastCrash() const;
     Q_INVOKABLE void crashSeen();                    // the plate is closed: this report is not shown again
@@ -282,9 +293,16 @@ signals:
     void updateChanged();
     void lastCrashChanged();
     void exportFinished(bool ok, const QString& message, const QString& path);
+    // the story was changed by GenryBL itself (a free @mod_id): the editor takes the new text
+    void storyRewritten(const QString& id, const QString& text);
+    void languageChanged();
 
 private:
     explicit Engine(QObject* parent = nullptr);
+    void applyLanguage();
+    i18n::JsonTranslator* m_tr = nullptr;
+    QString m_lang = QStringLiteral("ru");
+    bool m_langForced = false;             // --lang used once at start; a choice in the UI wins afterwards
     bool start(const QString& esRoot);
     bool m_needsEs = false;
     void setBusy(bool b, const QString& text = QString());
@@ -297,6 +315,12 @@ private:
     gb::SceneState coverScene(const QString& id) const;
     QString assetsDir(const QString& id) const;
     QString labelAtLine(const QString& text, int line) const;
+    // the mod's own audio files by what they are: imported as (audio_kinds.json next to project.json), else what the story plays them as
+    QHash<QString, QString> audioKinds() const;
+    void rememberAudioKind(const QString& file, const QString& kind);
+    // @mod_id taken in the game by another copy of GenryBL: a free one from the project, the story rewritten
+    QString claimModId(const QString& id, const QString& text);
+    QVariantList customAudio(const QString& kind, const QString& command) const;
 
     static Engine* s_instance;
     QString m_root;

@@ -16,12 +16,12 @@ Popup {
     signal accepted()
     // the same words in the installer
     readonly property string words:
-        "GenryBL — конструктор модов для «Бесконечного лета», и он для взрослых.\n\n" +
-        "Внутри есть официальный 18+ контент самой игры — сцены, вырезанные из Steam-версии (хентай-патч из Мастерской). " +
-        "Если тебе нет восемнадцати — закрывай и приходи позже, лагерь никуда не денется.\n\n" +
-        "Теперь по-честному. Я делаю инструмент, а не твои моды. Что ты в нём соберёшь, кому покажешь и куда выложишь — " +
-        "всё на тебе. За моды, сделанные в GenryBL, я не отвечаю никак: ни за то, что в них, ни за то, что с ними будет потом.\n\n" +
-        "Выкладываешь в Мастерскую Steam — ставь метку «для взрослых» и не нарушай её правила. Забанят тебя, а не меня."
+        qsTr("GenryBL — конструктор модов для «Бесконечного лета», и он для взрослых.\n\n") +
+        qsTr("Внутри есть официальный 18+ контент самой игры — сцены, вырезанные из Steam-версии (хентай-патч из Мастерской). ") +
+        qsTr("Если тебе нет восемнадцати — закрывай и приходи позже, лагерь никуда не денется.\n\n") +
+        qsTr("Теперь по-честному. Я делаю инструмент, а не твои моды. Что ты в нём соберёшь, кому покажешь и куда выложишь — ") +
+        qsTr("всё на тебе. За моды, сделанные в GenryBL, я не отвечаю никак: ни за то, что в них, ни за то, что с ними будет потом.\n\n") +
+        qsTr("Выкладываешь в Мастерскую Steam — ставь метку «для взрослых» и не нарушай её правила. Забанят тебя, а не меня.")
 
     background: Rectangle { color: "#e6070b09" }
 
@@ -49,8 +49,8 @@ Popup {
                 }
                 ColumnLayout {
                     spacing: 2
-                    Text { text: "Только для взрослых"; color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 40; font.bold: true }
-                    Text { text: "прочитай, это недолго"; color: "#7a6a4f"; font.family: Theme.ui; font.pixelSize: 18 }
+                    Text { text: qsTr("Только для взрослых"); color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 40; font.bold: true }
+                    Text { text: qsTr("прочитай, это недолго"); color: "#7a6a4f"; font.family: Theme.ui; font.pixelSize: 18 }
                 }
             }
             Text {
@@ -60,14 +60,14 @@ Popup {
                 color: Theme.ink; font.family: Theme.ui; font.pixelSize: 21
                 lineHeight: 1.12
             }
-            Text { text: "— Генри"; color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 24; font.italic: true; Layout.alignment: Qt.AlignRight }
+            Text { text: qsTr("— Генри"); color: "#8a1f1a"; font.family: Theme.riffic; font.pixelSize: 24; font.italic: true; Layout.alignment: Qt.AlignRight }
             RowLayout {
                 Layout.alignment: Qt.AlignRight
                 spacing: 12
-                PillButton { text: "Мне нет 18 — выйти"; onClicked: Qt.quit() }
+                PillButton { text: qsTr("Мне нет 18 — выйти"); onClicked: Qt.quit() }
                 PillButton {
                     accent: true
-                    text: "Мне есть 18, погнали"
+                    text: qsTr("Мне есть 18, погнали")
                     implicitWidth: 260; implicitHeight: 46
                     onClicked: { Engine.ageOk = true; gate.accepted(); gate.close() }
                 }

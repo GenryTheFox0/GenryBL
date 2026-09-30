@@ -38,14 +38,14 @@ Popup {
             Layout.fillWidth: true
             spacing: 8
             Repeater {
-                model: ["Персонажи", "Фоны", "CG"]
+                model: [qsTr("Персонажи"), qsTr("Фоны"), "CG"]
                 PillButton { text: modelData; accent: ip.tab === index; dark: ip.tab !== index; onClicked: { ip.tab = index; ip.tag = "" } }
             }
             TextField {
                 id: search
                 Layout.fillWidth: true
                 implicitHeight: 32
-                placeholderText: ip.tab === 0 && ip.tag ? "Эмоция или одежда…" : "Поиск…"
+                placeholderText: ip.tab === 0 && ip.tag ? qsTr("Эмоция или одежда…") : qsTr("Поиск…")
                 placeholderTextColor: Theme.faint
                 color: Theme.text
                 font.family: Theme.ui; font.pixelSize: 14
@@ -57,14 +57,14 @@ Popup {
         RowLayout {
             visible: ip.tab === 0 && ip.tag !== ""
             spacing: 10
-            PillButton { dark: true; text: "← Все персонажи"; onClicked: { ip.tag = ""; search.text = "" } }
+            PillButton { dark: true; text: qsTr("← Все персонажи"); onClicked: { ip.tag = ""; search.text = "" } }
             InkText { text: ip.tagName; size: 24; color: Theme.charColor(ip.tag) }
             Item { width: 18; height: 1 }
-            Text { visible: ip.wOutfits.length > 0; text: "Гардероб мастерской:"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14 }
+            Text { visible: ip.wOutfits.length > 0; text: qsTr("Гардероб мастерской:"); color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14 }
             DarkCombo {
                 visible: ip.wOutfits.length > 0
                 width: 260
-                model: ["одежда игры"].concat(ip.wOutfits.map(o => (o.adult ? "18+ " : "") + o.id + (o.dists.indexOf("") < 0 ? " (" + (o.dists[0] === "close" ? "близко" : "далеко") + ")" : "")))
+                model: [qsTr("одежда игры")].concat(ip.wOutfits.map(o => (o.adult ? "18+ " : "") + o.id + (o.dists.indexOf("") < 0 ? " (" + (o.dists[0] === "close" ? qsTr("близко") : qsTr("далеко")) + ")" : "")))
                 currentIndex: ip.wOutfit ? ip.wOutfits.findIndex(o => o.id === ip.wOutfit) + 1 : 0
                 onActivated: (i) => ip.wOutfit = i > 0 ? ip.wOutfits[i - 1].id : ""
             }

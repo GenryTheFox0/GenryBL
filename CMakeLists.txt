@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
-project(GenryBL VERSION 2.0.0 LANGUAGES CXX)
+project(GenryBL VERSION 2.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia Concurrent Network)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Multimedia Concurrent Network ShaderTools)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # GB_RELEASE=ON: the build for people (GitHub): the same program, only its own lists go to work/ and no edition badge;
@@ -58,7 +58,7 @@ target_compile_definitions(gb_cli PRIVATE GB_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 # ---- the app: C++ engine + QML UI ----
 qt_add_executable(GenryBL WIN32 src/app/main.cpp src/app.rc)
-set_source_files_properties(qml/Theme.qml qml/Sfx.qml qml/Music.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(qml/Theme.qml qml/Sfx.qml qml/Music.qml qml/Ambience.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(GenryBL
     URI GenryBL
     VERSION 1.0
@@ -67,6 +67,10 @@ qt_add_qml_module(GenryBL
         qml/Theme.qml
         qml/Sfx.qml
         qml/Music.qml
+        qml/Ambience.qml
+        qml/LiveBoard.qml
+        qml/BoardText.qml
+        qml/LanguagePicker.qml
         qml/InkText.qml
         qml/PillButton.qml
         qml/DarkTab.qml
@@ -105,11 +109,18 @@ qt_add_qml_module(GenryBL
         qml/DarkCheck.qml
     SOURCES
         src/app/Engine.h src/app/Engine.cpp
+        src/app/I18n.h src/app/I18n.cpp
         src/app/Images.h src/app/Images.cpp
         src/app/Highlighter.h src/app/Highlighter.cpp
         src/app/Installer.cpp
         src/app/Updater.cpp
         src/app/CrashCatcher.h src/app/CrashCatcher.cpp
+)
+# the living menu: wind in the leaves of the camp picture (qml/LiveBoard.qml) -> qrc:/shaders/menuwind.frag.qsb
+qt_add_shaders(GenryBL "genrybl_shaders"
+    PREFIX "/shaders"
+    BASE qml/shaders
+    FILES qml/shaders/menuwind.frag qml/shaders/boardgold.frag
 )
 target_include_directories(GenryBL PRIVATE src/app)
 target_link_libraries(GenryBL PRIVATE gb_core Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia Qt6::Concurrent Qt6::Network)
