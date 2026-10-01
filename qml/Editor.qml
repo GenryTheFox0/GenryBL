@@ -78,6 +78,10 @@ Item {
         if (shotPage === "editor-lab") Qt.callLater(() => { labDialog.openLab(); labDialog.pick(Number(shotArg) || 0) })
         if (shotPage === "editor-timeline") Qt.callLater(() => { ed.showTimeline = true; code.gotoLine(Number(shotArg) || 14); ed.refreshPreview() })
         if (shotPage === "editor-history") Qt.callLater(() => historyDialog.openFor(projectId, code.text))
+        // V2.1.2 «◆ Герой» and the right-click menu with the transitions
+        if (shotPage === "editor-keys-test") Qt.callLater(() => ed.keysSelfTest())
+        if (shotPage === "editor-hero") Qt.callLater(() => { code.gotoLine(Number(shotArg) || 14); ed.refreshPreview(); infoTabs.currentIndex = 3 })
+        if (shotPage === "editor-menu") Qt.callLater(() => { code.gotoLine(Number(shotArg) || 14); ed.refreshPreview(); ed.transitions = Engine.transitionList(); trEs.popup(code, 260, 40) })
         // «живое кино»: shotArg = "line clicks"
         if (shotPage === "editor-live") Qt.callLater(() => {
             const a = (shotArg || "1 2").split(" ").map(Number)
@@ -110,12 +114,119 @@ Item {
         previewSrc = Engine.previewUrl(code.text, code.currentLine, hoverExtra)
         scene = Engine.sceneInfo(code.text, code.currentLine)
         preview.boxes = hoverExtra === "" ? Engine.spriteBoxes(code.text, code.currentLine) : []
+        heroBoxes = hoverExtra === "" ? preview.boxes : heroBoxes
         if (timeline.visible) timeline.tdata = Engine.sceneTimeline(code.text, code.currentLine)
     }
     // «Таймлайн» under the editor (remembered between runs)
     property bool showTimeline: Engine.setting("timeline", "false") === "true"
     onShowTimelineChanged: { Engine.setSetting("timeline", showTimeline ? "true" : "false"); if (showTimeline) refreshPreview() }
     function insert(cmd) { hoverExtra = ""; code.insertLine(cmd) }
+
+    // ---- V2.1.2 keyframes as in Filmora («ключ») and «Переход ▸» on a right click
+    property var heroBoxes: []                 // the characters at the cursor (Engine.spriteBoxes)
+    property string heroTag: ""                // the one the «Герой» tab shows
+    property bool autoKey: Engine.setting("autoKey", "false") === "true"
+    onAutoKeyChanged: Engine.setSetting("autoKey", autoKey ? "true" : "false")
+    property real keySeconds: Number(Engine.setting("keySeconds", "0.6")) || 0.6
+    onKeySecondsChanged: Engine.setSetting("keySeconds", String(keySeconds))
+    property bool previewHud: Engine.previewHud()
+    function boxOf(tag) {
+        for (const b of preview.boxes) if (b.tag === tag) return b
+        return null
+    }
+    function keyProps(b) { return { x: b.kx, y: b.ky, zoom: b.zoom, rotate: b.rotate, alpha: b.alpha, flip: !!b.flip } }
+    // «ключ sl | x 0.30 | …»: x always; the others when they differ from the usual or from the state before
+    function keyText(tag, v, base, secs) {
+        const f2 = n => (Math.round(n * 100) / 100).toFixed(2)
+        const parts = ["x " + f2(v.x)]
+        if (Math.abs(v.y) > 0.004 || Math.abs(base.y) > 0.004) parts.push("y " + f2(v.y))
+        if (Math.abs(v.zoom - 1) > 0.004 || Math.abs(base.zoom - 1) > 0.004) parts.push("масштаб " + f2(v.zoom))
+        if (Math.abs(v.rotate) > 0.05 || Math.abs(base.rotate) > 0.05) parts.push("поворот " + Math.round(v.rotate))
+        if (v.alpha < 0.996 || base.alpha < 0.996) parts.push("прозрачность " + f2(v.alpha))
+        if (v.flip) parts.push("кувырок")
+        else if (base.flip) parts.push("кувырок нет")
+        if (secs > 0) parts.push("время " + Math.round(secs * 10) / 10)
+        return "ключ " + tag + " | " + parts.join(" | ")
+    }
+    // the cursor stands on this character's keyframe: it is rewritten; any other line: a new keyframe goes under it.
+    // fresh: always a new one (◆). The tag alone: Ren'Py keeps the face it has, a later emotion is not undone.
+    function keyFrame(b, change, fresh) {
+        if (!b) return
+        const n = code.currentLine
+        const here = code.lineText(n)
+        const m = here.match(/^(\s*)(ключ|keyframe)\s+([^|\s]+)/i)
+        const own = !fresh && !!m && m[3] === b.tag
+        let base = keyProps(b)
+        if (own) {
+            base = { x: b.kx, y: 0, zoom: 1, rotate: 0, alpha: 1, flip: false }
+            for (const o of Engine.spriteBoxes(code.text, n - 1)) if (o.tag === b.tag) base = keyProps(o)
+        }
+        const v = Object.assign(keyProps(b), change)
+        let secs = autoKey ? keySeconds : 0
+        if (own) {
+            const t = here.match(/\|\s*(время|сек|time)\s+([0-9.,]+)/i)
+            if (t) secs = Number(t[2].replace(",", "."))
+        }
+        const line = (m && own ? m[1] : lineIndent()) + keyText(b.tag, v, base, secs)
+        if (own) code.setLineText(n, line)
+        else code.insertAfterLine(n, line)
+        heroTag = b.tag
+        previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+    }
+    // the UI self-check of «ключ» and «Эффект перехода» (shot mode: nothing is saved); KEYTEST lines go to the log
+    function keysSelfTest() {
+        const wasAuto = autoKey, out = []
+        const ok = (name, c, d) => out.push((c ? "PASS " : "FAIL ") + name + (c ? "" : " — " + d))
+        code.setText("@mod_id genry_keys\n: start\nфон ext_square_day\nпоказать dv smile pioneer center dissolve\nАлиса: Привет.\nконецигры\n")
+        code.gotoLine(4); refreshPreview()
+        applyTransition({ id: "flash_red", title: "t" })
+        ok("a transition replaces the one at the end of «показать»", code.lineText(4) === "показать dv smile pioneer center flash_red", code.lineText(4))
+        code.gotoLine(5)
+        applyTransition({ id: "fade2", title: "t" })
+        ok("a line that takes none gets «эффект» under it", code.lineText(6) === "эффект fade2", code.lineText(6))
+        code.gotoLine(4); refreshPreview()
+        autoKey = false
+        keyFrame(boxOf("dv"), { x: 0.3 }, false)
+        ok("a drag writes a keyframe under the line", code.lineText(5) === "ключ dv | x 0.30" && code.currentLine === 5, code.lineText(5) + " @" + code.currentLine)
+        refreshPreview()
+        const b2 = boxOf("dv")
+        ok("the preview stands where the keyframe put it", !!b2 && Math.abs(b2.kx - 0.3) < 0.001, b2 ? b2.kx : "none")
+        keyFrame(b2, { zoom: 1.5 }, false)
+        ok("on its own keyframe a change rewrites it", code.lineText(5) === "ключ dv | x 0.30 | масштаб 1.50" && code.lineText(6) === "Алиса: Привет.",
+           code.lineText(5) + " / " + code.lineText(6))
+        refreshPreview()
+        const b3 = boxOf("dv")
+        ok("the size follows", !!b3 && Math.abs(b3.zoom - 1.5) < 0.001, b3 ? b3.zoom : "none")
+        autoKey = true
+        keyFrame(b3, { rotate: 15 }, false)
+        ok("◆ on: the keyframe animates", code.lineText(5) === "ключ dv | x 0.30 | масштаб 1.50 | поворот 15 | время " + keySeconds, code.lineText(5))
+        refreshPreview()
+        keyFrame(boxOf("dv"), {}, true)
+        ok("◆ here: a new keyframe even on its own one", code.lineText(6).indexOf("ключ dv | x 0.30") === 0 && code.currentLine === 6, code.lineText(6))
+        keyFrame(boxOf("dv"), { y: 0, zoom: 1, rotate: 0, alpha: 1, flip: false }, false)
+        ok("«Сбросить» says the old values back", code.lineText(6) === "ключ dv | x 0.30 | масштаб 1.00 | поворот 0 | время " + keySeconds, code.lineText(6))
+        const rpy = Engine.compile(code.text)
+        ok("the game gets an ATL block", rpy.indexOf("    show dv:") >= 0 && rpy.indexOf("ease 0.60 xpos 0.30 xanchor 0.5 zoom 1.50 rotate 15.0") >= 0, rpy.substring(0, 400))
+        autoKey = wasAuto
+        for (const l of out) console.log("KEYTEST " + l)
+        console.log("KEYTEST DONE " + out.filter(l => l.indexOf("PASS") === 0).length + "/" + out.length)
+    }
+    property var transitions: []
+    property var menuHeroes: []
+    function openCodeMenu() {
+        if (!transitions.length) transitions = Engine.transitionList()
+        menuHeroes = Engine.spriteBoxes(code.text, code.currentLine)
+        codeMenu.popup()
+    }
+    // the line takes the transition at its end (the old one goes); a line that takes none: «эффект …» under it
+    function applyTransition(t) {
+        const n = code.currentLine
+        const r = Engine.withTransition(code.lineText(n), t.id)
+        if (r) code.setLineText(n, r)
+        else code.insertAfterLine(n, lineIndent() + "эффект " + t.id)
+        previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+        Engine.toast(qsTr("Эффект перехода: ") + t.title, 0)
+    }
     // palette row -> its window: the choice and dialogue masters, or the command's form
     function openCommand(row) {
         hoverExtra = ""
@@ -342,6 +453,77 @@ Item {
         }
         MenuItem { text: qsTr("Новая сцена…"); onTriggered: cmdForm.openNew("label", {}, code.text, code.currentLine) }
         MenuItem { text: qsTr("Конец игры"); onTriggered: code.insertAfterLine(code.currentLine, ed.lineIndent() + "конецигры") }
+    }
+    Menu {
+        id: codeMenu
+        width: 380
+        Menu {
+            id: trMenu
+            width: 380
+            title: qsTr("Эффект перехода")
+            Instantiator {
+                model: ed.transitions.filter(t => ["dissolve", "dspr", "fade", "fade2", "flash", "none"].indexOf(t.id) >= 0)
+                delegate: MenuItem { required property var modelData; text: modelData.title + "   ·   " + modelData.id; onTriggered: ed.applyTransition(modelData) }
+                onObjectAdded: (index, object) => trMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => trMenu.removeItem(object)
+            }
+            MenuSeparator {}
+            Menu {
+                id: trEs
+                width: 380
+                title: qsTr("Родные из Лета")
+                Instantiator {
+                    model: ed.transitions.filter(t => t.g === 0)
+                    delegate: MenuItem { required property var modelData; text: modelData.title + "   ·   " + modelData.id; onTriggered: ed.applyTransition(modelData) }
+                    onObjectAdded: (index, object) => trEs.insertItem(index, object)
+                    onObjectRemoved: (index, object) => trEs.removeItem(object)
+                }
+            }
+            Menu {
+                id: trRp
+                width: 380
+                title: "Ren'Py"
+                Instantiator {
+                    model: ed.transitions.filter(t => t.g === 1)
+                    delegate: MenuItem { required property var modelData; text: modelData.title + "   ·   " + modelData.id; onTriggered: ed.applyTransition(modelData) }
+                    onObjectAdded: (index, object) => trRp.insertItem(index, object)
+                    onObjectRemoved: (index, object) => trRp.removeItem(object)
+                }
+            }
+            Menu {
+                id: trMods
+                width: 380
+                title: qsTr("Из модов")
+                Instantiator {
+                    model: ed.transitions.filter(t => t.g === 2)
+                    delegate: MenuItem { required property var modelData; text: modelData.title + "   ·   " + modelData.id; onTriggered: ed.applyTransition(modelData) }
+                    onObjectAdded: (index, object) => trMods.insertItem(index, object)
+                    onObjectRemoved: (index, object) => trMods.removeItem(object)
+                }
+            }
+        }
+        Menu {
+            id: keyMenu
+            width: 380
+            title: qsTr("◆ Ключевой кадр")
+            enabled: ed.menuHeroes.length > 0
+            Instantiator {
+                model: ed.menuHeroes
+                delegate: MenuItem {
+                    required property var modelData
+                    text: modelData.image
+                    onTriggered: { ed.keyFrame(modelData, {}, true); infoTabs.currentIndex = 3 }
+                }
+                onObjectAdded: (index, object) => keyMenu.insertItem(index, object)
+                onObjectRemoved: (index, object) => keyMenu.removeItem(object)
+            }
+        }
+        MenuItem { text: qsTr("Добавить строку…"); onTriggered: { ed.lineScenes = Engine.sceneNames(code.text); lineMenu.popup() } }
+        MenuSeparator {}
+        MenuItem { text: qsTr("Вырезать"); enabled: code.hasSelection; onTriggered: code.cut() }
+        MenuItem { text: qsTr("Копировать"); enabled: code.hasSelection; onTriggered: code.copy() }
+        MenuItem { text: qsTr("Вставить из буфера"); onTriggered: code.paste() }
+        MenuItem { text: qsTr("Выделить всё"); onTriggered: code.selectAll() }
     }
     ChoiceDialog {
         id: choiceWizard
@@ -706,6 +888,7 @@ Item {
             badges: ed.badges
             lineTool: true
             onLineToolClicked: (line, anchor) => { ed.lineScenes = Engine.sceneNames(code.text); lineMenu.popup(anchor, anchor.width + 4, 0) }
+            onContextMenuRequested: ed.openCodeMenu()
             onReplaced: (n) => {
                 previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
                 Engine.toast(n ? qsTr("Заменено: ") + n + qsTr(" (Ctrl+Z вернёт всё сразу)") : qsTr("Нечего заменять"), n ? 0 : 1)
@@ -736,6 +919,17 @@ Item {
                         code.setLineText(n, Engine.placeSprite(code.lineText(n), pos, dist))
                         previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
                     }
+                    // V2.1.2 ◆: the mouse writes keyframes; a click picks the character for «Герой»
+                    autoKey: ed.autoKey
+                    hud: ed.previewHud
+                    onAutoKeyToggled: (on) => ed.autoKey = on
+                    onHudToggled: (on) => { Engine.setPreviewHud(on); ed.previewHud = on; ed.refreshPreview() }
+                    onSpriteClicked: (tag) => { ed.heroTag = tag; infoTabs.currentIndex = 3 }
+                    onKeySprite: (tag, kx, ky) => ed.keyFrame(ed.boxOf(tag), { x: kx, y: ky }, false)
+                    onZoomSprite: (tag, f) => {
+                        const b = ed.boxOf(tag)
+                        if (b) ed.keyFrame(b, { zoom: Math.max(0.2, Math.min(3, b.zoom * f)) }, false)
+                    }
                 }
                 TabBar {
                     id: infoTabs
@@ -744,6 +938,7 @@ Item {
                     DarkTab { text: qsTr("Проблемы") + (ed.issues.length ? " (" + ed.issues.length + ")" : ""); accentColor: ed.errors ? Theme.bad : ed.warnings ? Theme.warn : Theme.good }
                     DarkTab { text: qsTr("Сцена") }
                     DarkTab { text: qsTr("Код Ren'Py") }
+                    DarkTab { text: qsTr("◆ Герой"); accentColor: Theme.gold }
                 }
                 StackLayout {
                     Layout.fillWidth: true
@@ -932,6 +1127,18 @@ Item {
                                 background: Rectangle { color: Theme.bg }
                             }
                         }
+                    }
+
+                    // ---- V2.1.2 «Герой»: the character's properties and keyframes (Filmora)
+                    HeroInspector {
+                        boxes: ed.heroBoxes
+                        selected: ed.heroTag
+                        autoKey: ed.autoKey
+                        seconds: ed.keySeconds
+                        onPick: (tag) => ed.heroTag = tag
+                        onKey: (b, change, fresh) => ed.keyFrame(b, change, fresh)
+                        onAutoKeyEdited: (on) => ed.autoKey = on
+                        onSecondsEdited: (s) => ed.keySeconds = s
                     }
                 }
             }

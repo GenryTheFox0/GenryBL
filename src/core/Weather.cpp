@@ -1,6 +1,8 @@
 #include "Weather.h"
 
 #include <QPainter>
+#include <algorithm>
+#include <cmath>
 #include <QPainterPath>
 #include <QRadialGradient>
 #include <QLinearGradient>
@@ -178,5 +180,53 @@ int weatherLevelWord(const QString& word)
 }
 
 double weatherLevelFactor(int level) { return level <= 1 ? 0.5 : level >= 3 ? 1.8 : 1.0; }
+
+QImage transitionMask(const QString& name)
+{
+    // drawn at a quarter and smoothed up: the ramp has no hard steps
+    const int w = 480, h = 270;
+    QImage m(w, h, QImage::Format_Grayscale8);
+    const double cx = w / 2.0, cy = h / 2.0, far = std::hypot(cx, cy);
+    // the heart grows from the middle: the smallest heart (x^2+y^2-1)^3 - x^2 y^3 <= 0 that reaches the point
+    auto heartScale = [&](double px, double py) {
+        double lo = 0.0, hi = 4.0;
+        for (int i = 0; i < 22; ++i) {
+            const double s = (lo + hi) / 2, x = px / s, y = py / s + 0.15;
+            const double a = x * x + y * y - 1;
+            if (a * a * a - x * x * y * y * y <= 0) hi = s; else lo = s;
+        }
+        return hi;
+    };
+    double heartMax = 0;
+    QVector<double> hs;
+    if (name == QLatin1String("genry_heart")) {
+        hs.resize(w * h);
+        for (int y = 0; y < h; ++y)
+            for (int x = 0; x < w; ++x) {
+                const double v = heartScale((x - cx) / (h * 0.42), (cy - y) / (h * 0.42));
+                hs[y * w + x] = v;
+                heartMax = std::max(heartMax, v);
+            }
+    }
+    for (int y = 0; y < h; ++y) {
+        uchar* line = m.scanLine(y);
+        for (int x = 0; x < w; ++x) {
+            double v = 0;                                   // 1 = first
+            if (name == QLatin1String("genry_circle")) v = 1 - std::hypot(x - cx, y - cy) / far;
+            else if (name == QLatin1String("genry_clock")) {
+                double a = std::atan2(x - cx, cy - y) / 6.283185307179586;   // from twelve o'clock, clockwise
+                if (a < 0) a += 1;
+                v = 1 - a;
+            } else if (name == QLatin1String("genry_diamond")) {
+                const double cell = 40, u = std::fmod(x, cell) - cell / 2, t = std::fmod(y, cell) - cell / 2;
+                const double d = (std::abs(u) + std::abs(t)) / cell;           // 0 in a diamond's middle, 1 at its corner
+                v = 1 - (0.55 * d + 0.45 * double(x) / w);                     // they open in a sweep from the left
+            } else if (name == QLatin1String("genry_heart")) v = 1 - hs[y * w + x] / std::max(1e-6, heartMax);
+            else v = 1 - double(x) / (w - 1);                                  // genry_soft: a soft curtain from the left
+            line[x] = uchar(std::clamp(v, 0.0, 1.0) * 255 + 0.5);
+        }
+    }
+    return m.scaled(1920, 1080, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+}
 
 } // namespace gb

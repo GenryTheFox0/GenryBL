@@ -44,6 +44,12 @@ struct Tbl {
         for (int i = 0; kRenames[i].k; ++i) renames.insert(U(kRenames[i].k), U(kRenames[i].v));
         for (int i = 0; kSpeakers[i].k; ++i) speakers.insert(U(kSpeakers[i].k), U(kSpeakers[i].v));
         for (int i = 0; kEffects[i]; ++i) effects.insert(U(kEffects[i]));
+        // V2.1.2: the rest of the game's own (globals.rpy), Ren'Py's (00definitions.rpy) and GenryBL's from the mods
+        for (const char* e : {"flash", "flash2", "flash_red", "dissolve_fast", "dissolve_long", "hell_dissolve", "wipeleft", "wiperight",
+                              "wipeup", "wipedown", "slideleft", "slideright", "slideup", "slidedown", "slideawayleft", "slideawayright",
+                              "pushleft", "pushright", "pushup", "pushdown", "irisin", "irisout", "blinds", "squares", "zoomin", "zoomout",
+                              "zoominout", "genry_circle", "genry_diamond", "genry_clock", "genry_soft", "genry_heart"})
+            effects.insert(U(e));
         for (int i = 0; kPositions[i]; ++i) positions.insert(U(kPositions[i]));
         for (int i = 0; kCommandNames[i]; ++i) commandNames.insert(U(kCommandNames[i]));
         for (int i = 0; kSpritePrefixes[i]; ++i) spritePrefixes.insert(U(kSpritePrefixes[i]));
@@ -1572,6 +1578,7 @@ const QHash<QString, QString>& speakers() { return T().speakers; }
 const QHash<QString, QString>& v1Renames()
 {
     static const QHash<QString, QString> m{
+        {U("ключ"), QStringLiteral("keyframe")}, {QStringLiteral("keyframe"), QStringLiteral("keyframe")},
         {U("запомнит"), QStringLiteral("remember")}, {U("запомнила"), QStringLiteral("remember")}, {U("запомнил"), QStringLiteral("remember")},
         {QStringLiteral("remember"), QStringLiteral("remember")},
         {U("шкала"), QStringLiteral("meter")}, {QStringLiteral("meter"), QStringLiteral("meter")},
@@ -2239,6 +2246,74 @@ static SL compileV1Feature(const QString& cmd, const QString& rest, const QStrin
     return {};
 }
 
+QStringList genryTransitionNames()
+{
+    return {QStringLiteral("genry_circle"), QStringLiteral("genry_diamond"), QStringLiteral("genry_clock"), QStringLiteral("genry_soft"),
+            QStringLiteral("genry_heart")};
+}
+
+Keyframe parseKeyframe(const QString& rest)
+{
+    Keyframe k;
+    const QStringList parts = rest.split(QLatin1Char('|'));
+    k.image = pyStrip(parts.value(0));
+    static const QStringList xs{QStringLiteral("x"), U("х")}, ys{QStringLiteral("y"), U("у")};
+    static const QStringList zooms{U("масштаб"), U("размер"), QStringLiteral("zoom"), QStringLiteral("scale")};
+    static const QStringList turns{U("поворот"), U("угол"), QStringLiteral("rotate")};
+    static const QStringList alphas{U("прозрачность"), U("видимость"), QStringLiteral("alpha")};
+    static const QStringList flips{U("кувырок"), U("зеркало"), QStringLiteral("flip"), QStringLiteral("mirror")};
+    static const QStringList times{U("время"), U("сек"), U("за"), QStringLiteral("time")};
+    static const QStringList nos{U("нет"), U("выкл"), QStringLiteral("no"), QStringLiteral("off"), QStringLiteral("0"), QStringLiteral("false")};
+    for (int i = 1; i < parts.size(); ++i) {
+        const QStringList w = pySplit(pyStrip(parts[i]));
+        if (w.isEmpty()) continue;
+        const QString key = w[0].toLower();
+        auto number = [](QString raw, double* v) {
+            raw = raw.trimmed();
+            const bool percent = raw.endsWith(QLatin1Char('%'));
+            if (percent) raw.chop(1);
+            raw.replace(QLatin1Char(','), QLatin1Char('.'));
+            bool ok = false;
+            *v = raw.toDouble(&ok);
+            if (ok && percent) *v /= 100.0;
+            return ok && std::isfinite(*v);
+        };
+        double v = 0;
+        if (flips.contains(key)) { k.hasFlip = true; k.flip = w.size() < 2 || !nos.contains(w[1].toLower()); continue; }
+        if (w.size() == 1 && number(w[0], &v)) { k.seconds = qMax(0.0, v); continue; }   // «| 0.6»: the seconds
+        if (w.size() < 2 || !number(w[1], &v)) continue;
+        if (xs.contains(key)) { k.hasX = true; k.x = v; }
+        else if (ys.contains(key)) { k.hasY = true; k.y = v; }
+        else if (zooms.contains(key) && v > 0) { k.hasZoom = true; k.zoom = v; }
+        else if (turns.contains(key)) { k.hasRotate = true; k.rotate = v; }
+        else if (alphas.contains(key)) { k.hasAlpha = true; k.alpha = qBound(0.0, v, 1.0); }
+        else if (times.contains(key)) k.seconds = qMax(0.0, v);
+    }
+    return k;
+}
+
+SL compileKeyframe(const QString& rest, CompileState& st, const CompileOptions& opt)
+{
+    const Keyframe k = parseKeyframe(rest);
+    QString image = k.image;
+    if (image.isEmpty()) return {U("    # ключ: кого? («ключ dv smile pioneer | x 0.30 | время 0.6»)")};
+    if (!opt.legacy) image = withOverlays(image);
+    QStringList props;
+    if (k.hasX) props << QStringLiteral("xpos %1 xanchor 0.5").arg(F2(k.x));
+    if (k.hasY) props << QStringLiteral("ypos %1 yanchor 0.0").arg(F2(k.y));
+    if (k.hasZoom) props << QStringLiteral("zoom ") + F2(k.zoom);
+    if (k.hasRotate) props << QStringLiteral("rotate ") + pyFixed(k.rotate, 1);
+    if (k.hasAlpha) props << QStringLiteral("alpha ") + F2(k.alpha);
+    if (k.hasFlip) props << (k.flip ? QStringLiteral("xzoom -1.0") : QStringLiteral("xzoom 1.0"));
+    SL r{QStringLiteral("    show %1:").arg(image)};
+    r << tintAtl(image);
+    if (!props.isEmpty())
+        r << (k.seconds > 0 ? QStringLiteral("        ease %1 ").arg(F2(k.seconds)) : QStringLiteral("        ")) + props.join(QLatin1Char(' '));
+    if (r.size() == 1) r[0] = QStringLiteral("    show ") + image;          // nothing to change: an ATL block may not be empty
+    rememberSpriteTag(st, image);
+    return r;
+}
+
 static QStringList compileLineCore(const QString& line, const QString& modId, CompileState& st, const CompileOptions& opt)
 {
     const Ctx c{opt, modId, &st.modVars, st.modMenu};
@@ -2363,6 +2438,7 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         return {out};
     }
     if (cmd == QLatin1String("walk")) return compileWalk(rest);
+    if (cmd == QLatin1String("keyframe")) return compileKeyframe(rest, st, opt);
     if (cmd == QLatin1String("bigshow")) return compileBigShow(rest);
     if (cmd == QLatin1String("mirror")) return compileMirrorShow(rest, QStringLiteral("1.0"), c);
     if (cmd == QLatin1String("mirrorbig")) return compileMirrorShow(rest, QStringLiteral("1.25"), c);
@@ -2556,7 +2632,9 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         const QString e = pyStrip(rest).isEmpty() ? QStringLiteral("dissolve") : pyStrip(rest);
         if (e == QLatin1String("none")) return {};
         if (isEffect(e)) return {QStringLiteral("    with ") + e};
-        SL all = T().effects.values();
+        SL all;                                            // an old GenryModEngine story hears the old list
+        if (opt.legacy) for (int i = 0; kEffects[i]; ++i) all << U(kEffects[i]);
+        else all = T().effects.values();
         all.sort();
         return {QStringLiteral("    # effect command needs one of: ") + all.join(QStringLiteral(", "))};
     }
@@ -4934,6 +5012,10 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         if (all.contains(QLatin1String("genry_codelock"))) block(kV2CodeLock);
         if (all.contains(QLatin1String("genry_flashlight"))) block(kV2Flashlight);
         if (all.contains(QLatin1String("genry_now_playing("))) block(kV21NowPlaying);
+        // V2.1.2 the transitions from the mods: a picture dissolve over GenryBL's own mask (Builder draws it)
+        for (const QString& t : genryTransitionNames())
+            if (all.contains(QStringLiteral("with ") + t))
+                out << QStringLiteral("define %1 = ImageDissolve(%2, 1.0, 48)").arg(t, pyQ(relModPath(modId, QStringLiteral("genry/fx/") + t + QStringLiteral(".png"))));
         if (all.contains(QLatin1String("genry_afk_watch"))) block(kV21Afk);
         if (all.contains(QLatin1String("genry_terminal_run("))) block(kV21Terminal);
         if (all.contains(QLatin1String("genry_rps_run("))) block(kV21Rps);

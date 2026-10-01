@@ -20,6 +20,14 @@ Rectangle {
     signal liveCinema()                    // «живое кино» right here, over this pane
     // a character dragged to a place (fleft…fright) or its distance wheeled (-1 far, 0, 1 close; -2 = keep)
     signal moveSprite(int line, string pos, int dist)
+    // V2.1.2 Filmora's way: with ◆ («автоключ») a drag anywhere / the wheel is a keyframe («ключ»)
+    property bool autoKey: false
+    property bool hud: true                // the music / sound plates over the frame
+    signal spriteClicked(string tag)
+    signal keySprite(string tag, real kx, real ky)
+    signal zoomSprite(string tag, real factor)
+    signal autoKeyToggled(bool on)
+    signal hudToggled(bool on)
 
     // ES's own places (media.rpy xalign): where a dropped character snaps to
     readonly property var places: [["fleft", 0.16], ["left", 0.28], ["cleft", 0.355], ["center", 0.5], ["cright", 0.645], ["right", 0.72], ["fright", 0.84]]
@@ -60,11 +68,20 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onDoubleClicked: pp.enlarge()
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onDoubleClicked: (m) => { if (m.button === Qt.LeftButton) pp.enlarge() }
+                onClicked: (m) => { if (m.button === Qt.RightButton) frameMenu.popup() }
                 ToolTip.visible: containsMouse && pp.extra === ""
                 ToolTip.delay: 900
-                ToolTip.text: qsTr("Двойной клик — на весь экран")
+                ToolTip.text: qsTr("Двойной клик — на весь экран · правая кнопка — меню превью")
                 hoverEnabled: true
+            }
+            Menu {
+                id: frameMenu
+                MenuItem { text: qsTr("Плашки музыки и звука"); checkable: true; checked: pp.hud; onTriggered: pp.hudToggled(checked) }
+                MenuItem { text: qsTr("◆ Автоключ: мышь ставит ключевые кадры"); checkable: true; checked: pp.autoKey; onTriggered: pp.autoKeyToggled(checked) }
+                MenuSeparator {}
+                MenuItem { text: qsTr("На весь экран"); onTriggered: pp.enlarge() }
             }
             // ---- drag a character along the frame: it snaps to ES's places, the wheel brings it closer or farther;
             // the «показать» line that placed it is rewritten
@@ -76,9 +93,9 @@ Rectangle {
                 readonly property real k: width / 1920
                 property int dragging: -1
                 property real dragFx: 0.5
-                // the snap marks, while a character is carried
+                // the snap marks, while a character is carried (with ◆ it goes anywhere)
                 Repeater {
-                    model: dragLayer.dragging >= 0 ? pp.places : []
+                    model: dragLayer.dragging >= 0 && !pp.autoKey ? pp.places : []
                     Rectangle {
                         required property var modelData
                         readonly property bool hit: pp.nearestPlace(dragLayer.dragFx)[0] === modelData[0]
@@ -94,7 +111,7 @@ Rectangle {
                         id: sb
                         required property var modelData
                         required property int index
-                        readonly property bool canDrag: modelData.line > 0
+                        readonly property bool canDrag: modelData.line > 0 || pp.autoKey
                         x: modelData.x * dragLayer.k
                         y: Math.max(0, modelData.y * dragLayer.k)
                         width: modelData.w * dragLayer.k
@@ -118,8 +135,9 @@ Rectangle {
                                 Text {
                                     id: tip
                                     anchors.centerIn: parent
-                                    text: area.drag.active ? "→ " + pp.placeName(pp.nearestPlace(dragLayer.dragFx)[0])
-                                                           : qsTr("тащи · колёсико — ближе/дальше")
+                                    text: area.drag.active ? (pp.autoKey ? qsTr("◆ отпусти — ключевой кадр") : "→ " + pp.placeName(pp.nearestPlace(dragLayer.dragFx)[0]))
+                                                           : pp.autoKey ? qsTr("◆ тащи куда угодно · колёсико — масштаб")
+                                                                        : qsTr("тащи · колёсико — ближе/дальше")
                                     color: "white"; font.family: Theme.ui; font.pixelSize: 12; font.bold: true
                                 }
                             }
@@ -131,7 +149,7 @@ Rectangle {
                             hoverEnabled: true
                             cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                             drag.target: ghost
-                            drag.axis: Drag.XAxis
+                            drag.axis: pp.autoKey ? Drag.XAndYAxis : Drag.XAxis
                             drag.threshold: 6
                             onPressed: dragLayer.dragFx = sb.modelData.cx
                             onPositionChanged: if (drag.active) {
@@ -140,18 +158,47 @@ Rectangle {
                             }
                             onReleased: {
                                 if (dragLayer.dragging === sb.index) {
+                                    const dx = ghost.x / dragLayer.width, dy = ghost.y / dragLayer.height
                                     const p = pp.nearestPlace(dragLayer.dragFx)[0]
-                                    ghost.x = 0
+                                    ghost.x = 0; ghost.y = 0
                                     dragLayer.dragging = -1
-                                    if (p !== sb.modelData.pos) pp.moveSprite(sb.modelData.line, p, -2)
-                                } else ghost.x = 0
+                                    if (pp.autoKey) pp.keySprite(sb.modelData.tag, sb.modelData.kx + dx, sb.modelData.ky + dy)
+                                    else if (p !== sb.modelData.pos) pp.moveSprite(sb.modelData.line, p, -2)
+                                } else {
+                                    ghost.x = 0; ghost.y = 0
+                                    pp.spriteClicked(sb.modelData.tag)
+                                }
                             }
                             onDoubleClicked: pp.enlarge()
                             onWheel: (wheel) => {
+                                if (pp.autoKey) { pp.zoomSprite(sb.modelData.tag, wheel.angleDelta.y > 0 ? 1.1 : 1 / 1.1); return }
+                                if (!(sb.modelData.line > 0)) return
                                 const d = Math.max(-1, Math.min(1, sb.modelData.dist + (wheel.angleDelta.y > 0 ? 1 : -1)))
                                 if (d !== sb.modelData.dist) pp.moveSprite(sb.modelData.line, "", d)
                             }
                         }
+                    }
+                }
+            }
+            // the two switches at hand: the plates (♪) and ◆ «автоключ»
+            Row {
+                anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 8
+                spacing: 6
+                visible: pp.extra === ""
+                Repeater {
+                    model: [["♪", qsTr("Плашки музыки и звука"), "hud"], ["◆", qsTr("Автоключ: мышь ставит ключевые кадры, как в Филморе"), "key"]]
+                    AbstractButton {
+                        id: sw
+                        required property var modelData
+                        readonly property bool lit: modelData[2] === "hud" ? pp.hud : pp.autoKey
+                        implicitWidth: 30; implicitHeight: 30
+                        hoverEnabled: true
+                        opacity: lit || hovered ? 1 : 0.6
+                        onClicked: modelData[2] === "hud" ? pp.hudToggled(!pp.hud) : pp.autoKeyToggled(!pp.autoKey)
+                        ToolTip.visible: hovered
+                        ToolTip.text: modelData[1]
+                        background: Rectangle { radius: 15; color: sw.lit ? Theme.accent : "#b3000000"; border.color: sw.hovered ? Theme.accent : "#66ffffff" }
+                        contentItem: Text { text: sw.modelData[0]; color: sw.lit ? "#16240c" : Theme.gold; font.pixelSize: 14; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
                 }
             }

@@ -462,6 +462,13 @@ void Cinema::absorb(const QString& s)
         return table.value(word);
     };
     static const QMap<QString, QString> none;
+    // V2.1.2 the game's flashes and shakes at the end of a line («… flash_red», «эффект vpunch»): the cinema shows them
+    if (!w.isEmpty() && isEffect(w.last())) {
+        const QString e = w.last();
+        if (e == QLatin1String("flash") || e == QLatin1String("flash2") || e == QLatin1String("flash_red")) m_moment = QStringLiteral("flash");
+        else if (e == QLatin1String("hpunch") || e == QLatin1String("vpunch")) m_moment = QStringLiteral("shake");
+        else if (e == QLatin1String("pixellate")) m_moment = QStringLiteral("pixels");
+    }
     if (cmd == QLatin1String("setvar") && w.size() >= 2) {
         m_vars.insert(slug(w[0], QStringLiteral("value"), false), eval(pyStrip(pySplit(rest, 1).value(1))));
     } else if (cmd == QLatin1String("addvar") && w.size() >= 2) {

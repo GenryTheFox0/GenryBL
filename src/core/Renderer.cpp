@@ -448,6 +448,11 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         const double x = sp.xpos * W - sp.xanchor * w, y = sp.ypos * H - sp.yanchor * h;
         p.save();
         p.setOpacity(sp.alpha);
+        if (sp.rotate != 0.0) {                                      // Ren'Py turns it round its middle
+            p.translate(x + w / 2, y + h / 2);
+            p.rotate(sp.rotate);
+            p.translate(-(x + w / 2), -(y + h / 2));
+        }
         if (sp.mirror) {
             p.translate(x + w, y);
             p.scale(-1, 1);

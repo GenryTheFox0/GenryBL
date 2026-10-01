@@ -104,13 +104,14 @@ SceneTimeline sceneTimeline(const QString& storyText, int line, const CompileOpt
                     if (id.startsWith(QLatin1String("char:"))) close(id, beat);
         } else if (cmd == QLatin1String("show") || cmd == QLatin1String("mirror") || cmd == QLatin1String("mirrorbig") || cmd == QLatin1String("bigshow") ||
                    cmd == QLatin1String("fullheight") || cmd == QLatin1String("enterleft") || cmd == QLatin1String("enterright") ||
-                   cmd == QLatin1String("walk") || cmd == QLatin1String("pulse") || cmd == QLatin1String("ghostmove") || cmd == QLatin1String("zoomshow")) {
+                   cmd == QLatin1String("walk") || cmd == QLatin1String("pulse") || cmd == QLatin1String("ghostmove") || cmd == QLatin1String("zoomshow") ||
+                   cmd == QLatin1String("keyframe")) {
             QStringList img = w;
             while (!img.isEmpty() && (isPosition(img.last()) || isWalkPosition(img.last()) || pyIsNumber(img.last()))) img.removeLast();
             const QString image = img.join(QLatin1Char(' ')).section(QLatin1Char('|'), 0, 0).trimmed();
             const QString tag = image.section(QLatin1Char(' '), 0, 0);
             // «… move»: the character glides there from where it stood - a keyframe of the scene
-            const bool key = w.contains(QStringLiteral("move"));
+            const bool key = w.contains(QStringLiteral("move")) || cmd == QLatin1String("keyframe");
             if (!tag.isEmpty()) start(QStringLiteral("char:") + tag, charTitle(tag), beat, ln, key ? QStringLiteral("◆ ") + image : image, QStringLiteral("char"));
         } else if (cmd == QLatin1String("hide") || cmd == QLatin1String("exitleft") || cmd == QLatin1String("exitright")) {
             const QString tag = w.value(0);

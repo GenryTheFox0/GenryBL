@@ -208,7 +208,8 @@ Item {
             spacing: 6
             DarkCombo {
                 width: 150
-                model: ["dissolve", qsTr("без перехода"), "fade", "dspr", "moveinleft", "moveinright", "hpunch"]
+                model: ["dissolve", qsTr("без перехода"), "fade", "dspr", "moveinleft", "moveinright", "hpunch", "vpunch", "dissolve2", "fade2", "fade3",
+                        "flash", "flash_red", "pixellate", "zoomin", "genry_circle", "genry_heart"]
                 onActivated: (i) => cb.trans = i === 1 ? "" : model[i]
             }
             PillButton { dark: true; text: qsTr("Реплика"); onClicked: cb.insert(cb.displayName + ": ") }

@@ -176,6 +176,13 @@ public:
     Q_INVOKABLE QVariantList spriteBoxes(const QString& text, int line) const;
     // a «показать» line with its place (fleft…fright, "" = keep) and distance (-1 far, 0 normal, 1 close, -2 keep)
     Q_INVOKABLE QString placeSprite(const QString& lineText, const QString& pos, int distance) const;
+    // V2.1.2 «Переход ▸»: every transition a line can end with [{id, title, group}] - the game's own, Ren'Py's, from the mods
+    Q_INVOKABLE QVariantList transitionList() const;
+    // the line with this transition at its end (the old one goes); "" = this line takes none («эффект …» goes below it)
+    Q_INVOKABLE QString withTransition(const QString& lineText, const QString& effect) const;
+    // the music / ambience / sound plates over the editor's preview (right click on it: hide them)
+    Q_INVOKABLE bool previewHud() const { return m_previewHud; }
+    Q_INVOKABLE void setPreviewHud(bool on);
     Q_INVOKABLE QString previewUrl(const QString& text, int line, const QString& extra = QString(), int choiceHover = -2);   // -2: the option under the cursor
     Q_INVOKABLE QVariantList lineStarts(const QString& text) const;
     Q_INVOKABLE int lineAt(const QString& text, int pos) const;
@@ -480,6 +487,7 @@ private:
     gb::Cinema m_cinema;
     QVariantMap cinemaMap(const gb::CinemaStop& c);
     std::atomic<int> m_wardrobeState{0};
+    std::atomic<bool> m_previewHud{true};     // read by the preview's worker thread
     void startWardrobe();
     void waitForWardrobe(const std::function<void(const QString&)>& log) const;   // worker threads: a build right after start
     QString saveProjectImage(const QImage& img, const QString& kind, const QString& name);   // assets/images/<name>.png

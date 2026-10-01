@@ -38,6 +38,7 @@
 #include <QProcess>
 #include <memory>
 #include <QQmlEngine>
+#include <QLocale>
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QStandardPaths>
@@ -147,6 +148,7 @@ Engine::Engine(QObject* parent)
     , m_settings(QCoreApplication::applicationDirPath() + QStringLiteral("/../work/settings.ini"), QSettings::IniFormat)
 {
     s_instance = this;
+    m_previewHud = m_settings.value(QStringLiteral("previewHud"), QStringLiteral("true")).toString() != QLatin1String("false");
     QDir d(QCoreApplication::applicationDirPath());
     for (int i = 0; i < 4 && m_root.isEmpty(); ++i) {
         if (QFileInfo::exists(d.filePath(QStringLiteral("data/es_catalog.json")))) m_root = d.absolutePath();
@@ -1112,11 +1114,107 @@ QVariantList Engine::spriteBoxes(const QString& text, int line) const
         }
         const QStringList iw = sp.image.split(QLatin1Char(' '), Qt::SkipEmptyParts);
         const int dist = iw.contains(QLatin1String("close")) ? 1 : iw.contains(QLatin1String("far")) ? -1 : 0;
+        // V2.1.2 the inspector («Герой»): what «ключ» would write for it now - the middle across, the drop from its
+        // usual place, size, turn, see-through, flip
+        const double keyY = sp.yanchor == 0.0 ? sp.ypos : 0.0;
         out << QVariantMap{{QStringLiteral("tag"), sp.tag}, {QStringLiteral("image"), sp.image}, {QStringLiteral("x"), x}, {QStringLiteral("y"), y},
                            {QStringLiteral("w"), w}, {QStringLiteral("h"), h}, {QStringLiteral("line"), showLine},
-                           {QStringLiteral("pos"), pos}, {QStringLiteral("dist"), dist}, {QStringLiteral("cx"), sp.xpos}};
+                           {QStringLiteral("pos"), pos}, {QStringLiteral("dist"), dist}, {QStringLiteral("cx"), sp.xpos},
+                           {QStringLiteral("kx"), sp.xpos + (0.5 - sp.xanchor) * w / 1920.0}, {QStringLiteral("ky"), keyY},
+                           {QStringLiteral("zoom"), sp.zoom}, {QStringLiteral("rotate"), sp.rotate}, {QStringLiteral("alpha"), sp.alpha},
+                           {QStringLiteral("flip"), sp.mirror}};
     }
     return out;
+}
+
+void Engine::setPreviewHud(bool on)
+{
+    m_previewHud = on;
+    m_settings.setValue(QStringLiteral("previewHud"), on ? QStringLiteral("true") : QStringLiteral("false"));
+}
+
+QVariantList Engine::transitionList() const
+{
+    QVariantList out;
+    const QString es = gbTr("Родные из Лета"), rp = QStringLiteral("Ren'Py"), mods = gbTr("Из модов");
+    auto add = [&](const char* id, const QString& kind, double seconds, const QString& group) {
+        const QString title = seconds > 0 ? kind + QStringLiteral(" · ") + gbTr("%1 с").arg(QLocale().toString(seconds, 'g', 3)) : kind;
+        out << QVariantMap{{QStringLiteral("id"), QString::fromLatin1(id)}, {QStringLiteral("title"), title}, {QStringLiteral("group"), group},
+                           {QStringLiteral("g"), group == es ? 0 : group == rp ? 1 : 2}};
+    };
+    // the game's own (globals.rpy) and the two of Ren'Py it leans on most
+    add("dissolve", gbTr("Растворение"), 0.5, es);
+    add("dspr", gbTr("Смена эмоции"), 0.2, es);
+    add("dissolve2", gbTr("Растворение"), 2, es);
+    add("fade", gbTr("Затемнение"), 1, es);
+    add("fade2", gbTr("Затемнение"), 2, es);
+    add("fade3", gbTr("Затемнение"), 3, es);
+    add("flash", gbTr("Вспышка белым"), 1, es);
+    add("flash2", gbTr("Вспышка белым"), 6, es);
+    add("flash_red", gbTr("Вспышка красным"), 2, es);
+    add("dissolve_fast", gbTr("Растворение"), 0.5, es);
+    add("hell_dissolve", gbTr("Очень медленное растворение"), 50, es);
+    add("dissolve_long", gbTr("Очень медленное растворение"), 100, es);
+    add("hpunch", gbTr("Тряска по горизонтали"), 0, es);
+    add("vpunch", gbTr("Тряска по вертикали"), 0, es);
+    // Ren'Py's own (00definitions.rpy)
+    add("pixellate", gbTr("Пиксели"), 1, rp);
+    add("wipeleft", gbTr("Шторка") + QStringLiteral(" ←"), 1, rp);
+    add("wiperight", gbTr("Шторка") + QStringLiteral(" →"), 1, rp);
+    add("wipeup", gbTr("Шторка") + QStringLiteral(" ↑"), 1, rp);
+    add("wipedown", gbTr("Шторка") + QStringLiteral(" ↓"), 1, rp);
+    add("slideleft", gbTr("Сдвиг") + QStringLiteral(" ←"), 1, rp);
+    add("slideright", gbTr("Сдвиг") + QStringLiteral(" →"), 1, rp);
+    add("slideup", gbTr("Сдвиг") + QStringLiteral(" ↑"), 1, rp);
+    add("slidedown", gbTr("Сдвиг") + QStringLiteral(" ↓"), 1, rp);
+    add("slideawayleft", gbTr("Уезжает") + QStringLiteral(" ←"), 1, rp);
+    add("slideawayright", gbTr("Уезжает") + QStringLiteral(" →"), 1, rp);
+    add("pushleft", gbTr("Выталкивание") + QStringLiteral(" ←"), 1, rp);
+    add("pushright", gbTr("Выталкивание") + QStringLiteral(" →"), 1, rp);
+    add("pushup", gbTr("Выталкивание") + QStringLiteral(" ↑"), 1, rp);
+    add("pushdown", gbTr("Выталкивание") + QStringLiteral(" ↓"), 1, rp);
+    add("irisin", gbTr("Ирис внутрь"), 1, rp);
+    add("irisout", gbTr("Ирис наружу"), 1, rp);
+    add("blinds", gbTr("Жалюзи"), 1, rp);
+    add("squares", gbTr("Квадраты"), 1, rp);
+    add("zoomin", gbTr("Наезд (появление)"), 0.5, rp);
+    add("zoomout", gbTr("Отъезд (исчезновение)"), 0.5, rp);
+    add("zoominout", gbTr("Наезд и отъезд"), 0.5, rp);
+    add("moveinleft", gbTr("Въезд слева"), 0.5, rp);
+    add("moveinright", gbTr("Въезд справа"), 0.5, rp);
+    add("moveoutleft", gbTr("Выезд влево"), 0.5, rp);
+    add("moveoutright", gbTr("Выезд вправо"), 0.5, rp);
+    add("move", gbTr("Плавный переезд"), 0.5, rp);
+    add("none", gbTr("Без перехода"), 0, rp);
+    // GenryBL's picture dissolves, as the mods make them (the mask ships with the mod)
+    add("genry_circle", gbTr("Круг"), 1, mods);
+    add("genry_heart", gbTr("Сердце"), 1, mods);
+    add("genry_diamond", gbTr("Ромбы"), 1, mods);
+    add("genry_clock", gbTr("Часы"), 1, mods);
+    add("genry_soft", gbTr("Мягкая шторка"), 1, mods);
+    return out;
+}
+
+QString Engine::withTransition(const QString& lineText, const QString& effect) const
+{
+    static const QSet<QString> takes{QStringLiteral("show"), QStringLiteral("hide"), QStringLiteral("bg"), QStringLiteral("showbg"), QStringLiteral("cg"),
+                                     QStringLiteral("bigshow"), QStringLiteral("mirror"), QStringLiteral("mirrorbig"), QStringLiteral("fullheight"),
+                                     QStringLiteral("colorfilter"), QStringLiteral("weather"), QStringLiteral("dream"), QStringLiteral("stopdream"),
+                                     QStringLiteral("nvlstart"), QStringLiteral("nvlend"), QStringLiteral("videobg"), QStringLiteral("stopvideobg"),
+                                     QStringLiteral("notebg"), QStringLiteral("effect")};
+    const int lead = int(lineText.size() - QString(lineText).remove(QRegularExpression(QStringLiteral("^\\s+"))).size());
+    QString t = lineText.mid(lead).trimmed();
+    const QString first = t.section(QLatin1Char(' '), 0, 0);
+    const QString cmd = normalizeCommand(first);
+    if (!takes.contains(cmd) || (t.size() <= first.size() && cmd != QLatin1String("effect"))) return {};
+    if (cmd == QLatin1String("effect")) return lineText.left(lead) + first + QLatin1Char(' ') + effect;
+    // the old transition (the last word, when it is one) goes
+    for (;;) {
+        const int sp = int(t.lastIndexOf(QLatin1Char(' ')));
+        if (sp <= first.size() - 1 || !isEffect(t.mid(sp + 1))) break;
+        t = t.left(sp).trimmed();
+    }
+    return lineText.left(lead) + t + QLatin1Char(' ') + effect;
 }
 
 QString Engine::placeSprite(const QString& lineText, const QString& pos, int distance) const
@@ -1724,7 +1822,9 @@ QVariantMap Engine::suggest(const QString& lineText, int col, const QString& ful
         items << QVariantMap{{QStringLiteral("text"), text}, {QStringLiteral("hint"), hint}, {QStringLiteral("kind"), kind}};
     };
     const QStringList words = pySplit(before.left(start));
-    auto effects = [&] { for (const char* e : {"dissolve", "fade", "fade2", "fade3", "dspr", "pixellate", "moveinleft", "moveinright", "hpunch", "vpunch", "none"}) offer(U(e), gbTr("переход"), QStringLiteral("fx")); };
+    auto effects = [&] {
+        for (const QVariant& v : transitionList()) offer(v.toMap().value(QStringLiteral("id")).toString(), v.toMap().value(QStringLiteral("title")).toString(), QStringLiteral("fx"));
+    };
     auto positions = [&] { for (const char* p : {"left", "center", "right", "fleft", "fright", "cleft", "cright"}) offer(U(p), gbTr("позиция"), QStringLiteral("pos")); };
     auto scenes = [&] { for (const QString& s : sceneNames(fullText)) offer(slug(s, QStringLiteral("label"), false), s, QStringLiteral("scene")); };
     if (words.isEmpty()) {
@@ -3065,7 +3165,7 @@ QImage Engine::providerImage(const QString& rawId, const QSize& req)
             QMutexLocker lock(&m_sceneMx);
             st = m_scenes.value(rest.toInt());
         }
-        return fit(m_renderer.render(st, true));
+        return fit(m_renderer.render(st, m_previewHud));
     }
     if (kind == QLatin1String("fx")) {               // a weather particle for the cinema, square (its particles are drawn square)
         const QImage p = weatherParticle(rest);

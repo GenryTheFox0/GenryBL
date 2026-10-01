@@ -26,5 +26,8 @@ QString weatherTint(const QString& key, int level);        // "#0b162630" for ra
 // «слабо»/«лёгкий» -> 1, «сильно»/«метель» -> 3, anything else 0 (not a level word)
 int weatherLevelWord(const QString& word);
 double weatherLevelFactor(int level);                      // count multiplier: 0.5 / 1 / 1.8
+// V2.1.2 the mask of a transition from the mods (genry_circle, genry_diamond, genry_clock, genry_soft, genry_heart):
+// 1920x1080 grey, Ren'Py's ImageDissolve shows the new picture where it is white first
+QImage transitionMask(const QString& name);
 
 } // namespace gb

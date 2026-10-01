@@ -23,6 +23,7 @@
 #include "Overlays.h"
 #include "Renderer.h"
 #include "Scene.h"
+#include "Weather.h"
 #include "Screenplay.h"
 #include "Py.h"
 #include "Text.h"
@@ -1869,6 +1870,66 @@ static void testHub()
           "catalog: a folder the catalog did not put there is never overwritten");
 }
 
+// [19] V2.1.2 Filmora's keyframes («ключ») and the transitions: the game's own, Ren'Py's, GenryBL's from the mods
+static void testKeyframes()
+{
+    out << "[19] keyframes and transitions\n";
+    CompileState st;
+    const CompileOptions v1;
+    const QString k = compileLine(QString::fromUtf8("ключ dv smile pioneer | x 0.3 | масштаб 120% | поворот 10 | прозрачность 0,8 | кувырок | время 0.6"),
+                                  QStringLiteral("m"), st, v1).join(QLatin1Char('\n'));
+    check(k.startsWith(QStringLiteral("    show dv smile pioneer:\n")) &&
+              k.endsWith(QStringLiteral("        ease 0.60 xpos 0.30 xanchor 0.5 zoom 1.20 rotate 10.0 alpha 0.80 xzoom -1.0")),
+          "ключ: an ATL block that eases from where it stood\n" + k);
+    const QString k0 = compileLine(QString::fromUtf8("ключ dv smile pioneer | y 0.1"), QStringLiteral("m"), st, v1).join(QLatin1Char('\n'));
+    check(k0.endsWith(QStringLiteral("\n        ypos 0.10 yanchor 0.0")) && !k0.contains(QStringLiteral("ease")), "ключ without время: at once\n" + k0);
+    check(compileLine(QString::fromUtf8("ключ dv smile pioneer"), QStringLiteral("m"), st, v1).join(QLatin1Char('\n')).trimmed() == QStringLiteral("show dv smile pioneer") ||
+              compileLine(QString::fromUtf8("ключ dv smile pioneer"), QStringLiteral("m"), st, v1).join(QLatin1Char('\n')).endsWith(QStringLiteral("matrixcolor genry_sprite_time_matrix()")),
+          "ключ with nothing to change: no empty ATL block");
+    const Keyframe pk = parseKeyframe(QString::fromUtf8("mt angry pioneer | х 0.7 | у -0.05 | кувырок нет | 1.5"));
+    check(pk.image == QStringLiteral("mt angry pioneer") && pk.hasX && qAbs(pk.x - 0.7) < 1e-9 && pk.hasY && qAbs(pk.y + 0.05) < 1e-9 &&
+              pk.hasFlip && !pk.flip && qAbs(pk.seconds - 1.5) < 1e-9 && !pk.hasZoom,
+          "ключ reads the Cyrillic х/у, «кувырок нет» and a bare number as the seconds");
+    // the preview stands where the animation ends; only the given ones change
+    const SceneState sk = sceneAt(QString::fromUtf8("@mod_id m\n: start\nфон ext_square_day\nпоказать sl smile pioneer left\n"
+                                                    "ключ sl smile pioneer | масштаб 1.3 | поворот -8 | прозрачность 0.5 | кувырок | время 0.6\n"
+                                                    "ключ sl smile pioneer | x 0.62\nконецигры\n"), 6);
+    check(sk.sprites.size() == 1 && qAbs(sk.sprites[0].xpos - 0.62) < 1e-9 && qAbs(sk.sprites[0].zoom - 1.3) < 1e-9 &&
+              qAbs(sk.sprites[0].rotate + 8) < 1e-9 && qAbs(sk.sprites[0].alpha - 0.5) < 1e-9 && sk.sprites[0].mirror,
+          "ключ: the preview keeps every earlier keyframe and moves only x");
+    const SceneState sb = sceneAt(QString::fromUtf8("@mod_id m\n: start\nпоказать sl smile pioneer left\nключ sl | x 0.4 | время 0.5\nконецигры\n"), 4);
+    check(sb.sprites.size() == 1 && sb.sprites[0].image == QStringLiteral("sl smile pioneer") && qAbs(sb.sprites[0].xpos - 0.4) < 1e-9,
+          "ключ by the tag alone keeps the face: " + (sb.sprites.isEmpty() ? QString() : sb.sprites[0].image));
+    const QString kb = compileLine(QString::fromUtf8("ключ sl | x 0.4 | время 0.5"), QStringLiteral("m"), st, v1).join(QLatin1Char('\n'));
+    check(kb.startsWith(QStringLiteral("    show sl:\n")) && kb.endsWith(QStringLiteral("        ease 0.50 xpos 0.40 xanchor 0.5")), "ключ by the tag alone compiles to «show sl:»\n" + kb);
+    const SceneState sr = sceneAt(QString::fromUtf8("@mod_id m\n: start\nпоказать sl smile pioneer left\nключ sl smile pioneer | поворот 20\n"
+                                                    "показать sl smile pioneer right\nконецигры\n"), 5);
+    check(sr.sprites.size() == 1 && sr.sprites[0].rotate == 0.0, "a new place resets the turn as it resets the size");
+    // the game's own transitions and Ren'Py's end a line now
+    for (const char* e : {"flash_red", "fade3", "dissolve_long", "pushleft", "irisout", "blinds", "genry_heart"}) {
+        const QString line = QString::fromUtf8("показать dv smile pioneer center ") + QString::fromLatin1(e);
+        check(compileLine(line, QStringLiteral("m"), st, v1).join(QLatin1Char('\n')).endsWith(QStringLiteral(" with ") + QString::fromLatin1(e)),
+              "transition " + QString::fromLatin1(e) + " ends a «показать»");
+    }
+    const QString story = QString::fromUtf8("@mod_id genry_tr\n: start\nфон ext_square_day genry_heart\nпоказать dv smile pioneer genry_circle\n"
+                                            "Алиса: Привет.\nконецигры\n");
+    const QString rpy = compileText(story, v1);
+    check(rpy.contains(QStringLiteral("define genry_heart = ImageDissolve(\"mods/genry_tr/genry/fx/genry_heart.png\", 1.0, 48)")) &&
+              rpy.contains(QStringLiteral("define genry_circle = ImageDissolve(\"mods/genry_tr/genry/fx/genry_circle.png\", 1.0, 48)")) &&
+              !rpy.contains(QStringLiteral("define genry_clock")),
+          "a transition from the mods: defined only when used, its mask in genry/fx\n" + rpy.right(600));
+    for (const QString& t : genryTransitionNames()) {
+        const QImage m = transitionMask(t).convertToFormat(QImage::Format_Grayscale8);
+        // where it opens first and where last: the middle and a corner; the curtains from the left; the clock just
+        // after twelve and just before it
+        const bool fromLeft = t == QStringLiteral("genry_soft") || t == QStringLiteral("genry_diamond");
+        const bool clock = t == QStringLiteral("genry_clock");
+        const int first = qGray(m.pixel(clock ? 1010 : fromLeft ? 30 : 960, clock ? 120 : 540));
+        const int last = qGray(m.pixel(clock ? 910 : 1890, clock ? 120 : 1050));
+        check(m.size() == QSize(1920, 1080) && first > last + 60, "mask " + t + QStringLiteral(": white goes first (%1 > %2)").arg(first).arg(last));
+    }
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -1893,6 +1954,7 @@ int main(int argc, char** argv)
     testCrash();
     testHub();
     testShippedHidden();
+    testKeyframes();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

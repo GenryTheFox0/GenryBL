@@ -395,6 +395,12 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
                 return rep;
             }
         }
+        // V2.1.2 the transitions from the mods: only the masks this mod names
+        for (const QString& t : genryTransitionNames())
+            if (rpy.contains(QStringLiteral("genry/fx/") + t + QStringLiteral(".png")) && !transitionMask(t).save(fx + QLatin1Char('/') + t + QStringLiteral(".png"), "PNG")) {
+                rep.error = QStringLiteral("не удалось записать ") + QDir::toNativeSeparators(fx + QLatin1Char('/') + t) + QStringLiteral(".png");
+                return rep;
+            }
         // the camp map's chibi faces («карта … @sl»)
         const QString chibiDir = rep.modDir + QStringLiteral("/genry/chibi");
         QDir().mkpath(chibiDir);

@@ -96,6 +96,19 @@ QString compileText(const QString& storyText, const CompileOptions& opt = {}, QS
 // ---- shared vocabulary (the old RENAMES & friends) ----
 QString normalizeCommand(const QString& word);
 bool isCommandName(const QString& id);
+// V2.1.2 «ключ»: a keyframe as in Filmora - where the character stands (x: its middle across the screen, y: how far
+// down from its usual place), its size, turn, see-through and flip. Only the given ones change - Ren'Py's ATL takes
+// the rest from the transform before it - over «время» seconds (0: at once).
+// «ключ dv smile pioneer | x 0.30 | масштаб 1.2 | поворот 10 | прозрачность 0.8 | кувырок | время 0.6»
+struct Keyframe {
+    QString image;
+    bool hasX = false, hasY = false, hasZoom = false, hasRotate = false, hasAlpha = false, hasFlip = false;
+    double x = 0.5, y = 0.0, zoom = 1.0, rotate = 0.0, alpha = 1.0, seconds = 0.0;
+    bool flip = false;
+};
+Keyframe parseKeyframe(const QString& rest);
+// V2.1.2 the transitions from the mods: GenryBL's picture dissolves (a mask the builder draws into genry/fx)
+QStringList genryTransitionNames();
 QString slugOf(const QString& s, const QString& fallback, const CompileOptions& opt);
 QString persistentKey(const QString& modId, const QString& name, const QString& fallback, const CompileOptions& opt);
 QString relModPath(const QString& modId, const QString& subpath);

@@ -37,7 +37,8 @@ Item {
             }
             DarkCombo {
                 width: 130
-                model: ["fade", "dissolve", qsTr("без перехода"), "fade2", "fade3", "dspr", "pixellate"]
+                model: ["fade", "dissolve", qsTr("без перехода"), "fade2", "fade3", "dspr", "pixellate", "dissolve2", "flash", "flash2", "flash_red",
+                        "wipeleft", "wiperight", "irisout", "blinds", "squares", "genry_circle", "genry_diamond", "genry_clock", "genry_soft", "genry_heart"]
                 onActivated: (i) => bb.trans = i === 2 ? "" : model[i]
             }
             PillButton { accent: true; text: qsTr("＋ Свой"); onClicked: imgDialog.open() }

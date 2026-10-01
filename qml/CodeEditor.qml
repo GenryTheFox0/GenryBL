@@ -20,6 +20,12 @@ Rectangle {
     property var badges: []
     signal edited()
     signal lineToolClicked(int line, Item anchor)
+    signal contextMenuRequested()             // V2.1.2 a right click on the text: the cursor went there first
+    function cut() { area.cut() }
+    function copy() { area.copy() }
+    function paste() { area.paste() }
+    function selectAll() { area.selectAll() }
+    readonly property bool hasSelection: area.selectionStart !== area.selectionEnd
     signal replaced(int count)
 
     // ---- the find bar (Ctrl+F, Ctrl+H - with «Заменить»): every match tinted, Enter - the next one
@@ -428,6 +434,16 @@ Rectangle {
                 if (!ce.programmatic && activeFocus) completeTimer.restart()
             }
             onCursorPositionChanged: if (!completeTimer.running && completion.visible && !completion.accepting) completion.close()
+            // a right click: the cursor to that line (a selection under it stays), then the menu
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                onTapped: (eventPoint, button) => {
+                    const pos = area.positionAt(eventPoint.position.x, eventPoint.position.y)
+                    if (area.selectionStart === area.selectionEnd || pos < area.selectionStart || pos > area.selectionEnd) area.cursorPosition = pos
+                    area.forceActiveFocus()
+                    ce.contextMenuRequested()
+                }
+            }
 
             Keys.onPressed: (e) => {
                 if (completion.visible) {

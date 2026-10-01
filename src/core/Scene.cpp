@@ -581,8 +581,29 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
                 sp.yanchor = pos == QLatin1String("truecenter") ? 0.5 : 0.0;
                 sp.zoom = 1.0;
                 sp.alpha = 1.0;
+                sp.rotate = 0.0;
                 sp.mirror = false;
             }
+            put(st, sp);
+            continue;
+        }
+        if (cmd == QLatin1String("keyframe")) {                      // V2.1.2 «ключ»: where the animation ends
+            const Keyframe k = parseKeyframe(rest);
+            const QString image = withOverlays(k.image);
+            if (image.isEmpty()) continue;
+            const QString tag = tagOf(image);
+            SpriteShow sp;                                            // not shown yet: ES's «center»
+            bool shown = false;
+            for (const SpriteShow& o : st.sprites) if (o.tag == tag) { sp = o; shown = true; }
+            sp.tag = tag;
+            // «ключ sl | …»: the tag alone - Ren'Py shows the face it has (a later emotion is not undone)
+            if (!shown || image.contains(QLatin1Char(' '))) { sp.image = image; sp.timeTint = tints(image); }
+            if (k.hasX) { sp.xpos = k.x; sp.xanchor = 0.5; }
+            if (k.hasY) { sp.ypos = k.y; sp.yanchor = 0.0; }
+            if (k.hasZoom) sp.zoom = k.zoom;
+            if (k.hasRotate) sp.rotate = k.rotate;
+            if (k.hasAlpha) sp.alpha = k.alpha;
+            if (k.hasFlip) sp.mirror = k.flip;
             put(st, sp);
             continue;
         }

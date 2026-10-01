@@ -19,6 +19,7 @@ struct SpriteShow {
     double xpos = 0.5, xanchor = 0.5;   // fractions (ES transforms: xalign N + xanchor 0.5)
     double ypos = 0.0, yanchor = 0.0;   // ES sprites hang from the top edge
     double zoom = 1.0, alpha = 1.0;
+    double rotate = 0.0;  // degrees, round its middle («ключ … поворот»)
     bool mirror = false;
     bool timeTint = true; // genry_sprite_time_tint
 };

@@ -117,6 +117,7 @@ qt_add_qml_module(GenryBL
         qml/BackgroundBrowser.qml
         qml/AudioBrowser.qml
         qml/PreviewPane.qml
+        qml/HeroInspector.qml
         qml/CinemaView.qml
         qml/FaceFixDialog.qml
         qml/SummerBackdrop.qml
