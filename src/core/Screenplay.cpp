@@ -6,6 +6,7 @@
 #include "Overlays.h"
 #include "Py.h"
 #include "Text.h"
+#include "Tr.h"
 
 #include <QHash>
 #include <QRegularExpression>
@@ -20,6 +21,22 @@ struct ScrPair {
 };
 #include "ScreenplayTables.inc"
 
+// V2.1.2 a sentence that opens with a command word («Звук шагов приближался.», «Пауза затянулась, и…»; a writer's
+// report: a whole line of prose went to a command). Commands are typed small - the palette and the forms write them so;
+// a capital letter with a sentence behind it is the story's text: a dash right after the word, a comma further on, or
+// the end of a sentence. A small first letter always means the command, `текст …` always text (the editor's right
+// click «Это команда» / «Это текст» writes one of the two for any line the rule reads the other way).
+bool sentenceOverCommand(const QString& s, const QString& w)
+{
+    if (s.isEmpty() || !s.at(0).isUpper()) return false;
+    const QString rest = pyStrip(s.mid(w.size()));
+    if (!rest.isEmpty() && (rest.at(0) == QLatin1Char('-') || rest.at(0) == QChar(0x2013) || rest.at(0) == QChar(0x2014))) return true;
+    const qsizetype n = s.simplified().count(QLatin1Char(' ')) + 1;
+    if (n >= 4 && s.contains(QStringLiteral(", "))) return true;
+    static const QString ends = QString::fromUtf8(".!?…»\"”)");
+    return n >= 3 && ends.contains(s.back());
+}
+
 // a line that is a command of the story - «Фонарик погас.» starts with a command word and still is a sentence
 bool isCommandLine(const QString& s)
 {
@@ -27,7 +44,7 @@ bool isCommandLine(const QString& s)
     const QString cmd = normalizeCommand(w);
     if (!isCommandName(cmd)) return false;
     if (cmd == QLatin1String("flashlight")) return parseFlashlight(pyStrip(s.mid(w.size()))).ok;
-    return true;
+    return !sentenceOverCommand(s, w);
 }
 
 QString U8(const char* s) { return QString::fromUtf8(s); }
@@ -795,6 +812,10 @@ public:
         if (s.startsWith(QLatin1Char('(')) && s.endsWith(QLatin1Char(')'))) return direction(s, out);
         if (expandHead(s, out)) return true;
         if (looksLikeProse(s)) {
+            const QString w = firstWord(s);
+            if (isCommandName(normalizeCommand(w)))
+                note(false, gbTr("«%1» начинается со слова-команды, но это предложение — читаю как текст. Нужна команда — правый клик → «Это команда» (или напиши «%2» с маленькой буквы)")
+                                .arg(s.size() > 40 ? s.left(40) + QChar(0x2026) : s, w.toLower()));
             *out << QStringLiteral("текст ") + s;
             return true;
         }
@@ -1149,6 +1170,14 @@ QStringList expandScreenplayLine(const QStringList& lines, int index, QVector<Sc
     ex.notes = notes;
     ex.line = index;
     return ex.expand(lines[index], &one) ? one : QStringList{};
+}
+
+bool storyCommandLine(const QString& line) { return isCommandLine(pyStrip(line)); }
+
+QString storyCommandWord(const QString& line)
+{
+    const QString w = firstWord(pyStrip(line));
+    return isCommandName(normalizeCommand(w)) ? w : QString();
 }
 
 QString screenplayKind(const QString& line)

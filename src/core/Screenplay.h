@@ -32,6 +32,11 @@ QStringList expandScreenplayLine(const QStringList& lines, int index, QVector<Sc
 // Pasted text - a screenplay (cues in capitals), a chat log, a prose chapter with «— реплика, — сказала
 // Алиса» - to story lines in the play form (or fully expanded commands).
 QStringList convertToStory(const QString& text, bool expand = false, QVector<ScreenplayNote>* notes = nullptr);
+// V2.1.2 the story's own decision, the same for the compiler, the preview, the checks and the highlighter: is the line
+// a command? («Музыка - смысл моей жизни.» opens with a command word and is a sentence: no.) storyCommandWord = the
+// line's first word when it is a command word at all ("" otherwise) - the editor's «Это текст / Это команда»
+bool storyCommandLine(const QString& line);
+QString storyCommandWord(const QString& line);
 // kind of a play line for the highlighter: "heading", "say", "direction", "prose" or "" (not one)
 QString screenplayKind(const QString& line);
 // the hero's name in a case: 0 им, 1 рд, 2 дт, 3 вн, 4 тв, 5 пр (Семён -> Семёна / Семёну / Семёна / Семёном / Семёне);

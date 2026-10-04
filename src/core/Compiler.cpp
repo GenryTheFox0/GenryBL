@@ -3412,6 +3412,58 @@ static SL hentaiPatchFallback(const SL& rpy, const QString& modId)
               "size=40, color=\"#e8e8e8\", text_align=0.5, xalign=0.5, yalign=0.5)))")};
 }
 
+// V2.1.2 a save made inside an older version of the mod. Ren'Py rolls such a save back to a statement it still knows;
+// when the update rewrote all of them it gives up and the game shows «Couldn't find a place to stop rolling back.
+// Perhaps the script changed in an incompatible way?» (a player's report). config.load_failed_label (Ren'Py 7.4: a
+// label or a callable) catches the load when the save stopped in this mod's file: the scene the player was in starts
+// over with the save's choices and meters (label_callback remembers it). Any other failed load goes on to the handler
+// set before (another mod's) or to Ren'Py's own error, as before. The names themselves now survive updates too
+// (the Builder keeps the .rpyc), so this is the last line of defence.
+static SL saveReloadBlock(const QString& modId, const QString& modName)
+{
+    QString name = modName.isEmpty() ? modId : modName;
+    name.replace(QLatin1Char('['), QStringLiteral("[[")).replace(QLatin1Char('{'), QStringLiteral("{{"));
+    const QString msg = pyQ(U("Мод «%1» обновился, и строки, на которой ты сохранился, в нём больше нет. Сцена начнётся сначала — "
+                              "выборы и очки остались.").arg(name));
+    QString b = QString::fromUtf8(R"PY(
+default @M@__genry_scene = None
+
+init 990 python:
+    def _genry_scene_cb_@M@(name, abnormal, _prev=config.label_callback):
+        if isinstance(name, basestring) and (name == "@M@" or name.startswith("@M@__")) and name != "@M@__genry_reload":
+            store.@M@__genry_scene = name
+        if _prev is not None:
+            _prev(name, abnormal)
+    config.label_callback = _genry_scene_cb_@M@
+
+    def _genry_load_failed_@M@(_prev=config.load_failed_label):
+        mine = False
+        try:
+            for _rb in renpy.game.log.log:
+                _cur = getattr(getattr(_rb, "context", None), "current", None)
+                _f = _cur[0] if isinstance(_cur, tuple) and _cur else None
+                if isinstance(_f, basestring) and _f.replace("\\", "/").endswith("/@M@.rpy"):
+                    mine = True
+                    break
+        except Exception:
+            mine = False
+        if mine:
+            return "@M@__genry_reload"
+        return _prev() if callable(_prev) else _prev
+    config.load_failed_label = _genry_load_failed_@M@
+
+label @M@__genry_reload:
+    window auto
+    @MSG@
+    if @M@__genry_scene and renpy.has_label(@M@__genry_scene):
+        $ renpy.jump(@M@__genry_scene)
+    if renpy.has_label("@M@"):
+        jump @M@
+    $ renpy.full_restart())PY");
+    b.replace(QStringLiteral("@M@"), modId).replace(QStringLiteral("@MSG@"), msg);
+    return b.split(QLatin1Char('\n'));
+}
+
 // V1: under shut eyes nothing plays a transition (it would be dead time in the dark), and after «скачок» the eyes
 // open by themselves right before the first thing the player has to see or answer - a line, a choice, a popup, a
 // jump to another scene. The place, the heroines, the time of day, the music are set up under the lids first.
@@ -4998,7 +5050,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
             i += int(boxes.size()) - 1;
         }
     }
-    if (!opt.legacy) out << hentaiPatchFallback(out, meta.modId);
+    if (!opt.legacy) out << hentaiPatchFallback(out, meta.modId) << saveReloadBlock(meta.modId, meta.modName);
     if (usedImageMenu) out << imageMenuScreen();
     if (!opt.legacy) {
         // V1 features: only the definitions and screens this mod really uses

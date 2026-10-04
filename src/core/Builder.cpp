@@ -9,6 +9,7 @@
 #include "Weather.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <cmath>
 #include <QDateTime>
 #include <QDir>
@@ -52,6 +53,25 @@ QProcessEnvironment gameEnvironment()
 void say(const BuildLog& log, const QString& s)
 {
     if (log) log(s);
+}
+
+// where the project keeps the statement names of its mod (the game's last .rpyc of it): <project>/genry_names/
+QString namesKeep(const BuildEnv& env, const QString& modId)
+{
+    if (env.assetsDir.isEmpty()) return {};
+    return QFileInfo(env.assetsDir).absolutePath() + QStringLiteral("/genry_names/") + modId + QStringLiteral(".rpyc");
+}
+
+// the .rpyc is the game's compile of this very .rpy: Ren'Py's own test (renpy/script.py load_appropriate_file) - the
+// md5 of the text read with universal newlines sits in the last 16 bytes of the .rpyc
+bool rpycMatchesRpy(const QString& rpy, const QString& rpyc)
+{
+    QFile a(rpy), b(rpyc);
+    if (!a.open(QIODevice::ReadOnly) || !b.open(QIODevice::ReadOnly) || b.size() < 16) return false;
+    QByteArray text = a.readAll();
+    text.replace("\r\n", "\n").replace('\r', '\n');
+    b.seek(b.size() - 16);
+    return QCryptographicHash::hash(text, QCryptographicHash::Md5) == b.read(16);
 }
 
 bool writeUtf8(const QString& path, const QString& text, QString* err)
@@ -503,15 +523,36 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
         if (own.open(QIODevice::WriteOnly | QIODevice::Truncate)) own.write(project.toUtf8());
     }
     rep.modFile = rep.modDir + QLatin1Char('/') + modId + QStringLiteral(".rpy");
+    const QString keptNames = namesKeep(env, modId);
+    if (!keptNames.isEmpty() && rpycMatchesRpy(rep.modFile, rep.modFile + QLatin1Char('c'))) {
+        // the names the game gave the version installed now go to the project before the new text replaces it
+        QDir().mkpath(QFileInfo(keptNames).absolutePath());
+        QFile::remove(keptNames);
+        QFile::copy(rep.modFile + QLatin1Char('c'), keptNames);
+    }
     if (QFileInfo(rep.modFile).size() > 0 && !env.backupsDir.isEmpty()) {
         QDir().mkpath(env.backupsDir);
         QFile::copy(rep.modFile, env.backupsDir + QLatin1Char('/') + modId + QStringLiteral(".rpy.") +
                                      QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss")) + QStringLiteral(".bak"));
     }
+    // V2.1.2 saves live through a mod update. Ren'Py names every statement when it compiles the .rpy and gives the
+    // statements that did not change the names they had in the .rpyc it finds there (renpy/script.py merge_names); a
+    // save stops at such a name. The .rpyc used to be deleted on every build: each update renamed the whole mod and every
+    // save made in it died on load («Couldn't find a place to stop rolling back»). Now it stays as the source of the
+    // names - a stale one is harmless, its md5 no longer matches the .rpy, so the game compiles again and only borrows
+    // the names - and the project keeps the one shipped last (genry_names/), in case the mod folder is gone.
     for (const QString& f : QDir(rep.modDir).entryList(QDir::Files))
-        if (f.endsWith(QLatin1String(".rpyc")) || f.startsWith(modId + QStringLiteral(".rpyc."))) QFile::remove(rep.modDir + QLatin1Char('/') + f);
+        if (f.startsWith(modId + QStringLiteral(".rpyc."))) QFile::remove(rep.modDir + QLatin1Char('/') + f);
+    const QString rpycFile = rep.modFile + QLatin1Char('c');
+    if (!QFileInfo::exists(rpycFile) && !keptNames.isEmpty() && QFileInfo::exists(keptNames)) {
+        QFile::copy(keptNames, rpycFile);
+        say(log, QStringLiteral("Имена строк — из прошлой выкладки (сейвы игроков не сломаются)"));
+    }
     say(log, QStringLiteral("Пишу %1.rpy…").arg(modId));
     if (!writeUtf8(rep.modFile, rpy, &rep.error)) return rep;
+    // a .rpyc whose .rpy is gone would still run (Ren'Py loads a lone .rpyc): an old file name's code stays out
+    for (const QString& f : QDir(rep.modDir).entryList({QStringLiteral("*.rpyc")}, QDir::Files))
+        if (!QFileInfo::exists(rep.modDir + QLatin1Char('/') + f.chopped(1))) QFile::remove(rep.modDir + QLatin1Char('/') + f);
     static const QRegularExpression lab(QStringLiteral("(?m)^label\\s+([A-Za-z0-9_]+)\\s*:"));
     for (auto m = lab.globalMatch(rpy); m.hasNext();) rep.labels << m.next().captured(1);
     rep.ok = true;

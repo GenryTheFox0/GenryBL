@@ -1195,6 +1195,21 @@ QVariantList Engine::transitionList() const
     return out;
 }
 
+QVariantMap Engine::lineRole(const QString& lineText) const
+{
+    const QString s = pyStrip(lineText);
+    const QString w = storyCommandWord(s);
+    // «текст …» itself is already the text, there is nothing to choose
+    if (w.isEmpty() || normalizeCommand(w) == QLatin1String("say")) return {};
+    const QString indent = lineText.left(lineText.indexOf(s.at(0)));
+    QString firstSmall = s;
+    firstSmall[0] = firstSmall.at(0).toLower();
+    return {{QStringLiteral("word"), w.toLower()},
+            {QStringLiteral("command"), storyCommandLine(s)},
+            {QStringLiteral("asText"), indent + QStringLiteral("текст ") + s},
+            {QStringLiteral("asCommand"), indent + firstSmall}};
+}
+
 QString Engine::withTransition(const QString& lineText, const QString& effect) const
 {
     static const QSet<QString> takes{QStringLiteral("show"), QStringLiteral("hide"), QStringLiteral("bg"), QStringLiteral("showbg"), QStringLiteral("cg"),

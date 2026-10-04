@@ -180,6 +180,9 @@ public:
     Q_INVOKABLE QVariantList transitionList() const;
     // the line with this transition at its end (the old one goes); "" = this line takes none («эффект …» goes below it)
     Q_INVOKABLE QString withTransition(const QString& lineText, const QString& effect) const;
+    // V2.1.2 a line opening with a command word: {word, command, asText, asCommand} - how the story reads it now and
+    // the line rewritten the other way («текст …» / the word written small); {} when it opens with no command word
+    Q_INVOKABLE QVariantMap lineRole(const QString& lineText) const;
     // the music / ambience / sound plates over the editor's preview (right click on it: hide them)
     Q_INVOKABLE bool previewHud() const { return m_previewHud; }
     Q_INVOKABLE void setPreviewHud(bool on);

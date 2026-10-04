@@ -211,7 +211,7 @@ void StoryHighlighter::highlightBlock(const QString& text)
     } else {
         const QString word = firstWord(s);
         const QString cmd = normalizeCommand(word);
-        if (isCommandName(cmd)) {
+        if (isCommandName(cmd) && storyCommandLine(s)) {      // «Музыка - смысл моей жизни.» is text (Screenplay)
             const bool label = cmd == QLatin1String("label");
             setFormat(lead, int(word.size()), fmt(categoryColor(categoryOf(cmd)), true));
             QTextCharFormat args = fmt(label ? QColor(0xff, 0xd1, 0xea) : QColor(0xd8, 0xd8, 0xe4), label);

@@ -38,6 +38,7 @@
 #include <QLocalServer>
 #include <QDateTime>
 #include <QThread>
+#include <QCryptographicHash>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -1930,6 +1931,76 @@ static void testKeyframes()
     }
 }
 
+// V2.1.2 two players' reports: a save made in a mod died after the mod's update («Couldn't find a place to stop rolling
+// back»), and a sentence opening with a command word («Музыка - …») went to the command
+static void testSavesAndProse()
+{
+    out << "[20] saves across mod updates, sentences over command words\n";
+    const CompileOptions v1;
+    const QString r = compileText(QString::fromUtf8("@mod_id genry_t\n@mod_name Тест\n: start\n"
+                                                    "Музыка - смысл моей жизни. Я хочу посвятить себя ей.\nЗвук шагов приближался.\n"
+                                                    "Пауза затянулась, и никто не говорил ни слова\nмузыка everlasting_summer\nПауза 2\n"
+                                                    "текст Музыка играла\nФон ext_square_day fade\n"),
+                                  v1);
+    check(r.contains(QString::fromUtf8("    \"Музыка - смысл моей жизни. Я хочу посвятить себя ей.\"\n")) &&
+              r.contains(QString::fromUtf8("    \"Звук шагов приближался.\"\n")) && r.contains(QString::fromUtf8("    \"Пауза затянулась, и никто")),
+          "a sentence that opens with a command word is the story's text");
+    check(r.contains(QStringLiteral("genry_resolve_music(\"everlasting_summer\")")) && r.contains(QStringLiteral("    $ renpy.pause(2, hard=True)\n")) &&
+              r.contains(QStringLiteral("    scene bg ext_square_day with fade\n")) && r.contains(QString::fromUtf8("    \"Музыка играла\"\n")),
+          "commands stay commands: a small first letter, a capital one with arguments only, «текст …» = text");
+    check(storyCommandLine(QString::fromUtf8("Музыка everlasting_summer")) && !storyCommandLine(QString::fromUtf8("Музыка - смысл моей жизни.")) &&
+              storyCommandLine(QString::fromUtf8("музыка - смысл моей жизни.")) && storyCommandWord(QString::fromUtf8("Звук шагов.")) == QString::fromUtf8("Звук"),
+          "the highlighter and the right click read lines the way the compiler does");
+    check(r.contains(QStringLiteral("    config.load_failed_label = _genry_load_failed_genry_t\n")) &&
+              r.contains(QStringLiteral("    config.label_callback = _genry_scene_cb_genry_t\n")) && r.contains(QStringLiteral("label genry_t__genry_reload:\n")) &&
+              r.contains(QStringLiteral("_prev() if callable(_prev) else _prev")) && orphanIndent(r).isEmpty(),
+          "a save the update broke restarts its scene; other failed loads go to the handler before ours " + orphanIndent(r));
+
+    // the Builder keeps the .rpyc: the source of the statement names for the next compile, and the project's copy
+    const QString root = QDir::tempPath() + QStringLiteral("/genrybl_selftest_names");
+    QDir(root).removeRecursively();
+    QDir().mkpath(root + QStringLiteral("/es/game/mods"));
+    QDir().mkpath(root + QStringLiteral("/proj/assets"));
+    QFile exe(root + QStringLiteral("/es/Everlasting Summer.exe"));
+    exe.open(QIODevice::WriteOnly);
+    exe.close();
+    BuildEnv env;
+    env.esRoot = root + QStringLiteral("/es");
+    env.dataDir = QStringLiteral(GB_SOURCE_DIR "/data");
+    env.assetsDir = root + QStringLiteral("/proj/assets");
+    const QString story = QString::fromUtf8("@mod_id genry_names\n@mod_name Имена\n: start\nтекст а\n");
+    const BuildReport b1 = build::install(env, story, v1, {});
+    const QString modDir = root + QStringLiteral("/es/game/mods/genry_names");
+    // what the game does on its first run: a .rpyc of this very text (its md5 in the last 16 bytes)
+    auto fakeCompile = [&](const QByteArray& tag) {
+        QFile rpy(modDir + QStringLiteral("/genry_names.rpy"));
+        rpy.open(QIODevice::ReadOnly);
+        QByteArray text = rpy.readAll();
+        text.replace("\r\n", "\n");
+        QFile c(modDir + QStringLiteral("/genry_names.rpyc"));
+        c.open(QIODevice::WriteOnly | QIODevice::Truncate);
+        c.write("RENPY RPC2" + tag + QCryptographicHash::hash(text, QCryptographicHash::Md5));
+    };
+    fakeCompile("names-v1");
+    QFile orphan(modDir + QStringLiteral("/gone.rpyc"));
+    orphan.open(QIODevice::WriteOnly);
+    orphan.close();
+    const BuildReport b2 = build::install(env, story + QString::fromUtf8("текст б\n"), v1, {});
+    QFile kept(modDir + QStringLiteral("/genry_names.rpyc"));
+    const bool stays = kept.open(QIODevice::ReadOnly) && kept.readAll().contains("names-v1");
+    kept.close();
+    check(b1.ok && b2.ok && stays && !QFileInfo::exists(modDir + QStringLiteral("/gone.rpyc")) &&
+              QFileInfo::exists(root + QStringLiteral("/proj/genry_names/genry_names.rpyc")),
+          "a rebuild keeps the game's .rpyc (the names of the old saves), drops a lone one, the project keeps a copy " + b1.error + b2.error);
+    QDir(modDir).removeRecursively();
+    const BuildReport b3 = build::install(env, story, v1, {});
+    QFile back(modDir + QStringLiteral("/genry_names.rpyc"));
+    check(b3.ok && back.open(QIODevice::ReadOnly) && back.readAll().contains("names-v1"),
+          "the mod folder gone (a player's copy from the Workshop only): the next build takes the names from the project " + b3.error);
+    back.close();
+    QDir(root).removeRecursively();
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -1955,6 +2026,7 @@ int main(int argc, char** argv)
     testHub();
     testShippedHidden();
     testKeyframes();
+    testSavesAndProse();
     out << "\nRESULT: " << g_ok << " passed, " << g_fail << " failed\n";
     return g_fail ? 1 : 0;
 }

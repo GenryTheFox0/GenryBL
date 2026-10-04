@@ -207,16 +207,36 @@ Item {
         ok("«Сбросить» says the old values back", code.lineText(6) === "ключ dv | x 0.30 | масштаб 1.00 | поворот 0 | время " + keySeconds, code.lineText(6))
         const rpy = Engine.compile(code.text)
         ok("the game gets an ATL block", rpy.indexOf("    show dv:") >= 0 && rpy.indexOf("ease 0.60 xpos 0.30 xanchor 0.5 zoom 1.50 rotate 15.0") >= 0, rpy.substring(0, 400))
+        // V2.1.2 the right click «Это текст / Это команда» on a line that opens with a command word
+        code.setText("@mod_id genry_keys\n: start\n    Звук шагов приближался.\nмузыка everlasting_summer\n")
+        code.gotoLine(3)
+        let role = Engine.lineRole(code.lineText(3))
+        ok("a sentence with a command word reads as text, the menu offers the command", role.word === "звук" && role.command === false, JSON.stringify(role))
+        setLineRole(role.asCommand, false)
+        ok("«Это команда» writes the word small, the indent stays", code.lineText(3) === "    звук шагов приближался.", code.lineText(3))
+        code.gotoLine(4)
+        role = Engine.lineRole(code.lineText(4))
+        setLineRole(role.asText, true)
+        ok("«Это текст» puts «текст» in front", role.command === true && code.lineText(4) === "текст музыка everlasting_summer", code.lineText(4))
+        ok("«текст …» itself offers nothing", !Engine.lineRole("текст Музыка играла").word, JSON.stringify(Engine.lineRole("текст Музыка играла")))
         autoKey = wasAuto
         for (const l of out) console.log("KEYTEST " + l)
         console.log("KEYTEST DONE " + out.filter(l => l.indexOf("PASS") === 0).length + "/" + out.length)
     }
     property var transitions: []
     property var menuHeroes: []
+    property var lineRole: ({})
     function openCodeMenu() {
         if (!transitions.length) transitions = Engine.transitionList()
         menuHeroes = Engine.spriteBoxes(code.text, code.currentLine)
+        lineRole = Engine.lineRole(code.lineText(code.currentLine))
         codeMenu.popup()
+    }
+    // V2.1.2 «Музыка - смысл моей жизни.»: the writer says what the line is - text or the command
+    function setLineRole(t, asText) {
+        code.setLineText(code.currentLine, t)
+        previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+        Engine.toast(asText ? qsTr("Строка — текст рассказчика") : qsTr("Строка — команда"), 0)
     }
     // the line takes the transition at its end (the old one goes); a line that takes none: «эффект …» under it
     function applyTransition(t) {
@@ -457,6 +477,19 @@ Item {
     Menu {
         id: codeMenu
         width: 380
+        MenuItem {
+            visible: !!ed.lineRole.word && ed.lineRole.command
+            height: visible ? implicitHeight : 0
+            text: qsTr("Это текст, а не команда «%1»").arg(ed.lineRole.word || "")
+            onTriggered: ed.setLineRole(ed.lineRole.asText, true)
+        }
+        MenuItem {
+            visible: !!ed.lineRole.word && !ed.lineRole.command
+            height: visible ? implicitHeight : 0
+            text: qsTr("Это команда «%1», а не текст").arg(ed.lineRole.word || "")
+            onTriggered: ed.setLineRole(ed.lineRole.asCommand, false)
+        }
+        MenuSeparator { visible: !!ed.lineRole.word; height: visible ? implicitHeight : 0 }
         Menu {
             id: trMenu
             width: 380
