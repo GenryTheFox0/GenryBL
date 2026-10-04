@@ -542,6 +542,18 @@ QVector<LintIssue> lintStory(const QString& text, const LintContext& ctx)
             }
             continue;
         }
+        if (cmd == QLatin1String("postcard") && !ctx.opt.legacy) {
+            // V2.1.2 «открытка»: a picture the game has on its face, words on its back
+            const PostcardSpec pc = parsePostcard(rest);
+            const QString f = pyStrip(pc.front);
+            if (f.isEmpty())
+                add(ln, LintIssue::Warning, gbTr("У открытки нет картинки — лицевая сторона будет серой"));
+            else if (!f.contains(QLatin1Char('/')) && !f.contains(QLatin1Char('.')) && !imageKnown(f) && !imageKnown(QStringLiteral("bg ") + f) &&
+                     !imageKnown(QStringLiteral("cg ") + f))
+                add(ln, LintIssue::Warning, gbTr("Нет картинки «%1» — лицевая сторона открытки будет серой").arg(f));
+            if (pyStrip(pc.text).isEmpty()) add(ln, LintIssue::Warning, gbTr("На обороте открытки пусто — напиши текст после «|»"));
+            continue;
+        }
         if (cmd == QLatin1String("codelock") && !ctx.opt.legacy) {
             const CodeLockSpec k = parseCodeLock(rest);
             const QString rawLine = rawLines.value(srcOf.value(i));

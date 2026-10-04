@@ -2031,6 +2031,34 @@ static void testSavesAndProse()
     QDir().mkpath(shots);
     for (const auto& [name, st] : {std::pair<const char*, SceneState>{"glide_0", beg}, {"glide_50", mid}, {"glide_100", end}})
         ren.render(st).save(shots + QStringLiteral("/%1.png").arg(QLatin1String(name)));
+
+    // «открытка» (an idea from the players: «like the phone, the focus moves onto it»)
+    const QString pcStory = QString::fromUtf8("@mod_id genry_pc\n: start\nфон ext_square_day\nСлавя: Тебе письмо.\n"
+                                              "открытка bg ext_camp_entrance_day | Привет! Тут здорово.\\nСкучаю. | Лена | кому=Семёну | надпись=Привет из «Совёнка»!\n"
+                                              "Славя: Ну что там?\n");
+    const QString pc = compileText(pcStory, v1);
+    check(pc.contains(QString::fromUtf8("    call screen genry_postcard(u\"bg ext_camp_entrance_day\", u\"Привет! Тут здорово.\\nСкучаю.\", u\"Лена\", u\"Семёну\", "
+                                        "u\"Привет из «Совёнка»!\", False, \"mods/genry_pc/genry/postcard_stamp.png\")\n")) &&
+              pc.contains(QStringLiteral("screen genry_postcard(front, msg, sign=\"\", to=\"\", caption=\"\", back_first=False, stamp=\"\"):")) &&
+              orphanIndent(pc).isEmpty(),
+          "«открытка» calls its screen with every field; the screen comes with the mod " + orphanIndent(pc));
+    const PostcardSpec ps = parsePostcard(QString::fromUtf8("cg d1_food_normal | Текст = главное | оборот"));
+    check(ps.front == QStringLiteral("cg d1_food_normal") && ps.text == QString::fromUtf8("Текст = главное") && ps.backFirst && ps.to.isEmpty(),
+          "an «=» inside the text is the text; «оборот» = the back first");
+    Cinema pcin;
+    pcin.load(pcStory, &es);
+    const CinemaStop c1 = pcin.start(1);
+    const CinemaStop c2 = pcin.next();
+    const CinemaStop c3 = pcin.next();
+    const CinemaStop c4 = pcin.next();
+    check(c1.kind == CinemaStop::Say && c2.scene.postcard.on && !c2.scene.postcard.back && c3.scene.postcard.on && c3.scene.postcard.back &&
+              c4.kind == CinemaStop::Say && !c4.scene.postcard.on && c4.scene.text == QString::fromUtf8("Ну что там?"),
+          "the cinema: the face, a click - the back, a click - on with the story");
+    ren.render(c2.scene).save(shots + QStringLiteral("/postcard_face.png"));
+    ren.render(c3.scene).save(shots + QStringLiteral("/postcard_back.png"));
+    const QImage stamp = postcardStamp();
+    check(stamp.size() == QSize(160, 190) && qAlpha(stamp.pixel(0, 0)) == 0 && qAlpha(stamp.pixel(80, 95)) == 255,
+          "the stamp: a perforated edge round a picture");
 }
 
 int main(int argc, char** argv)

@@ -323,6 +323,7 @@ CinemaStop Cinema::start(int line)
     m_lastSprites.clear();
     m_lastPathLen = -1;
     m_lastPathTail.clear();
+    m_cardTurn = 0;
     m_calls.clear();
     m_items.clear();
     m_music.clear();
@@ -819,6 +820,20 @@ CinemaStop Cinema::run()
             m_path << raw;
             CinemaStop st = stop(CinemaStop::Timed, i);
             st.seconds = 1.4;
+            return st;
+        }
+        if (cmd == QLatin1String("postcard")) {
+            // «открытка» as the game plays it: the face (a click), the back (a click), on with the story
+            const bool backFirst = parsePostcard(rest).backFirst;
+            if (m_cardTurn == 0) {
+                m_path << raw;
+                m_cardTurn = backFirst ? 0 : 1;
+                if (!backFirst) m_pc = i;            // the same line once more: its other side
+                return stop(CinemaStop::Note, i);
+            }
+            m_cardTurn = 0;
+            CinemaStop st = stop(CinemaStop::Note, i);
+            st.scene.postcard.back = true;
             return st;
         }
         if (cmd == QLatin1String("codelock")) {

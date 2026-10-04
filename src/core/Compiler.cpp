@@ -1619,6 +1619,8 @@ const QHash<QString, QString>& v1Renames()
         {QStringLiteral("+"), QStringLiteral("extend")}, {U("дописать"), QStringLiteral("extend")}, {QStringLiteral("extend"), QStringLiteral("extend")},
         // V2: «кодовыйзамок 1905 | Год основания? | верно -> сейф | неверно -> тупик | попыток=3» - on ES's o_rly plate
         {U("кодовыйзамок"), QStringLiteral("codelock")}, {U("кодзамок"), QStringLiteral("codelock")}, {QStringLiteral("codelock"), QStringLiteral("codelock")},
+        // V2.1.2: «открытка картинка | текст | подпись | кому=… | надпись=…» - the card in focus, a click turns it over
+        {U("открытка"), QStringLiteral("postcard")}, {QStringLiteral("postcard"), QStringLiteral("postcard")},
         // V2: «фонарик» / «фонарик выкл» / «фонарик 1.4 | цвет=#012» - the dark with a light that follows the mouse (7ДЛ)
         {U("фонарик"), QStringLiteral("flashlight")}, {U("фонарь"), QStringLiteral("flashlight")}, {QStringLiteral("flashlight"), QStringLiteral("flashlight")},
         // V2.1 - the 7ДЛ mechanics (V21Mechanics.inc)
@@ -1858,6 +1860,31 @@ CodeLockSpec parseCodeLock(const QString& rest)
         ++field;
     }
     return k;
+}
+
+PostcardSpec parsePostcard(const QString& rest)
+{
+    PostcardSpec p;
+    int field = 0;
+    for (const QString& raw : rest.split(QLatin1Char('|'))) {
+        const QString x = pyStrip(raw);
+        const int eq = int(x.indexOf(QLatin1Char('=')));
+        if (eq > 0) {
+            const QString k = pyStrip(x.left(eq)).toLower(), v = pyStrip(x.mid(eq + 1));
+            if (k == U("кому") || k == QLatin1String("to")) { p.to = v; continue; }
+            if (k == U("надпись") || k == QLatin1String("caption")) { p.caption = v; continue; }
+        }
+        const QString low = x.toLower();
+        if (field >= 1 && (low == U("оборот") || low == U("сразу оборот") || low == U("обратной стороной") || low == QLatin1String("back"))) {
+            p.backFirst = true;
+            continue;
+        }
+        if (field == 0) p.front = x;
+        else if (field == 1) p.text = x;
+        else if (field == 2) p.sign = x;
+        ++field;
+    }
+    return p;
 }
 
 AchSpec parseAchievement(const QString& rest)
@@ -2883,6 +2910,17 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
     }
     if (cmd == QLatin1String("weather")) return compileWeather(rest, c);
     if (cmd == QLatin1String("notify")) return compileNotifyPopup(rest, modId, c);
+    if (cmd == QLatin1String("postcard") && !opt.legacy) {
+        // V2.1.2 the card comes into focus over the frame (genry_postcard), a click turns it over, the next puts it away
+        const PostcardSpec p = parsePostcard(rest);
+        QString msg = p.text;
+        msg.replace(QStringLiteral("\\n"), QStringLiteral("\n"));
+        return {QStringLiteral("    window auto hide"),
+                QStringLiteral("    call screen genry_postcard(%1, %2, %3, %4, %5, %6, %7)")
+                    .arg(pyUQ(p.front), pyUQ(msg).replace(QLatin1Char('\n'), QStringLiteral("\\n")), pyUQ(p.sign), pyUQ(p.to), pyUQ(p.caption),
+                         p.backFirst ? QStringLiteral("True") : QStringLiteral("False"),
+                         pyQ(relModPath(modId, QStringLiteral("genry/postcard_stamp.png"))))};
+    }
     if (cmd == QLatin1String("codelock") && !opt.legacy) {
         // V2: ES's o_rly plate; the right code / a wrong one (or the tries are over) go where the writer said, else on
         const CodeLockSpec k = parseCodeLock(rest);
@@ -3411,6 +3449,84 @@ static SL hentaiPatchFallback(const SL& rpy, const QString& modId)
             U("            renpy.image((\"cg\", _genry_cg), Fixed(Solid(\"#0b0b12\"), Text(u\"Здесь CG из хентай-патча\\n(Мастерская Steam, id 1118110148)\", "
               "size=40, color=\"#e8e8e8\", text_align=0.5, xalign=0.5, yalign=0.5)))")};
 }
+
+// V2.1.2 «открытка»: the card comes into focus over a dimmed frame (zoom + a turn of the wrist), a click turns it
+// over (xzoom down and up, the hide/show events of showif), the next click puts it away. The face: the picture in
+// a white border with an optional caption; the back: ES's own paper colours, the message in Corbel italic, «Кому»
+// on the address lines and a stamp GenryBL draws (genry/postcard_stamp.png). The same screen in every mod.
+static const char* const kV212Postcard = R"PY(
+init python:
+    def genry_pc_image(name):
+        name = (name or "").strip()
+        if not name:
+            return Solid("#6f7f8c")
+        if "/" in name or "." in name:
+            return name
+        for cand in (name, "bg " + name, "cg " + name):
+            if renpy.has_image(cand):
+                return cand
+        return Solid("#6f7f8c")
+
+transform genry_pc_dim:
+    on show:
+        alpha 0.0
+        linear 0.3 alpha 1.0
+    on hide:
+        linear 0.25 alpha 0.0
+
+transform genry_pc_focus:
+    on show:
+        alpha 0.0 zoom 0.55 rotate -8
+        ease 0.5 alpha 1.0 zoom 1.0 rotate -2
+    on hide:
+        ease 0.3 alpha 0.0 zoom 1.06 rotate 0
+
+transform genry_pc_side:
+    on show:
+        xzoom 0.0
+        pause 0.17
+        ease 0.17 xzoom 1.0
+    on hide:
+        ease 0.17 xzoom 0.0
+
+screen genry_postcard(front, msg, sign="", to="", caption="", back_first=False, stamp=""):
+    modal True
+    zorder 150
+    default side = (1 if back_first else 0)
+    add Solid("#000000aa") at genry_pc_dim
+    fixed:
+        at genry_pc_focus
+        xysize (1120, 680)
+        align (0.5, 0.47)
+        showif side == 0:
+            fixed:
+                at genry_pc_side
+                xysize (1120, 680)
+                add Solid("#f6f1e6")
+                add Transform(genry_pc_image(front), size=(1040, 585)) pos (40, 40)
+                if caption:
+                    text caption font "fonts/corbelz.ttf" size 34 color "#5a3b22" xpos 46 ypos 652 yanchor 0.5
+        showif side == 1:
+            fixed:
+                at genry_pc_side
+                xysize (1120, 680)
+                add Solid("#f2e8d2")
+                add Solid("#cdbf9f") pos (560, 50) xysize (3, 580)
+                text u"ПОЧТОВАЯ КАРТОЧКА" font "fonts/corbelb.ttf" size 22 color "#9a8a68" pos (600, 52)
+                if stamp:
+                    add stamp pos (920, 40)
+                for _genry_y in (420, 490, 560):
+                    add Solid("#bcae8d") pos (600, _genry_y) xysize (480, 2)
+                if to:
+                    text to font "fonts/corbeli.ttf" size 32 color "#26346b" xpos 606 ypos 414 yanchor 1.0
+                vbox:
+                    pos (48, 56)
+                    xsize 480
+                    spacing 14
+                    text msg font "fonts/corbeli.ttf" size 32 color "#26346b"
+                    if sign:
+                        text sign font "fonts/corbeli.ttf" size 32 color "#26346b" xalign 1.0
+    key "dismiss" action If(side == 0, SetScreenVariable("side", 1), Return(True)))PY";
 
 // V2.1.2 a save made inside an older version of the mod. Ren'Py rolls such a save back to a statement it still knows;
 // when the update rewrote all of them it gives up and the game shows «Couldn't find a place to stop rolling back.
@@ -5062,6 +5178,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         if (all.contains(QLatin1String("genry_choice_btn"))) block(kV1ChoiceBtn);
         if (all.contains(QLatin1String("genry_choice_random"))) block(kV1ChoiceRandom);
         if (all.contains(QLatin1String("genry_codelock"))) block(kV2CodeLock);
+        if (all.contains(QLatin1String("call screen genry_postcard("))) block(kV212Postcard);
         if (all.contains(QLatin1String("genry_flashlight"))) block(kV2Flashlight);
         if (all.contains(QLatin1String("genry_now_playing("))) block(kV21NowPlaying);
         // V2.1.2 the transitions from the mods: a picture dissolve over GenryBL's own mask (Builder draws it)

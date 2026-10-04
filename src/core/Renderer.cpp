@@ -201,7 +201,8 @@ void Renderer::setAssets(const EsAssets* es, const QString& dataDir)
     m_dataDir = dataDir;
     if (!es) return;
     // ES's own dialogue font (game/fonts/calibri.ttf) so the preview text matches the game
-    for (const char* f : {"fonts/calibri.ttf", "fonts/calibrib.ttf", "fonts/calibrii.ttf", "fonts/corbel.ttf", "fonts/gothic.ttf"}) {
+    for (const char* f : {"fonts/calibri.ttf", "fonts/calibrib.ttf", "fonts/calibrii.ttf", "fonts/corbel.ttf", "fonts/corbelb.ttf", "fonts/corbeli.ttf",
+                          "fonts/corbelz.ttf", "fonts/gothic.ttf"}) {   // corbel b/i/z: the «открытка»
         const QByteArray data = es->vfs().read(QString::fromLatin1(f));
         if (data.isEmpty()) continue;
         const int id = QFontDatabase::addApplicationFontFromData(data);
@@ -628,7 +629,7 @@ QImage Renderer::render(const SceneState& s, bool hud) const
 
     // ---- say window (ES screen say, small font mode)
     const bool saying = !s.text.isEmpty() && !s.windowHidden && s.cardKind.isEmpty() && s.nvlText.isEmpty() && !s.phoneOpen &&
-                        (s.choices.isEmpty() || s.choiceAsked) && !s.modMenuOpen && s.codeLock.isEmpty() &&
+                        (s.choices.isEmpty() || s.choiceAsked) && !s.modMenuOpen && s.codeLock.isEmpty() && !s.postcard.on &&
                         !s.phoneHome && !s.feedOpen && s.phoneCall.isEmpty();
     if (saying && m_es) {
         const QString tod = s.timeOfDay == QLatin1String("prologue") ? QStringLiteral("prologue") : s.timeOfDay;
@@ -1831,6 +1832,67 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         const QRectF bar(r.left() + 22, r.top() + 14 + fm.height() + 8, 280, 8);
         p.fillRect(bar, QColor(255, 255, 255, 0x22));
         p.fillRect(QRectF(bar.left(), bar.top(), bar.width() * qBound(0.0, (v - lo) / qMax(1.0, hi - lo), 1.0), 8), QColor(s.meterPing[1]));
+    }
+
+    // ---- V2.1.2 «открытка» (genry_postcard): the card in focus over the dimmed frame, a little turned, as the game
+    // shows it at rest; its face, or its back after the click
+    if (s.postcard.on) {
+        p.fillRect(canvas.rect(), QColor(0, 0, 0, 0xaa));
+        p.save();
+        p.setRenderHint(QPainter::Antialiasing);
+        p.translate(W * 0.5, H * 0.47);
+        p.rotate(-2);
+        const QRectF card(-560, -340, 1120, 680);
+        p.fillRect(card.translated(10, 14), QColor(0, 0, 0, 70));                 // a soft shadow under the card
+        QFont ink(m_header);
+        ink.setItalic(true);
+        ink.setPixelSize(32);
+        const QColor inkColor(0x26, 0x34, 0x6b);
+        if (!s.postcard.back) {
+            p.fillRect(card, QColor(0xf6, 0xf1, 0xe6));
+            QImage face;
+            const QString n = pyStrip(s.postcard.front);
+            for (const QString& cand : {n, QStringLiteral("bg ") + n, QStringLiteral("cg ") + n}) {
+                if (n.isEmpty() || !face.isNull()) break;
+                face = background(cand);
+            }
+            const QRectF photo(card.left() + 40, card.top() + 40, 1040, 585);
+            if (face.isNull()) p.fillRect(photo, QColor(0x6f, 0x7f, 0x8c));
+            else p.drawImage(photo, face);
+            if (!s.postcard.caption.isEmpty()) {
+                QFont cap(m_header);
+                cap.setItalic(true);
+                cap.setBold(true);
+                cap.setPixelSize(34);
+                p.setFont(cap);
+                p.setPen(QColor(0x5a, 0x3b, 0x22));
+                p.drawText(QRectF(card.left() + 46, card.top() + 625, 1030, 55), Qt::AlignLeft | Qt::AlignVCenter, plain(s.postcard.caption));
+            }
+        } else {
+            p.fillRect(card, QColor(0xf2, 0xe8, 0xd2));
+            p.fillRect(QRectF(card.left() + 560, card.top() + 50, 3, 580), QColor(0xcd, 0xbf, 0x9f));
+            QFont head(m_header);
+            head.setBold(true);
+            head.setPixelSize(22);
+            p.setFont(head);
+            p.setPen(QColor(0x9a, 0x8a, 0x68));
+            p.drawText(QPointF(card.left() + 600, card.top() + 52 + QFontMetricsF(head).ascent()), U("ПОЧТОВАЯ КАРТОЧКА"));
+            p.drawImage(QPointF(card.left() + 920, card.top() + 40), postcardStamp());
+            for (int y : {420, 490, 560}) p.fillRect(QRectF(card.left() + 600, card.top() + y, 480, 2), QColor(0xbc, 0xae, 0x8d));
+            p.setFont(ink);
+            p.setPen(inkColor);
+            const QFontMetricsF fm(ink);
+            if (!s.postcard.to.isEmpty()) p.drawText(QPointF(card.left() + 606, card.top() + 414 - fm.descent()), plain(s.postcard.to));
+            qreal y = card.top() + 56 + fm.ascent();
+            for (const QString& para : plain(s.postcard.text).split(QLatin1Char('\n')))
+                for (const QString& l : wrap(para, ink, 480)) {
+                    p.drawText(QPointF(card.left() + 48, y), l);
+                    y += fm.height() + 2;
+                }
+            if (!s.postcard.sign.isEmpty())
+                p.drawText(QRectF(card.left() + 48, y - fm.ascent() + 14, 480, fm.height()), Qt::AlignRight | Qt::AlignTop, plain(s.postcard.sign));
+        }
+        p.restore();
     }
 
     // ---- editor HUD: what plays and what happens on this line

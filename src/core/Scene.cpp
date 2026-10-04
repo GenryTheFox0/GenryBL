@@ -105,6 +105,7 @@ void clearTransient(SceneState& st)
     st.achievement.clear();
     st.achievementPlate.clear();
     st.codeLock.clear();
+    st.postcard = {};
     st.videoCard.clear();
     st.moment.clear();
     st.sound.clear();
@@ -398,6 +399,11 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             for (const AchDecl& a : achievementsDecl)
                 st.achievements << a.title + (achieved.contains(a.key) ? QStringLiteral("|1") : QStringLiteral("|0")) + (a.hidden ? QStringLiteral("|h|") : QStringLiteral("||")) + a.image;
             st.showAchievements = true;
+            continue;
+        }
+        if (cmd == QLatin1String("postcard")) {                       // V2.1.2 the card in focus, face first
+            const PostcardSpec p = parsePostcard(rest);
+            st.postcard = {true, p.backFirst, p.front, QString(p.text).replace(QStringLiteral("\\n"), QStringLiteral("\n")), p.sign, p.to, p.caption};
             continue;
         }
         if (cmd == QLatin1String("codelock")) {

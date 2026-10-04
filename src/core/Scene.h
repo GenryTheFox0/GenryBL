@@ -100,6 +100,8 @@ struct SceneState {
     QStringList achievements;                     // "caption|got|h|picture": got 1/0, h = hidden until it comes
     QString achievementPlate;                     // transient: ES's achievement plate with this title slides in
     QString codeLock;                             // transient: «кодовыйзамок» - "hint|digits|tries" on ES's o_rly plate
+    // V2.1.2 transient: «открытка» - the card in focus over the frame, its face or its back
+    struct Postcard { bool on = false, back = false; QString front, text, sign, to, caption; } postcard;
     bool flashlight = false;                      // «фонарик»: the dark with a light (the preview puts it in the middle)
     double flashZoom = 1.5;
     QString flashColor = QStringLiteral("#050810");

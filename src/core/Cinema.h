@@ -85,6 +85,7 @@ private:
     QVector<SpriteShow> m_lastSprites;
     int m_lastPathLen = -1;
     QString m_lastPathTail;
+    int m_cardTurn = 0;                       // «открытка»: 1 = its face was shown, the next click turns it over
     QVector<int> m_srcOf;
     QHash<QString, int> m_labels;             // Ren'Py label -> index of its «: scene» line
     int m_pc = 0, m_steps = 0;

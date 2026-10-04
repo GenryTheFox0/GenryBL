@@ -153,6 +153,9 @@ FlashSpec parseFlashlight(const QString& rest);
 // «кодовыйзамок 1905 | Год основания лагеря? | верно -> сейф | неверно -> тупик | попыток=3»
 struct CodeLockSpec { QString code, hint, okTarget, badTarget; int tries = 0; };
 CodeLockSpec parseCodeLock(const QString& rest);
+// V2.1.2 «открытка картинка | текст на обороте | подпись | кому=… | надпись=… | оборот»
+struct PostcardSpec { QString front, text, sign, to, caption; bool backFirst = false; };
+PostcardSpec parsePostcard(const QString& rest);
 
 // CG names the Steam build declares but only the 18+ workshop patch (1118110148) has files for
 const QStringList& hentaiPatchCgs();

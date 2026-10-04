@@ -29,5 +29,7 @@ double weatherLevelFactor(int level);                      // count multiplier: 
 // V2.1.2 the mask of a transition from the mods (genry_circle, genry_diamond, genry_clock, genry_soft, genry_heart):
 // 1920x1080 grey, Ren'Py's ImageDissolve shows the new picture where it is white first
 QImage transitionMask(const QString& name);
+// V2.1.2 the stamp on the back of an «открытка» (160x190): a perforated edge, a red star, «СССР · 4 коп», a postmark
+QImage postcardStamp();
 
 } // namespace gb

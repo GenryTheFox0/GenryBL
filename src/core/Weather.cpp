@@ -229,4 +229,86 @@ QImage transitionMask(const QString& name)
     return m.scaled(1920, 1080, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 }
 
+QImage postcardStamp()
+{
+    const int w = 160, h = 190;
+    QImage img(w, h, QImage::Format_ARGB32_Premultiplied);
+    img.fill(Qt::transparent);
+    QPainter p(&img);
+    p.setRenderHint(QPainter::Antialiasing);
+    // the paper with its perforated edge: a white sheet, half-circles bitten out along every side
+    QPainterPath sheet;
+    sheet.addRect(4, 4, w - 8, h - 8);
+    QPainterPath holes;
+    const double r = 4.2, step = 12.0;
+    for (double x = 4 + step / 2; x < w - 4; x += step) {
+        holes.addEllipse(QPointF(x, 4), r, r);
+        holes.addEllipse(QPointF(x, h - 4), r, r);
+    }
+    for (double y = 4 + step / 2; y < h - 4; y += step) {
+        holes.addEllipse(QPointF(4, y), r, r);
+        holes.addEllipse(QPointF(w - 4, y), r, r);
+    }
+    p.fillPath(sheet.subtracted(holes), QColor(0xfb, 0xf7, 0xee));
+    // the picture: a sky over a pine forest, the camp's colours
+    const QRectF pic(16, 16, w - 32, h - 58);
+    QLinearGradient sky(pic.topLeft(), pic.bottomLeft());
+    sky.setColorAt(0, QColor(0x6f, 0xa8, 0xd6));
+    sky.setColorAt(1, QColor(0xd9, 0xe9, 0xc8));
+    p.fillRect(pic, sky);
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(0x2f, 0x5e, 0x3a));
+    for (int k = 0; k < 7; ++k) {
+        const double cx = pic.left() + 8 + k * 16.5, base = pic.bottom(), top = base - 34 - (k % 3) * 9;
+        QPolygonF tree;
+        tree << QPointF(cx, top) << QPointF(cx - 10, base) << QPointF(cx + 10, base);
+        p.drawPolygon(tree);
+    }
+    // the red star of the camp's gate
+    QPolygonF star;
+    const QPointF c(pic.center().x(), pic.top() + 34);
+    for (int k = 0; k < 10; ++k) {
+        const double pi = 3.14159265358979323846, a = -pi / 2 + k * pi / 5, rr = k % 2 ? 9.5 : 23.0;
+        star << QPointF(c.x() + rr * std::cos(a), c.y() + rr * std::sin(a));
+    }
+    p.setBrush(QColor(0xc8, 0x1e, 0x1e));
+    p.drawPolygon(star);
+    // the face value
+    QFont f(QStringLiteral("Calibri"));
+    f.setBold(true);
+    f.setPixelSize(17);
+    p.setFont(f);
+    p.setPen(QColor(0x8c, 0x1b, 0x1b));
+    p.drawText(QRectF(14, h - 42, w - 28, 22), Qt::AlignLeft | Qt::AlignVCenter, QString::fromUtf8("СССР"));
+    p.drawText(QRectF(14, h - 42, w - 28, 22), Qt::AlignRight | Qt::AlignVCenter, QString::fromUtf8("4 коп"));
+    // a postmark over the corner: two rings, the camp's name, the waves of the cancel
+    p.setPen(QPen(QColor(40, 44, 70, 150), 2.2));
+    p.setBrush(Qt::NoBrush);
+    const QPointF pm(w - 47, 48);
+    p.drawEllipse(pm, 30, 30);
+    p.drawEllipse(pm, 21, 21);
+    f.setBold(false);
+    f.setPixelSize(10);
+    p.setFont(f);
+    p.save();
+    p.translate(pm);
+    const QString name = QString::fromUtf8("СОВЁНОК");
+    for (int k = 0; k < name.size(); ++k) {
+        p.save();
+        p.rotate(-66 + k * 22);
+        p.drawText(QRectF(-6, -29.5, 12, 9), Qt::AlignCenter, QString(name.at(k)));
+        p.restore();
+    }
+    p.restore();
+    for (int k = 0; k < 3; ++k) {
+        QPainterPath wave;
+        const double y = pm.y() - 10 + k * 10;
+        wave.moveTo(pm.x() - 76, y);
+        for (double x = pm.x() - 76; x <= pm.x() - 40; x += 10) wave.quadTo(x + 2.5, y - 4, x + 5, y), wave.quadTo(x + 7.5, y + 4, x + 10, y);
+        p.drawPath(wave);
+    }
+    p.end();
+    return img;
+}
+
 } // namespace gb
