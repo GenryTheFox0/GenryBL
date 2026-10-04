@@ -700,17 +700,22 @@ GameCheck gameCheck(const QString& esRoot, const QString& dataDir, const QString
     }
     const QString tag = QStringLiteral("%1_%2").arg(QCoreApplication::applicationPid()).arg(QDateTime::currentMSecsSinceEpoch());
     const QString lintPath = QDir::tempPath() + QStringLiteral("/genrybl_lint_") + tag + QStringLiteral(".txt");
-    const QString smokePath = QDir::tempPath() + QStringLiteral("/genrybl_smoke_") + tag + QStringLiteral(".txt");
+    // V2.1.3 the game's Python 2 reads its environment and arguments in the ANSI code page: a Cyrillic user name in
+    // %TEMP% or a Cyrillic game folder could break them on a PC whose «language for non-Unicode programs» is not
+    // Russian. The report goes next to the game under a plain name, and the game folder is «.» (the working folder)
+    const QString smokeName = QStringLiteral("genrybl_smoke_") + tag + QStringLiteral(".txt");
+    const QString smokePath = esRoot + QLatin1Char('/') + smokeName;
+    const QDateTime startedAt = QDateTime::currentDateTime().addSecs(-2);
     QProcess p;
     p.setWorkingDirectory(esRoot);
     QProcessEnvironment env = gameEnvironment();
     env.insert(QStringLiteral("RENPY_LESS_UPDATES"), QStringLiteral("1"));      // no «Loading…» window for two minutes
-    env.insert(QStringLiteral("GENRY_SMOKE_OUT"), QDir::toNativeSeparators(smokePath));
+    env.insert(QStringLiteral("GENRY_SMOKE_OUT"), smokeName);
     env.insert(QStringLiteral("GENRY_SMOKE_MODS"), modIds.join(QLatin1Char(',')));
     p.setProcessEnvironment(env);
     p.setStandardOutputFile(lintPath);
     p.setStandardErrorFile(lintPath, QIODevice::Append);
-    p.start(esExe(esRoot), {esRoot, QStringLiteral("genry_smoke")});
+    p.start(esExe(esRoot), {QStringLiteral("."), QStringLiteral("genry_smoke")});
     const bool started = p.waitForStarted(15000);
     const bool finished = started && p.waitForFinished(timeoutMs);
     if (started && !finished) p.kill();
@@ -759,16 +764,33 @@ GameCheck gameCheck(const QString& esRoot, const QString& dataDir, const QString
         }
     }
     if (!smokeDone) {
-        // the game died while starting (a broken .rpy of some mod): its traceback is the answer
-        QString why = console;
-        if (why.trimmed().isEmpty()) {
-            QFile tb(esRoot + QStringLiteral("/traceback.txt"));
-            if (tb.open(QIODevice::ReadOnly)) why = QString::fromUtf8(tb.readAll());
-            res.console = why;
-        }
-        QStringList tail = why.split(QLatin1Char('\n'));
-        tail = tail.mid(qMax(0, int(tail.size()) - 14));
-        res.error = gbTr("игра не довела проверку до конца:\n") + tail.join(QLatin1Char('\n')).trimmed();
+        // the game stopped before the check: its own reports of THIS run say why. A traceback.txt / errors.txt older
+        // than the start is an old crash of some other day (a player saw his game's crash of 26 September on every
+        // export and took it for the export's error) - it is never shown as the reason.
+        auto fresh = [&](const QString& name) {
+            const QFileInfo fi(esRoot + QLatin1Char('/') + name);
+            if (!fi.exists() || fi.lastModified() < startedAt) return QString();
+            QFile f(fi.filePath());
+            return f.open(QIODevice::ReadOnly) ? QString::fromUtf8(f.readAll()) : QString();
+        };
+        auto tail = [](const QString& s, int n) {
+            QStringList l = s.trimmed().split(QLatin1Char('\n'));
+            return QStringList(l.mid(qMax(0, int(l.size()) - n))).join(QLatin1Char('\n')).trimmed();
+        };
+        const QString errors = fresh(QStringLiteral("errors.txt")), traceback = fresh(QStringLiteral("traceback.txt")),
+                      log = fresh(QStringLiteral("log.txt"));
+        QString why;
+        if (!errors.isEmpty())
+            why = gbTr("игра не смогла прочитать скрипты (errors.txt в папке игры) — сломан какой-то мод:\n") + tail(errors, 16);
+        else if (!traceback.isEmpty())
+            why = gbTr("игра упала при запуске (traceback.txt в папке игры):\n") + tail(traceback, 14);
+        else if (!console.trimmed().isEmpty())
+            why = tail(console, 14);
+        else
+            why = gbTr("игра закрылась, не дойдя до проверки, и не оставила отчёта. Последние строки её журнала (log.txt в папке игры) — пришли их нам:\n") +
+                  (log.isEmpty() ? gbTr("(журнал не обновился — игра, похоже, не запустилась вовсе)") : tail(log, 12));
+        res.console = (errors + traceback + console + log).trimmed();
+        res.error = gbTr("игра не довела проверку до конца — ") + why;
         return res;
     }
     res.ran = true;
