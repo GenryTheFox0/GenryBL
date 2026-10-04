@@ -1999,6 +1999,38 @@ static void testSavesAndProse()
           "the mod folder gone (a player's copy from the Workshop only): the next build takes the names from the project " + b3.error);
     back.close();
     QDir(root).removeRecursively();
+
+    // «Живое кино»: a «ключ … время» glides between the stops instead of jumping to its end
+    static EsAssets es;
+    QString err;
+    if (!es.load(QStringLiteral(GB_SOURCE_DIR "/data/es_catalog.json"), esRootForTests(), &err)) {
+        check(false, "ES for the glide " + err);
+        return;
+    }
+    Cinema cin;
+    cin.load(QString::fromUtf8("@mod_id genry_glide\n: start\nфон ext_square_day\nпоказать sl smile pioneer center\nСлавя: Стою.\n"
+                               "ключ sl | x 0.20 | масштаб 1.3 | время 0.8\nключ dv | x 0.9 | время 0.5\nСлавя: Поехала.\n"
+                               "ключ sl | x 0.80\nСлавя: А теперь сразу.\n"),
+             &es);
+    const CinemaStop s1 = cin.start(1);
+    const CinemaStop s2 = cin.next();
+    const CinemaStop s3 = cin.next();
+    check(s1.animSeconds.isEmpty() && s2.animSeconds.size() == 1 && qAbs(s2.animSeconds.value(QStringLiteral("sl")) - 0.8) < 1e-9 &&
+              s3.animSeconds.isEmpty(),
+          "a «ключ … время» glides into the next stop; a new hero and a «ключ» without время do not");
+    const SceneState mid = glideScene(s2.scene, s2.animFrom, s2.animSeconds, 0.5);
+    const SceneState end = glideScene(s2.scene, s2.animFrom, s2.animSeconds, 1.0);
+    const SceneState beg = glideScene(s2.scene, s2.animFrom, s2.animSeconds, 0.0);
+    auto slOf = [](const SceneState& st) { for (const SpriteShow& s : st.sprites) if (s.tag == QLatin1String("sl")) return s; return SpriteShow{}; };
+    check(qAbs(slOf(beg).xpos - 0.5) < 1e-6 && qAbs(slOf(end).xpos - 0.2) < 1e-6 && qAbs(slOf(mid).xpos - 0.35) < 1e-6 &&
+              qAbs(slOf(mid).zoom - 1.15) < 1e-6,
+          QStringLiteral("eased like Ren'Py: start, half way, end (x %1 → %2 → %3)").arg(slOf(beg).xpos).arg(slOf(mid).xpos).arg(slOf(end).xpos));
+    Renderer ren;
+    ren.setAssets(&es, QStringLiteral(GB_SOURCE_DIR "/data"));
+    const QString shots = QStringLiteral(GB_SOURCE_DIR "/tests/out");
+    QDir().mkpath(shots);
+    for (const auto& [name, st] : {std::pair<const char*, SceneState>{"glide_0", beg}, {"glide_50", mid}, {"glide_100", end}})
+        ren.render(st).save(shots + QStringLiteral("/%1.png").arg(QLatin1String(name)));
 }
 
 int main(int argc, char** argv)

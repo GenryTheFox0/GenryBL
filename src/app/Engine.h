@@ -499,6 +499,8 @@ private:
     QMutex m_sceneMx;
     QHash<int, gb::SceneState> m_scenes;
     QHash<int, gb::SceneState> m_cineScenes;          // the cinema's frames: a live cinema re-walks on every edit
+    struct CineAnim { QVector<gb::SpriteShow> from; QHash<QString, double> seconds; double total = 0; };
+    QHash<int, CineAnim> m_cineAnims;                 // V2.1.2 «ключ … время»: a frame's heroes in between («cine/<key>@t»)
     int m_cineKey = 0;
     int m_sceneKey = 0;
     qint64 m_gamePid = 0;

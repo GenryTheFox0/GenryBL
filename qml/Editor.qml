@@ -80,6 +80,7 @@ Item {
         if (shotPage === "editor-history") Qt.callLater(() => historyDialog.openFor(projectId, code.text))
         // V2.1.2 «◆ Герой» and the right-click menu with the transitions
         if (shotPage === "editor-keys-test") Qt.callLater(() => ed.keysSelfTest())
+        if (shotPage === "editor-glide-test") Qt.callLater(() => ed.glideSelfTest())
         if (shotPage === "editor-hero") Qt.callLater(() => { code.gotoLine(Number(shotArg) || 14); ed.refreshPreview(); infoTabs.currentIndex = 3 })
         if (shotPage === "editor-menu") Qt.callLater(() => { code.gotoLine(Number(shotArg) || 14); ed.refreshPreview(); ed.transitions = Engine.transitionList(); trEs.popup(code, 260, 40) })
         // «живое кино»: shotArg = "line clicks"
@@ -172,6 +173,37 @@ Item {
         else code.insertAfterLine(n, line)
         heroTag = b.tag
         previewTimer.restart(); lintTimer.restart(); saveTimer.restart()
+    }
+    // V2.1.2 the UI self-check of the cinema's glide («ключ … время» between two lines); GLIDETEST lines go to the log
+    // (run with --late: the frames are drawn on the image threads)
+    property var glideSeen: ({ max: -1, frames: 0, ticks: 0 })
+    function glideSelfTest() {
+        code.setText("@mod_id genry_glide\n: start\nфон ext_square_day\nпоказать sl smile pioneer center\nСлавя: Стою.\n" +
+                     "ключ sl | x 0.20 | масштаб 1.3 | время 0.8\nСлавя: Поехала.\n")
+        cinemaView.begin(code.text, 1)
+        glideProbe.start()
+    }
+    Timer {
+        id: glideProbe
+        interval: 50
+        repeat: true
+        onTriggered: {
+            const g = ed.glideSeen
+            g.ticks++
+            if (g.ticks === 12) cinemaView.advance()                     // after the first line: on to the glide
+            g.frames = Math.max(g.frames, cinemaView.animFrames.length)
+            g.max = Math.max(g.max, cinemaView.animIndex)
+            if (g.ticks < 120 && (g.ticks < 20 || cinemaView.animIndex >= 0 || cinemaView.animFrames.length > 0)) return
+            stop()
+            const out = []
+            const ok = (name, c, d) => out.push((c ? "PASS " : "FAIL ") + name + (c ? "" : " — " + d))
+            ok("the «ключ» stop brings its in-between frames", g.frames >= 5, g.frames)
+            ok("they play to the last one", g.max === g.frames - 1, g.max + " of " + g.frames)
+            ok("then the layer goes, the new frame stays", cinemaView.animIndex === -1 && cinemaView.animFrames.length === 0 &&
+               cinemaView.stop.text === "Поехала.", cinemaView.animIndex + " " + cinemaView.stop.text)
+            for (const l of out) console.log("GLIDETEST " + l)
+            console.log("GLIDETEST DONE " + out.filter(l => l.indexOf("PASS") === 0).length + "/" + out.length)
+        }
     }
     // the UI self-check of «ключ» and «Эффект перехода» (shot mode: nothing is saved); KEYTEST lines go to the log
     function keysSelfTest() {

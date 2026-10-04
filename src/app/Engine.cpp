@@ -1363,12 +1363,24 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
         st.screenMenu = false;
     }
     int key;
+    CineAnim anim;
+    for (auto it = c.animSeconds.begin(); it != c.animSeconds.end(); ++it) anim.total = qMax(anim.total, it.value());
+    if (anim.total > 0) {
+        anim.from = c.animFrom;
+        anim.seconds = c.animSeconds;
+    }
     {
         QMutexLocker lock(&m_sceneMx);
         key = ++m_cineKey;
         m_cineScenes.insert(key, st);
         m_cineScenes.remove(key - 48);
+        if (anim.total > 0) m_cineAnims.insert(key, anim);
+        m_cineAnims.remove(key - 48);
     }
+    // the in-between frames the cinema plays while the heroes glide (about 24 a second, a little ahead of time)
+    const QVariantMap animMap = anim.total > 0 ? QVariantMap{{QStringLiteral("frames"), qBound(4, int(std::lround(anim.total * 24)), 30)},
+                                                             {QStringLiteral("seconds"), anim.total}}
+                                               : QVariantMap{};
     static const QRegularExpression tags(QStringLiteral("\\{[^}]*\\}"));
     QString text = st.text;
     text.remove(tags);
@@ -1396,7 +1408,7 @@ QVariantMap Engine::cinemaMap(const CinemaStop& c)
             {QStringLiteral("moment"), c.moment}, {QStringLiteral("note"), c.note}, {QStringLiteral("time"), st.timeOfDay},
             {QStringLiteral("weather"), weather}, {QStringLiteral("weatherKey"), st.weather + QString::number(st.weatherLevel)},
             {QStringLiteral("eyes"), st.eyesClosed ? QStringLiteral("closed") : st.sleepy ? QStringLiteral("sleepy") : QStringLiteral("open")},
-            {QStringLiteral("eyesSeconds"), st.eyesSeconds},
+            {QStringLiteral("eyesSeconds"), st.eyesSeconds}, {QStringLiteral("anim"), animMap},
             {QStringLiteral("box"), c.kind == CinemaStop::Say && !st.nvlMode && !st.windowHidden}};
 }
 
@@ -3195,10 +3207,17 @@ QImage Engine::providerImage(const QString& rawId, const QSize& req)
     }
     if (kind == QLatin1String("cine")) {             // «кино-режим»: the frame as the game shows it, no editor HUD
         SceneState st;
+        CineAnim anim;
+        // «cine/<key>@<t>»: the heroes of a «ключ … время» part of the way there, eased as Ren'Py's «ease» (t: 0…1 of
+        // the longest one; each hero over its own seconds)
+        const int at = int(rest.indexOf(QLatin1Char('@')));
+        const int key = (at < 0 ? rest : rest.left(at)).toInt();
         {
             QMutexLocker lock(&m_sceneMx);
-            st = m_cineScenes.value(rest.toInt());
+            st = m_cineScenes.value(key);
+            if (at >= 0) anim = m_cineAnims.value(key);
         }
+        if (at >= 0 && anim.total > 0) st = glideScene(st, anim.from, anim.seconds, rest.mid(at + 1).toDouble());
         return fit(m_renderer.render(st, false));
     }
     if (kind == QLatin1String("cover")) return fit(m_renderer.render(coverScene(rest.section(QLatin1Char('/'), 0, 0))));

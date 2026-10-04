@@ -40,7 +40,15 @@ struct CinemaStop {
     QString video;                // Video: "es:video/x.ogv" | "file:video/x.webm"
     QString moment;               // shake / flash / pixels / blink since the last stop
     QString note;                 // End: why it ended; else a hint (a missing scene…)
+    // V2.1.2 «ключ … время N» since the last stop: the heroes glide from where they stood (animFrom, the last stop's
+    // sprites) to this stop's places, each over its own seconds, as Ren'Py's «ease» does in the game
+    QVector<SpriteShow> animFrom;
+    QHash<QString, double> animSeconds;   // tag -> seconds
 };
+
+// V2.1.2 the heroes of a «ключ … время» part of the way there: t = 0…1 of the longest glide, each hero over its own
+// seconds, eased as Ren'Py's «ease» (renpy/atl.py); heroes that did not stand on the last stop are where they are
+SceneState glideScene(SceneState st, const QVector<SpriteShow>& from, const QHash<QString, double>& seconds, double t);
 
 class Cinema {
 public:
@@ -73,6 +81,10 @@ private:
     const EsAssets* m_es = nullptr;
     QString m_modId;
     QStringList m_lines, m_prefix, m_path;
+    // the last stop: its heroes and how far the path had gone (the «ключ» lines after it animate the next one)
+    QVector<SpriteShow> m_lastSprites;
+    int m_lastPathLen = -1;
+    QString m_lastPathTail;
     QVector<int> m_srcOf;
     QHash<QString, int> m_labels;             // Ren'Py label -> index of its «: scene» line
     int m_pc = 0, m_steps = 0;

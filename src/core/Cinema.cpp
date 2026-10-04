@@ -1,5 +1,7 @@
 // GenryBL V1 - «кино-режим» (see Cinema.h).
 #include "Cinema.h"
+
+#include <cmath>
 #include "Compiler.h"
 #include "EsAssets.h"
 #include "Py.h"
@@ -232,12 +234,64 @@ void Cinema::load(const QString& storyText, const EsAssets* es)
     m_defaults = m_vars;
 }
 
+SceneState glideScene(SceneState st, const QVector<SpriteShow>& from, const QHash<QString, double>& seconds, double t)
+{
+    double total = 0;
+    for (auto it = seconds.begin(); it != seconds.end(); ++it) total = qMax(total, it.value());
+    if (total <= 0) return st;
+    t = qBound(0.0, t, 1.0);
+    for (SpriteShow& s : st.sprites) {
+        const auto secs = seconds.constFind(s.tag);
+        if (secs == seconds.constEnd() || *secs <= 0) continue;
+        const SpriteShow* f = nullptr;
+        for (const SpriteShow& o : from) if (o.tag == s.tag) f = &o;
+        if (!f) continue;
+        const double local = qBound(0.0, t * total / *secs, 1.0);
+        const double e = 0.5 - std::cos(3.14159265358979323846 * local) / 2.0;     // renpy/atl.py warper «ease»
+        auto mix = [e](double a, double b) { return a + (b - a) * e; };
+        s.xpos = mix(f->xpos, s.xpos);
+        s.xanchor = mix(f->xanchor, s.xanchor);
+        s.ypos = mix(f->ypos, s.ypos);
+        s.yanchor = mix(f->yanchor, s.yanchor);
+        s.zoom = mix(f->zoom, s.zoom);
+        s.rotate = mix(f->rotate, s.rotate);
+        s.alpha = mix(f->alpha, s.alpha);
+        if (e < 0.5) s.mirror = f->mirror;
+    }
+    return st;
+}
+
 CinemaStop Cinema::stop(CinemaStop::Kind k, int idx)
 {
     CinemaStop st;
     st.kind = k;
     st.line = idx >= 0 && idx < m_srcOf.size() ? m_srcOf[idx] + 1 : 0;
-    if (!m_blind) st.scene = sceneAt((m_prefix + m_path).join(QLatin1Char('\n')), -1, m_es);
+    if (!m_blind) {
+        st.scene = sceneAt((m_prefix + m_path).join(QLatin1Char('\n')), -1, m_es);
+        // V2.1.2 the «ключ» lines walked since the last stop (the whole path when it was rebuilt by a jump)
+        const bool sameWay = m_lastPathLen >= 0 && m_lastPathLen <= m_path.size() &&
+                             (m_lastPathLen == 0 || m_path.at(m_lastPathLen - 1) == m_lastPathTail);
+        for (int i = sameWay ? m_lastPathLen : 0; i < m_path.size(); ++i) {
+            const QString s = pyStrip(m_path.at(i));
+            const QString w = firstWord(s);
+            if (normalizeCommand(w) != QLatin1String("keyframe")) continue;
+            const Keyframe k = parseKeyframe(pyStrip(s.mid(w.size())));
+            const QString tag = k.image.section(QLatin1Char(' '), 0, 0);
+            if (tag.isEmpty()) continue;
+            if (k.seconds > 0) st.animSeconds.insert(tag, k.seconds);
+            else st.animSeconds.remove(tag);                 // a later «ключ» without время puts it there at once
+        }
+        // only the heroes that stood on the last stop and have moved: a new one appears where it is
+        for (auto it = st.animSeconds.begin(); it != st.animSeconds.end();) {
+            bool stood = false;
+            for (const SpriteShow& o : m_lastSprites) stood = stood || o.tag == it.key();
+            it = stood ? std::next(it) : st.animSeconds.erase(it);
+        }
+        if (!st.animSeconds.isEmpty()) st.animFrom = m_lastSprites;
+        m_lastSprites = st.scene.sprites;
+        m_lastPathLen = int(m_path.size());
+        m_lastPathTail = m_path.isEmpty() ? QString() : m_path.last();
+    }
     st.music = m_music;
     st.ambience = m_ambience;
     st.sounds = m_sounds;
@@ -266,6 +320,9 @@ bool Cinema::jumpTo(const QString& scene, QString* note, bool keepBranches)
 CinemaStop Cinema::start(int line)
 {
     m_path.clear();
+    m_lastSprites.clear();
+    m_lastPathLen = -1;
+    m_lastPathTail.clear();
     m_calls.clear();
     m_items.clear();
     m_music.clear();

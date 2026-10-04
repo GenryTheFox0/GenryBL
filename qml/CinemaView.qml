@@ -48,6 +48,13 @@ Popup {
     property string ambienceKey: ""
     property real remain: 0                     // a timed choice / call: seconds left
     property int soundTurn: 0
+    // V2.1.2 «ключ … время N»: the heroes glide - in-between frames over the new one (frame 0 = where they stood,
+    // the last = the new frame itself, so hiding the layer at the end changes nothing on screen)
+    property var animFrames: []
+    property int animReady: 0
+    property int animIndex: -1
+    property int animStep: 40
+    property var pendingFade: null
     readonly property real sc: frame.width / 1920
     readonly property bool typing: !!stop.typed && shown < (stop.text || "").length
     readonly property bool waitsClick: stop.kind === "say" || stop.kind === "note"
@@ -147,9 +154,22 @@ Popup {
             if (quiet || skipping) lids.shut = shut
             else { lidAnim.from = lids.shut; lidAnim.to = shut; lidAnim.duration = Math.max(150, (s.eyesSeconds || 2) * 1000); lidAnim.start() }
         }
+        // the heroes glide (a walk back / a skip: they are there at once); the crossfade to the new frame then runs
+        // under the glide, started when its first frame covers it - the end pose never flashes before the start one
+        animTimer.stop()
+        animIndex = -1
+        animReady = 0
+        const glide = !!(s.anim && s.anim.frames && !quiet && !skipping)
+        if (glide) {
+            const n = s.anim.frames, list = []
+            for (let i = 0; i <= n; ++i) list.push(s.frame + "@" + (i / n).toFixed(4))
+            animStep = Math.max(16, Math.round(s.anim.seconds * 1000 / n))
+            animFrames = list
+        } else animFrames = []
         // the frame: a quick crossfade like ES's dissolve
-        if (useA) { imgB.source = s.frame; fadeToB.restart() } else { imgA.source = s.frame; fadeToA.restart() }
+        if (useA) { imgB.source = s.frame; pendingFade = fadeToB } else { imgA.source = s.frame; pendingFade = fadeToA }
         useA = !useA
+        if (!glide) { pendingFade.restart(); pendingFade = null }
         shown = s.typed && !quiet ? 0 : (s.text || "").length
         if (s.typed && !quiet) typer.restart()
         // audio
@@ -263,6 +283,49 @@ Popup {
             NumberAnimation { id: fadeToB; target: imgB; property: "opacity"; from: 0; to: 1; duration: cv.skipping ? 0 : 260 }
             NumberAnimation { id: fadeToA; target: imgB; property: "opacity"; from: 1; to: 0; duration: cv.skipping ? 0 : 260 }
             VideoOutput { id: videoOut; anchors.fill: parent; visible: cv.stop.kind === "video" && videoPlayer.playbackState === MediaPlayer.PlayingState }
+            // V2.1.2 the glide of «ключ … время»: frame 0 covers the crossfade as soon as it is drawn, the rest play once all are in
+            Item {
+                anchors.fill: parent
+                visible: cv.animIndex >= 0
+                Repeater {
+                    model: cv.animFrames
+                    Image {
+                        required property string modelData
+                        required property int index
+                        anchors.fill: parent
+                        fillMode: Image.PreserveAspectFit
+                        asynchronous: true
+                        cache: false
+                        sourceSize: Qt.size(Math.max(1, Math.round(frame.width)), Math.max(1, Math.round(frame.height)))
+                        source: modelData
+                        visible: index === cv.animIndex
+                        onStatusChanged: {
+                            if (status === Image.Error) {        // no glide then: the new frame as usual
+                                animTimer.stop(); cv.animIndex = -1; cv.animFrames = []
+                                if (cv.pendingFade) { cv.pendingFade.restart(); cv.pendingFade = null }
+                                return
+                            }
+                            if (status !== Image.Ready) return
+                            if (index === 0 && cv.animIndex < 0) {
+                                cv.animIndex = 0
+                                if (cv.pendingFade) { cv.pendingFade.restart(); cv.pendingFade = null }
+                            }
+                            if (++cv.animReady === cv.animFrames.length) animTimer.start()
+                        }
+                    }
+                }
+            }
+            Timer {
+                id: animTimer
+                interval: cv.animStep
+                repeat: true
+                onTriggered: {
+                    if (cv.animIndex < cv.animFrames.length - 1) { cv.animIndex++; return }
+                    stop()
+                    cv.animIndex = -1                    // the last in-between frame is the new frame: nothing jumps
+                    cv.animFrames = []
+                }
+            }
 
             // ---- the weather, falling: the game's SnowBlossom layers (the same pictures, counts, speeds) as particles;
             // the game's rain falls behind its dialogue box
