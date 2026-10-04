@@ -1998,6 +1998,13 @@ static void testSavesAndProse()
     check(b3.ok && back.open(QIODevice::ReadOnly) && back.readAll().contains("names-v1"),
           "the mod folder gone (a player's copy from the Workshop only): the next build takes the names from the project " + b3.error);
     back.close();
+    // a check / an export / a publish: the names of what people get go to the project at once (the showcase leaves
+    // game/mods right after its build, before any next install could keep them)
+    fakeCompile("names-v2");
+    QFile kept2(root + QStringLiteral("/proj/genry_names/genry_names.rpyc"));
+    check(build::keepNames(env, QStringLiteral("genry_names")) && kept2.open(QIODevice::ReadOnly) && kept2.readAll().contains("names-v2"),
+          "keepNames: the game's fresh .rpyc goes to the project right after the check");
+    kept2.close();
     QDir(root).removeRecursively();
 
     // «Живое кино»: a «ключ … время» glides between the stops instead of jumping to its end

@@ -79,6 +79,10 @@ bool zipMod(const QString& modDir, const QString& zipPath, QString* err);
 // «Экспорт» (V1): the mod as OTHER people get it.
 // every "mods/<id>/..." file the mod's .rpy point at that is not inside its folder (empty = self-contained)
 QStringList missingModFiles(const QString& modDir, const QString& modId);
+// V2.1.2 the statement names of the .rpyc the game just compiled (a check, an export, a publish) go to the project
+// (<project>/genry_names/<id>.rpyc): the next build borrows them even if the mod folder is gone by then (a player's
+// copy from the Workshop only, the showcase removed from game/mods) - saves made in the published version live on
+bool keepNames(const BuildEnv& env, const QString& modId);
 // the ZIP for players: <id>/... + КАК_УСТАНОВИТЬ.txt, file names in UTF-8 (Qt's zip writer marks them - the old
 // tar-made archive could turn Cyrillic names into garbage on another PC), then read back and compared byte for byte
 bool exportZip(const QString& modDir, const QString& modId, const QString& modName, const QString& zipPath, QString* err);

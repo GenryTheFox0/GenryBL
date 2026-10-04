@@ -2646,6 +2646,7 @@ void Engine::engineCheck(const QString& id, const QString& storyText)
         if (!r.ok) return qMakePair(false, QStringList{r.error});
         const build::GameCheck c = build::gameCheck(env.esRoot, env.dataDir, {r.meta.modId});
         if (!c.ran) return qMakePair(false, QStringList{c.error});
+        build::keepNames(env, r.meta.modId);
         return qMakePair(c.hits.isEmpty(), c.hits);
     }));
 }
@@ -2700,6 +2701,7 @@ void Engine::exportMod(const QString& id, const QString& storyText, const QStrin
         QString err;
         const build::GameCheck c = build::gameCheck(env.esRoot, env.dataDir, {r.meta.modId});
         if (!c.ran) { res.message = c.error; return res; }
+        build::keepNames(env, r.meta.modId);                // what people get: its statement names stay with the project
         const QStringList hits = c.hits;
         if (!hits.isEmpty()) {
             res.message = gbTr("Игра нашла в моде ошибки — экспорт остановлен, чтобы люди не получили сломанный мод:\n") +

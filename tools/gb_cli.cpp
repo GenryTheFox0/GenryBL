@@ -366,6 +366,7 @@ int main(int argc, char** argv)
             out.flush();
             const build::GameCheck c = build::gameCheck(esRoot, root + "/data", {r.meta.modId});
             if (!c.ran) return fail(c.error);
+            if (build::keepNames(env, r.meta.modId)) out << "statement names kept in the project (genry_names)\n";
             if (c.hits.isEmpty()) out << "LINT CLEAN: " << c.statements << " statements, " << c.screens << " screens built\n";
             for (const QString& h : c.hits) out << "  " << h << "\n";
             return c.hits.isEmpty() ? 0 : 1;

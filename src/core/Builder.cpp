@@ -835,6 +835,16 @@ QString installText(const QString& modId, const QString& modName)
 
 }   // namespace
 
+bool keepNames(const BuildEnv& env, const QString& modId)
+{
+    const QString rpy = env.esRoot + QStringLiteral("/game/mods/") + modId + QLatin1Char('/') + modId + QStringLiteral(".rpy");
+    const QString keep = namesKeep(env, modId);
+    if (keep.isEmpty() || !rpycMatchesRpy(rpy, rpy + QLatin1Char('c'))) return false;
+    QDir().mkpath(QFileInfo(keep).absolutePath());
+    QFile::remove(keep);
+    return QFile::copy(rpy + QLatin1Char('c'), keep);
+}
+
 QStringList missingModFiles(const QString& modDir, const QString& modId)
 {
     QStringList missing;
