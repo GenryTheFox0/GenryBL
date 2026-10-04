@@ -126,6 +126,8 @@ def sha(path):
 def main():
     # the 18+ patch that ships inside (data/patch): fresh from the Workshop, before the selftest reads it
     subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'bundle_patch.py')])
+    # the wardrobe lists that ship, merged before the selftest - so [18] checks the very list people get
+    subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'harvest_wardrobe_lists.py')])
     print('== build the public edition')
     vs_shell(f'cmake -S "{ROOT}" -B "{BUILD}" -G Ninja -DCMAKE_BUILD_TYPE=Release -DGB_RELEASE=ON -DCMAKE_PREFIX_PATH="{QT}" >nul')
     # from scratch every time: ninja keeps no header dependencies for an object compiled from a console with another code
@@ -190,8 +192,7 @@ def main():
         sys.exit('the program would not start on a clean Windows - no release')
     print(f'   dependencies: {n} exe/dll checked, all inside or a part of Windows')
     data = os.path.join(STAGE, 'data')
-    # «Удалённые» / «поправить лицо» of the wardrobe ship with it (collected from every copy on this PC)
-    subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'harvest_wardrobe_lists.py')])
+    # «Удалённые» / «поправить лицо» of the wardrobe ship with it (collected from every copy on this PC, before the build)
     for f in ('es_catalog.json', 'forms.json', 'genrybl.ico', 'starter_story.txt', 'starter_blank.txt', 'wardrobe_hidden.txt', 'wardrobe_faces.txt'):
         os.makedirs(data, exist_ok=True)
         shutil.copy2(os.path.join(ROOT, 'data', f), data)

@@ -4,6 +4,7 @@ Collects them from every place they were made on this PC - the dev build writes 
 (the test of what people get) and the old dev work/ keep their own - and merges them into data/. make_release.py runs it.
 """
 import io
+import json
 import os
 import sys
 
@@ -27,8 +28,15 @@ def main():
         if len(c) == 3:
             faces[c[0]] = l
     before = len(hidden), len(faces)
+    # the game's own sprites never ship hidden (an old list once took every emotion but «smile» off Ольга Дмитриевна;
+    # older copies still carry it): «tag|look:emotion outfit» of a sprite the catalog has stays out
+    game = set()
+    for name in json.load(io.open(os.path.join(data, 'es_catalog.json'), encoding='utf-8')).get('sprites', {}):
+        w = name.split()
+        if len(w) >= 2:
+            game.add(w[0] + '|look:' + ' '.join(w[1:]))
     for src in SOURCES:
-        hidden.update(lines(os.path.join(src, 'wardrobe_hidden.txt')))
+        hidden.update(l for l in lines(os.path.join(src, 'wardrobe_hidden.txt')) if l not in game)
         for l in lines(os.path.join(src, 'wardrobe_faces.txt')):
             c = l.split('\t')
             if len(c) == 3:
