@@ -152,7 +152,7 @@ public:
     QString appRoot() const { return m_root; }
     QString esRoot() const { return m_es.esRoot(); }
     QString esRenpy() const { return m_es.esRoot().isEmpty() ? QString() : gb::build::esRenpyVersion(m_es.esRoot()); }
-    QString version() const { return QStringLiteral("V2.1.1"); }
+    QString version() const { return QStringLiteral("V2.1.2"); }
 
     // ---- story tools ----
     Q_INVOKABLE QString compile(const QString& text) const;

@@ -2,7 +2,7 @@
   <img src="docs/images/logo.png" width="1000" alt="Конструктор БЛ — GenryBL">
 </p>
 
-<h1 align="center">GenryBL — Конструктор БЛ · V2.1</h1>
+<h1 align="center">GenryBL — Конструктор БЛ · V2.1.2</h1>
 <p align="center"><strong>Твой лагерь. Твои истории.</strong><br>Your camp. Your stories.</p>
 <p align="center"><strong>От создателя Project 2099 и Project Iron 6 · From the creator of Project 2099 and Project Iron 6</strong></p>
 
@@ -97,6 +97,14 @@ GenryBL — **для взрослых**, и я этого не прячу.
 
 Нужны Windows 10/11 и «Бесконечное лето» из Steam (оно бесплатное). **Больше ничего качать не надо**: Qt,
 Visual C++, ffmpeg и 18+ патч уже внутри — заводится даже на голой Windows.
+
+## Что нового в V2.1.2
+
+**Сейвы игроков переживают обновление мода** (а если строку под сейвом переписали — «мод обновился, сцена сначала»
+вместо вылета), **текст со слова-команды остаётся текстом** (правый клик «Это текст / Это команда»), все эмоции
+героинь снова на месте. Новое: **«Открытка»** — наезд в фокус, клик — оборот с текстом от руки и маркой; **ключевые
+кадры как в Филморе** (вкладка «◆ Герой», автоключ мышкой, плавно и в игре, и в «Кино»); **все переходы** Лета, Ren'Py
+и модов правой кнопкой; «Кино» с историей реплик и пропуском, как в игре. Подробно — [CHANGELOG](docs/CHANGELOG_V2.md).
 
 ## Что нового в V2.1
 
@@ -294,6 +302,14 @@ ES right at that scene. Three months of work. **V1.0 is here. Fucking finally.**
   automatically.
 - **Any audio / video format** is converted for the game (ffmpeg inside).
 - **An installer in the game's own style** that finds ES through Steam.
+
+### What's new in V2.1.2
+
+Players' saves survive a mod's update (a save whose line was rewritten restarts its scene with a notice instead of the
+error screen), a sentence opening with a command word stays text (right click «This is text / This is the command»),
+every ES emotion is back. New: the postcard (focus zoom, a click flips it to a handwritten back with a stamp),
+keyframes as in Filmora (the «◆ Hero» tab, mouse auto-key, smooth in the game and in the cinema), every transition of
+ES, Ren'Py and the mods on a right click, the cinema with the game's history and skip.
 
 ### What's new in V2.1
 

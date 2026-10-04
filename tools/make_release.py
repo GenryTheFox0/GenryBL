@@ -128,7 +128,9 @@ def main():
     subprocess.check_call([sys.executable, os.path.join(ROOT, 'tools', 'bundle_patch.py')])
     print('== build the public edition')
     vs_shell(f'cmake -S "{ROOT}" -B "{BUILD}" -G Ninja -DCMAKE_BUILD_TYPE=Release -DGB_RELEASE=ON -DCMAKE_PREFIX_PATH="{QT}" >nul')
-    vs_shell(f'cmake --build "{BUILD}" --target GenryBL GenryBL_Setup gb_selftest gb_cli gb_workshop')
+    # from scratch every time: ninja keeps no header dependencies for an object compiled from a console with another code
+    # page (cl's localized «/showIncludes» prefix) - a changed .h then left stale objects that crashed (V2.1.2)
+    vs_shell(f'cmake --build "{BUILD}" --clean-first --target GenryBL GenryBL_Setup gb_selftest gb_cli gb_workshop')
     env = dict(os.environ)
     env['PATH'] = os.path.join(QT, 'bin') + os.pathsep + env['PATH']
     r = subprocess.run([os.path.join(BUILD, 'gb_selftest.exe')], env=env, capture_output=True, text=True, encoding='utf-8', errors='replace')
