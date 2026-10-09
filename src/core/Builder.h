@@ -49,6 +49,8 @@ QString esExe(const QString& esRoot);
 // project images as Ren'Py names: "bg my_room.png" -> ("bg my_room", mods/<id>/images/bg my_room.png)
 QVector<CustomImage> customImages(const QString& assetsDir, const QString& modId);
 QHash<QString, QString> customImageFiles(const QString& assetsDir);    // name -> absolute file (for the preview)
+// "images/far/miguel.png" -> "miguel far" (V2.1.4 distances of the author's characters, like the game's close/far)
+QString customImageName(const QString& imagesRoot, const QString& file);
 // the project's own files before «Играть»: broken pictures (the game dies on them), giants, «лже-буквы» in names
 QVector<LintIssue> checkAssets(const QString& assetsDir);
 

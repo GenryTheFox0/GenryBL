@@ -336,7 +336,10 @@ int main(int argc, char** argv)
         return 0;
     }
     if (cmd == "compile") {
-        out << compileText(story, opt, &err);
+        // the project's own pictures (assets/ next to the story) count, as in a real build
+        QStringList body;
+        const ModMeta meta = parseMeta(pySplitLines(story), &body, opt);
+        out << compileText(story, opt, &err, build::customImages(QFileInfo(a.value(2)).absolutePath() + "/assets", meta.modId));
         return err.isEmpty() ? 0 : fail(err);
     }
     if (!esOk) return fail(err);

@@ -411,6 +411,22 @@ QImage Renderer::background(const QString& name) const
     return out;
 }
 
+bool Renderer::isOwnSprite(const QString& image) const
+{
+    // V2.1.4: a character of the mod's own PNG (not a «bg …»/«cg …» picture, not a tag of the game) - the mod puts it on
+    // the bottom edge (genry_feet), as the compiler does
+    static const QSet<QString> game{QStringLiteral("dv"), QStringLiteral("un"), QStringLiteral("sl"), QStringLiteral("mi"), QStringLiteral("us"),
+                                    QStringLiteral("mt"), QStringLiteral("el"), QStringLiteral("sh"), QStringLiteral("mz"), QStringLiteral("uv"),
+                                    QStringLiteral("cs"), QStringLiteral("bg"), QStringLiteral("cg")};
+    const QString tag = image.section(QLatin1Char(' '), 0, 0, QString::SectionSkipEmpty).toLower();
+    if (tag.isEmpty() || game.contains(tag)) return false;
+    QMutexLocker lock(&m_mx);
+    if (m_custom.contains(image)) return true;
+    for (auto it = m_custom.constBegin(); it != m_custom.constEnd(); ++it)
+        if (it.key().section(QLatin1Char(' '), 0, 0) == tag) return true;
+    return false;
+}
+
 QImage Renderer::render(const SceneState& s, bool hud) const
 {
     QImage canvas(W, H, QImage::Format_ARGB32_Premultiplied);
@@ -446,7 +462,11 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         Mat m;
         if (sp.timeTint && genryTimeMatrix(s.spriteTime, &m)) apply(img, m);
         const double w = img.width() * sp.zoom, h = img.height() * sp.zoom;
-        const double x = sp.xpos * W - sp.xanchor * w, y = sp.ypos * H - sp.yanchor * h;
+        const double x = sp.xpos * W - sp.xanchor * w;
+        double y = sp.ypos * H - sp.yanchor * h;
+        // V2.1.4: the author's own PNG on an ES position stands on the bottom edge (genry_feet in the mod); a «ключ» y is
+        // counted from there. ES's own sprites keep hanging from the top edge
+        if (sp.yanchor == 0.0 && isOwnSprite(sp.image)) y = (1.0 + sp.ypos) * H - h;
         p.save();
         p.setOpacity(sp.alpha);
         if (sp.rotate != 0.0) {                                      // Ren'Py turns it round its middle
@@ -1168,10 +1188,19 @@ QImage Renderer::render(const SceneState& s, bool hud) const
         }
     }
     if (!s.floating.isEmpty()) {
+        // V2.1.4: at its xalign / yalign like `xalign x yalign y` in the game (was nailed to the top middle)
         QFont f(m_family);
         f.setPixelSize(38);
-        const qreal tw = QFontMetricsF(f).horizontalAdvance(s.floating);
-        outlineText(p, QPointF((W - tw) / 2, H * 0.18), s.floating, f, QColor(0xee, 0xf6, 0xff), Qt::black, 2);
+        const QFontMetricsF fm(f);
+        const QStringList lines = s.floating.split(QLatin1Char('\n'));
+        qreal tw = 0;
+        for (const QString& l : lines) tw = qMax(tw, fm.horizontalAdvance(l));
+        const qreal th = fm.height() * lines.size();
+        const qreal left = s.floatX * (W - tw), top = s.floatY * (H - th);
+        for (int i = 0; i < lines.size(); ++i) {
+            const qreal lw = fm.horizontalAdvance(lines[i]);
+            outlineText(p, QPointF(left + (tw - lw) / 2, top + fm.ascent() + i * fm.height()), lines[i], f, QColor(0xee, 0xf6, 0xff), Qt::black, 2);
+        }
     }
 
     // ---- genry_music_player (a modal list of the mod's tracks)

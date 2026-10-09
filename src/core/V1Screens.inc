@@ -811,6 +811,13 @@ static const char* const kV1Lids = R"rpy(
 image genry_lids = Fixed("anim blink_up", "anim blink_down")
 )rpy";
 
+static const char* const kV1Feet = R"rpy(
+# GenryBL V2.1.4: свой персонаж (картинка мода) на позиции БЛ стоит ногами на низу экрана. Позиции игры подвешивают
+# спрайт за верхний край (родные спрайты высотой во весь экран), картинка пониже экрана повисала в воздухе.
+transform genry_feet:
+    ypos 1.0 yanchor 1.0
+)rpy";
+
 static const char* const kV1Hero = R"rpy(
 # GenryBL V1: имя героя вместо «Семёна». Семён в БЛ - DynamicCharacter, читает me_name, а reload_names() (каждое
 # «время») кладёт туда names['me']: ставим оба. names - своя копия в сохранении, сюжет самой игры не трогается.

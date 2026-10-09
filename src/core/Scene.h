@@ -61,6 +61,7 @@ struct SceneState {
     bool screenMenu = false;
     QString notifyTitle, notifyText;
     QString floating;
+    double floatX = 0.5, floatY = 0.18;           // «мысль … | x | y»: xalign / yalign as the game places it
     bool flash = false, map = false;
     QStringList mapZones;                         // «карта»: "zone|scene|chibi" of the open places
     QString nvlText;

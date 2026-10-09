@@ -1097,6 +1097,7 @@ QVariantList Engine::spriteBoxes(const QString& text, int line) const
             h = img.height() * sp.zoom;
             x = sp.xpos * 1920 - sp.xanchor * w;
             y = sp.ypos * 1080 - sp.yanchor * h;
+            if (sp.yanchor == 0.0 && m_renderer.isOwnSprite(sp.image)) y = (1.0 + sp.ypos) * 1080 - h;   // V2.1.4: on the bottom edge
         }
         // the «показать» that put it where it stands: the last one of its tag up to this line
         int showLine = 0;

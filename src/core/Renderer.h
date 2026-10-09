@@ -24,6 +24,7 @@ public:
     // Project pictures by Ren'Py image name ("genry_alisa_casual", "bg my_room") -> file
     void setCustomImages(const QHash<QString, QString>& nameToFile);
     QHash<QString, QString> customImages() const;
+    bool isOwnSprite(const QString& image) const;      // V2.1.4: the mod's own character (stands on the bottom edge)
     void dropSpriteCache();                  // new pictures appeared (the workshop wardrobe got ready)
 
     QImage render(const SceneState& s, bool hud = false) const;           // 1920x1080

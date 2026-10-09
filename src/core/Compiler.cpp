@@ -215,6 +215,41 @@ QString spriteShowAtClause(const QString& image, const QString& pos)
     return pos.isEmpty() ? QString() : QStringLiteral(" at ") + pos;
 }
 
+bool isEsGameFont(const QString& path)
+{
+    // game/fonts of a clean Steam/Android install: the fonts the game and Ren'Py 7.4 ship
+    static const QSet<QString> game{
+        QStringLiteral("calibri.ttf"), QStringLiteral("calibrib.ttf"), QStringLiteral("calibrii.ttf"), QStringLiteral("calibriz.ttf"),
+        QStringLiteral("corbel.ttf"), QStringLiteral("corbelb.ttf"), QStringLiteral("corbeli.ttf"), QStringLiteral("corbelz.ttf"),
+        QStringLiteral("times.ttf"), QStringLiteral("timesbd.ttf"), QStringLiteral("timesbi.ttf"), QStringLiteral("timesi.ttf"),
+        QStringLiteral("kis.ttf"), QStringLiteral("kisb.ttf"), QStringLiteral("kisi.ttf"), QStringLiteral("gothic.ttf"),
+        QStringLiteral("dejavusansoblique.ttf"), QStringLiteral("dejavuserif.ttf"), QStringLiteral("pressstart2p.ttf"),
+        QStringLiteral("stzhongs.ttf"), QStringLiteral("dejavusans.ttf"), QStringLiteral("dejavusans-bold.ttf")};
+    QString p = QString(path).replace(QLatin1Char('\\'), QLatin1Char('/')).toLower();
+    if (p.startsWith(QLatin1String("es:"))) p = p.mid(3);
+    return (p.startsWith(QLatin1String("fonts/")) || !p.contains(QLatin1Char('/'))) && game.contains(p.section(QLatin1Char('/'), -1));
+}
+
+// V2.1.4: «полныйрост», «зеркало», «фокус…» put a sprite on screen under another name (show dv … as genry_fullheight_…)
+void rememberAliases(CompileState& st, const QStringList& lines)
+{
+    static const QRegularExpression showAs(QStringLiteral("^\\s*show\\s+(\\S+).*\\sas\\s+(\\S+?):?\\s*$"));
+    for (const QString& l : lines) {
+        const QRegularExpressionMatch m = showAs.match(l);
+        if (!m.hasMatch()) continue;
+        QStringList& names = st.spriteAliases[m.captured(1).toLower()];
+        if (!names.contains(m.captured(2))) names << m.captured(2);
+    }
+}
+
+// the hide lines for every other name a tag is on screen as (and forgets them)
+QStringList hideAliases(CompileState& st, const QString& tag)
+{
+    QStringList r;
+    for (const QString& a : st.spriteAliases.take(tag.toLower())) r << QStringLiteral("    hide ") + a;
+    return r;
+}
+
 SL tintAtl(const QString& image)
 {
     if (shouldSpriteTimeTint(image)) return {QStringLiteral("        matrixcolor genry_sprite_time_matrix()")};
@@ -2327,7 +2362,11 @@ SL compileKeyframe(const QString& rest, CompileState& st, const CompileOptions& 
     if (!opt.legacy) image = withOverlays(image);
     QStringList props;
     if (k.hasX) props << QStringLiteral("xpos %1 xanchor 0.5").arg(F2(k.x));
-    if (k.hasY) props << QStringLiteral("ypos %1 yanchor 0.0").arg(F2(k.y));
+    // y = how far from the usual place: ES sprites hang from the top edge, the author's own PNG stands on the bottom one
+    if (k.hasY) {
+        if (!opt.legacy && st.customSprites.contains(imageTagName(image).toLower())) props << QStringLiteral("ypos %1 yanchor 1.0").arg(F2(1.0 + k.y));
+        else props << QStringLiteral("ypos %1 yanchor 0.0").arg(F2(k.y));
+    }
     if (k.hasZoom) props << QStringLiteral("zoom ") + F2(k.zoom);
     if (k.hasRotate) props << QStringLiteral("rotate ") + pyFixed(k.rotate, 1);
     if (k.hasAlpha) props << QStringLiteral("alpha ") + F2(k.alpha);
@@ -2460,17 +2499,30 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
             if (effect.isEmpty())
                 effect = st.activeSpriteTags.contains(image.section(QLatin1Char(' '), 0, 0)) ? QStringLiteral("dspr") : QStringLiteral("dissolve");
         }
-        const QString out = withEffectLine(QStringLiteral("    show ") + image + spriteShowAtClause(image, pos), effect);
+        QString at = spriteShowAtClause(image, pos);
+        const QString tag = imageTagName(image).toLower();
+        // V2.1.4: the author's own PNG on an ES position stands on the bottom edge (the position keeps its x)
+        if (!opt.legacy && !pos.isEmpty() && pos != QLatin1String("truecenter") && st.customSprites.contains(tag))
+            at.replace(QStringLiteral(" at ") + pos, QStringLiteral(" at %1, genry_feet").arg(pos));
+        // V2.1.4: a plain «показать dv» after «полныйрост dv»: the full-height one goes, not two Alisas on screen
+        SL r = opt.legacy ? SL() : hideAliases(st, tag);
+        r << withEffectLine(QStringLiteral("    show ") + image + at, effect);
         rememberSpriteTag(st, image);
-        return {out};
+        if (!opt.legacy && st.customSprites.contains(tag) && !st.activeSpriteTags.contains(tag)) st.activeSpriteTags << tag;
+        return r;
     }
     if (cmd == QLatin1String("walk")) return compileWalk(rest);
     if (cmd == QLatin1String("keyframe")) return compileKeyframe(rest, st, opt);
     if (cmd == QLatin1String("bigshow")) return compileBigShow(rest);
-    if (cmd == QLatin1String("mirror")) return compileMirrorShow(rest, QStringLiteral("1.0"), c);
-    if (cmd == QLatin1String("mirrorbig")) return compileMirrorShow(rest, QStringLiteral("1.25"), c);
-    if (cmd == QLatin1String("conflictfocus")) return compileConflictFocus(rest, c);
-    if (cmd == QLatin1String("fullheight")) return compileFullheight(rest, c);
+    if (cmd == QLatin1String("mirror") || cmd == QLatin1String("mirrorbig") || cmd == QLatin1String("conflictfocus") ||
+        cmd == QLatin1String("fullheight")) {
+        const SL r = cmd == QLatin1String("mirror")      ? compileMirrorShow(rest, QStringLiteral("1.0"), c)
+                     : cmd == QLatin1String("mirrorbig") ? compileMirrorShow(rest, QStringLiteral("1.25"), c)
+                     : cmd == QLatin1String("conflictfocus") ? compileConflictFocus(rest, c)
+                                                             : compileFullheight(rest, c);
+        if (!opt.legacy) rememberAliases(st, r);
+        return r;
+    }
     if (cmd == QLatin1String("crowdshow")) return compileCrowdShow(rest);
     if (cmd == QLatin1String("enterleft")) return compileEnterShow(rest, true);
     if (cmd == QLatin1String("enterright")) return compileEnterShow(rest, false);
@@ -2564,7 +2616,14 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
         if (!w.isEmpty() && isEffect(w.last())) effect = w.takeLast();
         // V1: «убрать» with nobody named is no line of Ren'Py at all («hide» alone does not parse)
         if (w.isEmpty() && !opt.legacy) return {U("    # убрать: кого? («убрать dv» или «убратьвсех»)")};
-        return {withEffectLine(QStringLiteral("    hide ") + joinW(w), effect)};
+        // V2.1.4: the character shown with «полныйрост»/«зеркало» is on screen under another name - it goes as well,
+        // in the same transition
+        const SL aliases = opt.legacy ? SL() : hideAliases(st, w.first());
+        if (aliases.isEmpty()) return {withEffectLine(QStringLiteral("    hide ") + joinW(w), effect)};
+        SL r = aliases;
+        r << QStringLiteral("    hide ") + joinW(w);
+        if (!effect.isEmpty() && effect != QLatin1String("none")) r << QStringLiteral("    with ") + effect;
+        return r;
     }
     if (cmd == QLatin1String("music")) {
         SL r = compileMusicPlay(rest, c);
@@ -2651,6 +2710,15 @@ static QStringList compileLineCore(const QString& line, const QString& modId, Co
             // V1: «scar» is no image of the game - ES lint flags hiding it
             if (!opt.legacy && QLatin1String(t) == QLatin1String("scar")) continue;
             r << QStringLiteral("    hide ") + U(t);
+        }
+        if (!opt.legacy) {      // V2.1.4: the full-height / mirrored ones under their other names, and the author's own characters
+            for (auto it = st.spriteAliases.constBegin(); it != st.spriteAliases.constEnd(); ++it)
+                for (const QString& a : it.value()) r << QStringLiteral("    hide ") + a;
+            st.spriteAliases.clear();
+            QStringList own(st.customSprites.begin(), st.customSprites.end());
+            own.sort();
+            for (const QString& t : own)
+                if (st.activeSpriteTags.contains(t)) r << QStringLiteral("    hide ") + t;
         }
         r << QStringLiteral("    with dissolve");
         return r;
@@ -4398,15 +4466,26 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         if (st.contains(QLatin1Char('i'))) display = QStringLiteral("{i}%1{/i}").arg(display);
         if (st.contains(QLatin1Char('b'))) display = QStringLiteral("{b}%1{/b}").arg(display);
     }
+    QString plainDisplay = display;       // V2.1.4: the same name without the font - what a player without that font sees
     if (!titleFont.isEmpty()) {
-        // V1: «es:fonts/x.ttf» = a font of the game itself (nothing copied into the mod)
-        if (!opt.legacy && titleFont.startsWith(QLatin1String("es:"))) titleFont = titleFont.mid(3);
+        // V1: «es:fonts/x.ttf» = a font of the game itself (nothing copied into the mod).
+        // V2.1.4: only when the game really ships it - a font another mod dropped into the author's game/fonts crashed the
+        // whole ES mods list for everyone else («Could not find font u'fonts/a_BosaNova.ttf'»); the builder copies it into
+        // the mod and the name points there
+        if (!opt.legacy && titleFont.startsWith(QLatin1String("es:")))
+            titleFont = isEsGameFont(titleFont) ? titleFont.mid(3) : relModPath(modId, QStringLiteral("fonts/") + titleFont.section(QLatin1Char('/'), -1));
         else if (!titleFont.startsWith(QLatin1String("mods/"))) titleFont = relModPath(modId, titleFont);
         display = QStringLiteral("{font=%1}%2{/font}").arg(titleFont, display);
     }
-    if (!titleColor.isEmpty() && pyIsHexColor(titleColor)) display = QStringLiteral("{color=%1}%2{/color}").arg(titleColor, display);
+    if (!titleColor.isEmpty() && pyIsHexColor(titleColor)) {
+        display = QStringLiteral("{color=%1}%2{/color}").arg(titleColor, display);
+        plainDisplay = QStringLiteral("{color=%1}%2{/color}").arg(titleColor, plainDisplay);
+    }
     static const QRegularExpression size3(QStringLiteral("^[0-9]{1,3}$"));
-    if (!titleSize.isEmpty() && size3.match(titleSize).hasMatch()) display = QStringLiteral("{size=%1}%2{/size}").arg(titleSize, display);
+    if (!titleSize.isEmpty() && size3.match(titleSize).hasMatch()) {
+        display = QStringLiteral("{size=%1}%2{/size}").arg(titleSize, display);
+        plainDisplay = QStringLiteral("{size=%1}%2{/size}").arg(titleSize, plainDisplay);
+    }
 
     SL initLines, scriptLines;
     QHash<QString, QString> speakerMap;
@@ -4448,7 +4527,10 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
 
     SL out;
     appendBlock(out, kHeadA, modId);
-    out << QStringLiteral("    $ mods[%1] = %2").arg(pyQ(modId), pyUQ(display));
+    if (!opt.legacy && !titleFont.isEmpty())      // V2.1.4: no font file on this player's device - the plain name, never a crash
+        out << QStringLiteral("    $ mods[%1] = %2 if renpy.loadable(%3) else %4").arg(pyQ(modId), pyUQ(display), pyQ(titleFont), pyUQ(plainDisplay));
+    else
+        out << QStringLiteral("    $ mods[%1] = %2").arg(pyQ(modId), pyUQ(display));
     appendBlock(out, kHeadB, modId);
     out << initLines;
     const int declareAt = int(out.size());
@@ -4478,6 +4560,12 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
     CompileState st;
     st.speakers = speakerMap;
     st.modVars = modVars;
+    if (!opt.legacy)            // V2.1.4: the author's characters (not «bg …»/«cg …» pictures, not a tag of the game)
+        for (const CustomImage& img : images) {
+            const QString tag = imageTagName(img.name).toLower();
+            if (!tag.isEmpty() && tag != QLatin1String("bg") && tag != QLatin1String("cg") && !T().spritePrefixes.contains(tag))
+                st.customSprites.insert(tag);
+        }
     st.modMenu = modMenu;
     st.modName = meta.modName;
     for (const Meter& m : meterList) st.meters.insert(c.var(m.raw), {m.title, m.color, m.lo, m.hi});
@@ -5210,6 +5298,7 @@ QString compileStory(const ModMeta& meta, const QStringList& bodyRaw, const Comp
         }
         if (all.contains(QLatin1String("genry_camp_map")) || all.contains(QLatin1String("genry_map_pic("))) block(kV1Map);
         if (all.contains(QLatin1String("genry_lids"))) block(kV1Lids);
+        if (all.contains(QLatin1String("genry_feet"))) block(kV1Feet);
         if (all.contains(QLatin1String("genry_hero_apply"))) block(kV1Hero);
         if (all.contains(c.sys(QStringLiteral("map_seen")))) out << QString() << QStringLiteral("default %1 = {}").arg(c.sys(QStringLiteral("map_seen")));
         const bool memories = all.contains(QLatin1String("genry_remember(")) || all.contains(QLatin1String("genry_memories"));
@@ -5329,5 +5418,7 @@ QString compileText(const QString& storyText, const CompileOptions& opt, QString
     const ModMeta meta = parseMeta(pySplitLines(stripBom(storyText)), &body, opt);
     return compileStory(meta, body, opt, images, error);
 }
+
+bool esGameFont(const QString& path) { return isEsGameFont(path); }
 
 } // namespace gb

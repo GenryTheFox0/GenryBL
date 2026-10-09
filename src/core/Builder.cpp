@@ -264,12 +264,26 @@ QVector<CustomImage> customImages(const QString& assetsDir, const QString& modId
     files.sort();
     QSet<QString> seen;
     for (const QString& f : files) {
-        const QString name = QFileInfo(f).completeBaseName().toLower().simplified();
+        const QString name = customImageName(root, f);
         if (name.isEmpty() || seen.contains(name) || name == QLatin1String("genry_phone_body")) continue;
         seen.insert(name);
         out.push_back({name, QStringLiteral("mods/%1/images/%2").arg(modId, QDir(root).relativeFilePath(f))});
     }
     return out;
+}
+
+QString customImageName(const QString& imagesRoot, const QString& file)
+{
+    QString name = QFileInfo(file).completeBaseName().toLower().simplified();
+    // V2.1.4: a character drawn for several distances, as the game keeps its heroines (sprites/close, sprites/far):
+    // images/close/miguel.png = «miguel close», images/far/miguel.png = «miguel far», images/miguel.png = «miguel»
+    const QStringList dirs = QDir(imagesRoot).relativeFilePath(QFileInfo(file).absolutePath()).toLower().split(QLatin1Char('/'));
+    for (const QString& d : dirs)
+        if ((d == QLatin1String("close") || d == QLatin1String("far")) && !name.isEmpty() && !name.endsWith(QLatin1Char(' ') + d)) {
+            name += QLatin1Char(' ') + d;
+            break;
+        }
+    return name;
 }
 
 QHash<QString, QString> customImageFiles(const QString& assetsDir)
@@ -281,7 +295,7 @@ QHash<QString, QString> customImageFiles(const QString& assetsDir)
                     QDirIterator::Subdirectories);
     while (it.hasNext()) {
         const QString f = it.next();
-        out.insert(QFileInfo(f).completeBaseName().toLower().simplified(), f);
+        out.insert(customImageName(root, f), f);
     }
     return out;
 }
@@ -379,6 +393,22 @@ BuildReport install(const BuildEnv& env, const QString& storyText, const Compile
         rep.copied += syncTree(env.assetsDir + QLatin1Char('/') + sub, rep.modDir + QLatin1Char('/') + sub, &rep.error, &ok,
                                sub == QLatin1String("images"));
         if (!ok) return rep;
+    }
+    // V2.1.4: «es:fonts/x.ttf» that the game does not ship (another mod dropped it into this game/fonts) goes inside the
+    // mod - the compiled name points at mods/<id>/fonts/x.ttf; without it every player's ES mods list crashed
+    if (!opt.legacy) {
+        QString tf = QString(rep.meta.titleFont).replace(QLatin1Char('\\'), QLatin1Char('/')).trimmed();
+        if (tf.startsWith(QLatin1String("es:")) && !esGameFont(tf)) {
+            const QString rel = tf.mid(3), file = rel.section(QLatin1Char('/'), -1);
+            const QString src = env.esRoot + QStringLiteral("/game/") + rel;
+            const QString dst = rep.modDir + QStringLiteral("/fonts/") + file;
+            if (QFileInfo::exists(src)) {
+                if (!copyFile(src, dst, &rep.error)) return rep;
+                say(log, QStringLiteral("Шрифт названия %1 — не из игры, кладу его в мод").arg(file));
+            } else {
+                say(log, QStringLiteral("Шрифт названия %1 не найден в игре — в списке модов будет обычный шрифт").arg(file));
+            }
+        }
     }
     // GenryBL's own files (genry/) are written anew by every build: nothing stale stays from the last one
     if (!opt.legacy) QDir(rep.modDir + QStringLiteral("/genry")).removeRecursively();

@@ -60,7 +60,17 @@ struct CompileState {
     QMap<QString, QPair<QString, QString>> strangerChars;   // the mod's Character var -> (her id, the name shown)
     bool nowPlaying = false;                  // V2.1 «сейчасиграет вкл»: a started track shows its name
     QString modName;                          // the mod's name (the save's name at its start)
+    // V2.1.4: tags of the mod's own pictures - a character of the author's PNG stands on the screen's bottom edge
+    // (ES positions hang a sprite from its top: the game's sprites are a screen tall, a shorter PNG floated in the air)
+    QSet<QString> customSprites;
+    // V2.1.4: tag -> the other names it is on screen as («полныйрост dv» = show dv … as genry_fullheight_…):
+    // «убрать dv» and a plain «показать dv» take those away too
+    QHash<QString, QStringList> spriteAliases;
 };
+
+// V2.1.4: a font file the game itself ships in game/fonts (every player has it); any other «es:fonts/…» lay loose in the
+// author's game, put there by another mod, and travels inside the mod
+bool esGameFont(const QString& path);
 
 // `image <name> = "<path>"` for the mod's own pictures (paths relative to game/).
 struct CustomImage {

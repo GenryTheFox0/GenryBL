@@ -72,7 +72,12 @@ void put(SceneState& st, const SpriteShow& s)
 
 void hideTag(SceneState& st, const QString& tag)
 {
-    st.sprites.erase(std::remove_if(st.sprites.begin(), st.sprites.end(), [&](const SpriteShow& s) { return s.tag == tag; }), st.sprites.end());
+    // V2.1.4: also the same character on screen under another name («полныйрост dv» = dv as genry_fullheight_…)
+    st.sprites.erase(std::remove_if(st.sprites.begin(), st.sprites.end(),
+                                    [&](const SpriteShow& s) {
+                                        return s.tag == tag || (s.tag.startsWith(QLatin1String("genry_")) && s.image.section(QLatin1Char(' '), 0, 0) == tag);
+                                    }),
+                     st.sprites.end());
 }
 
 QString alias(const QString& base, const QString& prefix)
@@ -574,6 +579,12 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             if (image.isEmpty()) continue;
             const QString tag = tagOf(image);
             if (tag == QLatin1String("prologue_dream")) { st.dream = true; st.dreamAlpha = 1.0; continue; }
+            // V2.1.4: a plain «показать dv» takes the full-height / mirrored dv away, as the mod does in the game
+            st.sprites.erase(std::remove_if(st.sprites.begin(), st.sprites.end(),
+                                            [&](const SpriteShow& s) {
+                                                return s.tag != tag && s.tag.startsWith(QLatin1String("genry_")) && tagOf(s.image) == tag;
+                                            }),
+                             st.sprites.end());
             SpriteShow sp;
             for (const SpriteShow& o : st.sprites) if (o.tag == tag) sp = o;     // Ren'Py keeps the old placement
             sp.tag = tag;
@@ -672,7 +683,9 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
             continue;
         }
         if (cmd == QLatin1String("fullheight")) {
-            const QStringList p = pipes(rest);
+            // «полныйрост dv smile pioneer right» (no «|») is words, as the compiler reads it - not one picture name
+            // (the preview drew a «нет спрайта dv smile pioneer right» box)
+            const QStringList p = rest.contains(QLatin1Char('|')) ? pipes(rest) : QStringList();
             QString image, pos = QStringLiteral("center"), mode = QStringLiteral("auto");
             double zoom = 1.28, alpha = 1.0;
             if (!p.isEmpty()) {
@@ -870,6 +883,13 @@ SceneState sceneAt(const QString& storyText, int upto, const EsAssets* es)
         if (cmd == QLatin1String("floatingthought")) {
             st.floating = rest.section(QLatin1Char('|'), 0, 0).trimmed().replace(QStringLiteral("\\n"), QStringLiteral("\n"));
             if (st.floating.isEmpty()) st.floating = U("Мысль.");
+            // V2.1.4: where it floats - the game puts it at xalign/yalign; the preview always drew it at the top middle
+            // (ANGEL_OF_DEATH: «текст не двигается»)
+            st.floatX = 0.5;
+            st.floatY = 0.18;
+            double fx;
+            if (num(rest.section(QLatin1Char('|'), 1, 1).trimmed(), &fx)) st.floatX = qBound(0.0, fx, 1.0);
+            if (num(rest.section(QLatin1Char('|'), 2, 2).trimmed(), &fx)) st.floatY = qBound(0.0, fx, 1.0);
             continue;
         }
         if (cmd == QLatin1String("phonestart") && QStringList{U("дом"), U("рабочийстол"), U("рабочий стол"), U("меню"), QStringLiteral("home")}.contains(rest.toLower())) {
